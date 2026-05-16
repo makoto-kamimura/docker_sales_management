@@ -1,0 +1,41 @@
+# ---- OS / Editor ----
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+.idea/
+.vscode/
+!.vscode/extensions.json
+!.vscode/settings.json.example
+
+# ---- Secrets / env ----
+# platform/ の .env は .env.example のみコミット
+platform/.env
+platform/.env.*
+!platform/.env.example
+
+# 念のためどの階層でも .env 系を除外（.example は許可）
+.env
+.env.*
+!.env.example
+!.env*.example
+
+# ---- ログ / 一時 ----
+*.log
+logs/
+tmp/
+.cache/
+
+# ---- Node / フロント共通（各サブプロジェクトの .gitignore も併用） ----
+node_modules/
+
+# ---- Claude / AI tooling ローカル設定 ----
+.claude/
+CLAUDE.local.md
+
+# ---- ビルド成果物 ----
+dist/
+build/
+out/
+coverage/

@@ -1,0 +1,48 @@
+# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
+
+# Bundler
+/.bundle
+
+# SQLite
+/db/*.sqlite3
+/db/*.sqlite3-*
+
+# ログ / 一時ファイル（.keep は保持）
+/log/*
+!/log/.keep
+/tmp/*
+!/tmp/.keep
+/tmp/pids/*
+!/tmp/pids/
+!/tmp/pids/.keep
+
+# Active Storage
+/storage/*
+!/storage/.keep
+/tmp/storage/*
+!/tmp/storage/
+!/tmp/storage/.keep
+
+# プリコンパイル済みアセット
+/public/assets
+
+# Rails credentials
+/config/master.key
+/config/credentials/*.key
+
+# 環境変数
+/.env
+/.env.*
+!/.env.example
+
+# spring / bootsnap
+/spring/*.pid
+/.bootsnap-cache/
+
+# coverage / docs
+/coverage/
+/doc/api/
+/doc/app/
+
+# OS
+.DS_Store

@@ -1,0 +1,103 @@
+"use client";
+
+import { useState } from "react";
+import useSWR from "swr";
+import { api, jsonBody } from "@/lib/api";
+import { useAuth } from "@/lib/auth";
+import { yen } from "@/lib/format";
+import type { Category, Product } from "@/lib/types";
+
+export default function AdminProductsPage() {
+  const { user, token } = useAuth();
+  const { data: products, mutate } = useSWR<Product[]>(
+    user?.role === "admin" ? "admin-products" : null,
+    () => api<Product[]>("/admin/products", { auth: token })
+  );
+  const { data: categories } = useSWR<Category[]>(
+    user?.role === "admin" ? "admin-cats" : null,
+    () => api<Category[]>("/categories", { auth: token })
+  );
+  const [form, setForm] = useState({
+    sku: "", name: "", description: "", price_cents: 1000, category_id: 0,
+    is_subscribable: false, tags: "", initial_stock: 10
+  });
+  const [err, setErr] = useState<string | null>(null);
+
+  if (!user) return <p>ログインが必要です。</p>;
+  if (user.role !== "admin") return <p>権限がありません。</p>;
+
+  async function setStock(productId: number, stock: number) {
+    await api(`/admin/inventories/${productId}`, { method: "PATCH", body: jsonBody({ stock }), auth: token });
+    mutate();
+  }
+
+  async function create(e: React.FormEvent) {
+    e.preventDefault(); setErr(null);
+    try {
+      await api("/admin/products", {
+        method: "POST",
+        body: jsonBody({
+          ...form,
+          tags: form.tags.split(",").map((t) => t.trim()).filter(Boolean),
+          published_at: new Date().toISOString(),
+        }),
+        auth: token,
+      });
+      mutate();
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : "エラー");
+    }
+  }
+
+  return (
+    <div className="space-y-6">
+      <h1 className="text-xl font-bold">商品管理</h1>
+
+      <table className="w-full bg-white border rounded-xl overflow-hidden text-sm">
+        <thead className="bg-coffee-50">
+          <tr>
+            <th className="p-2 text-left">SKU</th>
+            <th className="p-2 text-left">名前</th>
+            <th className="p-2 text-right">価格</th>
+            <th className="p-2">サブスク</th>
+            <th className="p-2">在庫</th>
+          </tr>
+        </thead>
+        <tbody>
+          {products?.map((p) => (
+            <tr key={p.id} className="border-t">
+              <td className="p-2">{p.sku}</td>
+              <td className="p-2">{p.name}</td>
+              <td className="p-2 text-right">{yen(p.price_cents)}</td>
+              <td className="p-2 text-center">{p.is_subscribable ? "○" : ""}</td>
+              <td className="p-2 text-center">
+                <input type="number" defaultValue={p.stock ?? 0}
+                       onBlur={(e) => setStock(p.id, Number(e.target.value))}
+                       className="w-20 rounded border px-2 py-1 text-center" />
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+
+      <section className="bg-white border rounded-xl p-4">
+        <h2 className="font-semibold mb-2">商品を追加</h2>
+        <form onSubmit={create} className="grid grid-cols-2 gap-2 text-sm">
+          <input required placeholder="SKU" value={form.sku} onChange={(e) => setForm({ ...form, sku: e.target.value })} className="border rounded px-2 py-1" />
+          <input required placeholder="名前" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} className="border rounded px-2 py-1" />
+          <select required value={form.category_id} onChange={(e) => setForm({ ...form, category_id: Number(e.target.value) })} className="border rounded px-2 py-1">
+            <option value={0}>カテゴリ</option>
+            {categories?.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+          </select>
+          <input required type="number" placeholder="価格 (cents)" value={form.price_cents} onChange={(e) => setForm({ ...form, price_cents: Number(e.target.value) })} className="border rounded px-2 py-1" />
+          <input placeholder="タグ (カンマ区切り)" value={form.tags} onChange={(e) => setForm({ ...form, tags: e.target.value })} className="border rounded px-2 py-1 col-span-2" />
+          <textarea placeholder="説明" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} className="border rounded px-2 py-1 col-span-2 h-20" />
+          <input type="number" placeholder="初期在庫" value={form.initial_stock} onChange={(e) => setForm({ ...form, initial_stock: Number(e.target.value) })} className="border rounded px-2 py-1" />
+          <label className="flex items-center gap-2"><input type="checkbox" checked={form.is_subscribable} onChange={(e) => setForm({ ...form, is_subscribable: e.target.checked })} />サブスク対象</label>
+          {err && <p className="text-rose-600 col-span-2">{err}</p>}
+          <button className="col-span-2 rounded bg-espresso text-white py-2">追加</button>
+        </form>
+      </section>
+    </div>
+  );
+}

@@ -1,0 +1,158 @@
+name: docker_ruby
+
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: dr_postgres
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-app}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-app_password}
+      POSTGRES_DB: ${POSTGRES_DB:-app_development}
+      TZ: Asia/Tokyo
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./postgres/init:/docker-entrypoint-initdb.d:ro
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-app} -d ${POSTGRES_DB:-app_development}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks: [appnet]
+
+  api:
+    build:
+      context: ../app/api
+      dockerfile: Dockerfile
+    container_name: dr_api
+    command: bash -c "bundle exec rails db:prepare && bundle exec rails s -b 0.0.0.0 -p 3000"
+    environment:
+      RAILS_ENV: development
+      DATABASE_URL: postgres://${POSTGRES_USER:-app}:${POSTGRES_PASSWORD:-app_password}@postgres:5432/${POSTGRES_DB:-app_development}
+      DIFY_API_BASE: ${DIFY_API_BASE:-http://dify-api:5001/v1}
+      DIFY_API_KEY: ${DIFY_API_KEY:-}
+      RAILS_LOG_TO_STDOUT: "true"
+      BUNDLE_PATH: /usr/local/bundle
+    volumes:
+      - ../app/api:/app
+      - bundle_cache:/usr/local/bundle
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "3000:3000"
+    networks: [appnet]
+
+  web:
+    build:
+      context: ../app/web
+      dockerfile: Dockerfile
+    container_name: dr_web
+    command: sh -c "npm install && npm run dev -- -p 3001 -H 0.0.0.0"
+    environment:
+      # ブラウザ (CSR) から見たAPIのURL = ホストの :80 (Nginx)
+      NEXT_PUBLIC_API_BASE: http://localhost/api
+      # Next.js SSR (Node.js) から見たAPIのURL = Docker network 内のホスト名
+      API_BASE_INTERNAL: http://api:3000/api
+      NODE_ENV: development
+    volumes:
+      - ../app/web:/app
+      - web_node_modules:/app/node_modules
+    depends_on:
+      - api
+    ports:
+      - "3001:3001"
+    networks: [appnet]
+
+  mobile:
+    build:
+      context: ../app/mobile
+      dockerfile: Dockerfile
+    container_name: dr_mobile
+    # デフォルトは LAN モード。物理デバイスから接続する場合は .env で
+    # REACT_NATIVE_PACKAGER_HOSTNAME に開発PCのLAN IPを設定すること。
+    # トンネル接続が必要な場合は EXPO_HOST=tunnel を .env に設定 (ngrokを使う)。
+    command: sh -c "npm install && npx expo start --host ${EXPO_HOST:-lan} --port 8081"
+    environment:
+      EXPO_PUBLIC_API_BASE: ${EXPO_PUBLIC_API_BASE:-http://localhost/api}
+      REACT_NATIVE_PACKAGER_HOSTNAME: ${REACT_NATIVE_PACKAGER_HOSTNAME:-host.docker.internal}
+      EXPO_NO_TELEMETRY: "1"
+    volumes:
+      - ../app/mobile:/app
+      - mobile_node_modules:/app/node_modules
+    ports:
+      - "8081:8081"
+      - "19000:19000"
+      - "19001:19001"
+      - "19002:19002"
+    networks: [appnet]
+
+  nginx:
+    image: nginx:1.27-alpine
+    container_name: dr_nginx
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/conf.d:/etc/nginx/conf.d:ro
+    ports:
+      - "80:80"
+    depends_on:
+      - api
+      - web
+    networks: [appnet]
+
+  # Dify (AI接客プラットフォーム) - 外部 docker-compose を別ネットワークで起動するのが推奨。
+  # ここでは API から呼び出す前提でリンクのみ提供。詳細は doc/dify-setup.md 参照。
+  dify-api:
+    image: langgenius/dify-api:latest
+    container_name: dr_dify_api
+    profiles: ["ai"]
+    environment:
+      MODE: api
+      LOG_LEVEL: INFO
+      SECRET_KEY: ${DIFY_SECRET_KEY:-sk-please-change-me}
+      DB_USERNAME: ${POSTGRES_USER:-app}
+      DB_PASSWORD: ${POSTGRES_PASSWORD:-app_password}
+      DB_HOST: postgres
+      DB_PORT: "5432"
+      DB_DATABASE: dify
+      REDIS_HOST: redis
+      REDIS_PORT: "6379"
+      VECTOR_STORE: pgvector
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    ports:
+      - "5001:5001"
+    networks: [appnet]
+
+  dify-web:
+    image: langgenius/dify-web:latest
+    container_name: dr_dify_web
+    profiles: ["ai"]
+    environment:
+      CONSOLE_API_URL: http://localhost:5001
+      APP_API_URL: http://localhost:5001
+    ports:
+      - "3002:3000"
+    depends_on:
+      - dify-api
+    networks: [appnet]
+
+  redis:
+    image: redis:7-alpine
+    container_name: dr_redis
+    profiles: ["ai"]
+    networks: [appnet]
+
+volumes:
+  postgres_data:
+  bundle_cache:
+  web_node_modules:
+  mobile_node_modules:
+
+networks:
+  appnet:
+    driver: bridge
