@@ -1,6 +1,8 @@
-# docker_ruby
+# docker_sales_management
 
 EC + サブスク + AI接客 のフルスタック・マルチクライアントアプリ。
+
+ライセンス: [MIT](LICENSE)
 
 ## 技術スタック
 
@@ -16,7 +18,7 @@ EC + サブスク + AI接客 のフルスタック・マルチクライアント
 ## ディレクトリ
 
 ```
-docker_ruby/
+docker_sales_management/
 ├── app/        # アプリケーション (api / web / mobile / ai)
 ├── doc/        # 要件・設計・セットアップ手順
 └── platform/   # Docker Compose, Nginx, Postgres 初期化
@@ -31,6 +33,8 @@ docker compose up -d postgres
 docker compose run --rm api bash -c "bundle exec rails db:prepare && bundle exec rails db:seed"
 docker compose up
 ```
+
+> **本番運用時の注意**: `.env` / `seeds.rb` のデフォルトパスワード (`app_password` / `password`) は開発専用です。デプロイ前に必ず変更してください。`app/api/config/master.key` はリポジトリに含めず、別途安全に管理してください。
 
 詳細・トラブルシュートは [doc/operation.md](doc/operation.md) を参照。
 
