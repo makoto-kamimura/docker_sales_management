@@ -7,6 +7,7 @@
 - Docker Desktop (Compose v2)
 - ホストには Ruby / Node の事前インストール **不要**
 - ポート: 80 / 3000 / 3001 / 5432 / 8081 / 19000-19002 が空いていること
+- (Dify を起動する場合) 追加で 8080 / 8443 / 5003 が空いていること
 
 ## 1. 初回セットアップ
 
@@ -77,21 +78,79 @@ docker compose up -d
 docker compose logs -f api web
 ```
 
-## 3. Dify (AI接客) を一緒に起動
+## 3. Dify (AI接客) を起動
 
-`ai` プロファイルで Dify (API + Web + Redis) も同時起動できる:
+> ⚠️ Dify は **公式 [langgenius/dify](https://github.com/langgenius/dify) の docker compose** を**別ディレクトリで起動**する構成。  
+> 本リポジトリの `platform/docker-compose.yml` には Dify サービスを含めない（同梱 nginx／Rails と同一オリジン化できず Cookie 認証が壊れるため）。
+
+### 3.1 初回セットアップ (1回だけ)
+
+```bash
+# 1. 公式リポジトリをホームに clone
+git clone --depth 1 https://github.com/langgenius/dify.git ~/dify
+
+# 2. .env を作成し、本プラットフォームの nginx (80) と衝突しないようポートを変更
+cp ~/dify/docker/.env.example ~/dify/docker/.env
+
+# .env の以下2行を編集 (デフォルト 80/443 → 8080/8443 に変更):
+#   EXPOSE_NGINX_PORT=8080
+#   EXPOSE_NGINX_SSL_PORT=8443
+# SECRET_KEY= も空なら適当なランダム文字列を設定:
+#   SECRET_KEY=sk-$(openssl rand -base64 42)
+```
+
+### 3.2 起動 / 停止 (2回目以降)
+
+```bash
+# 起動
+cd ~/dify/docker && docker compose up -d
+
+# 停止
+cd ~/dify/docker && docker compose stop
+
+# 状況確認
+cd ~/dify/docker && docker compose ps
+```
+
+- Dify Console / Web:  http://localhost:8080
+- Dify Service API:     http://localhost:8080/v1   (Rails からはこちらを叩く)
+
+### 3.3 Workflow 登録と API キー発行
+
+初回のみ：
+
+1. http://localhost:8080/install で管理者アカウント作成
+2. ログイン後、Studio → Create from Blank → **Chatflow** で「AI接客」ワークフローを作成
+3. Variables に以下を追加 (型はすべて string):
+   - `member_name`
+   - `cart_items` (JSON 文字列)
+   - `recent_orders` (JSON 文字列)
+4. LLM ノードのモデルプロバイダを設定 (OpenAI/Anthropic 等の API キーを Dify 側で登録)
+5. プロンプトに [../app/ai/prompts/concierge_system.md](../app/ai/prompts/concierge_system.md) を貼り付け
+6. **Publish** → アプリ画面の「API Access」から **API Key** を発行 (`app-xxxxxxxx`)
+
+### 3.4 Rails 側の接続設定
+
+`platform/.env`:
+
+```bash
+DIFY_API_BASE=http://host.docker.internal:8080/v1
+DIFY_API_KEY=app-xxxxxxxxxxxxxxxxxx
+```
+
+反映：
 
 ```bash
 cd docker_ruby/platform
-docker compose --profile ai up -d dify-api dify-web redis
+docker compose restart api
 ```
 
-- Dify Console: http://localhost:3002
-- Dify API:     http://localhost:5001
+> Rails コンテナは `appnet` ネットワーク、Dify は別ネットワーク (`docker_default`) に居るため、Docker DNS ではなく **`host.docker.internal`** 経由でホスト→Dify nginx に到達する。  
+> 動作確認: `docker compose exec api bash -lc 'curl -sS http://host.docker.internal:8080/v1/parameters -H "Authorization: Bearer $DIFY_API_KEY"'`
 
-初回は Console でアカウント作成 → Chatflow ワークフロー作成 → API キーを取得し `.env` の `DIFY_API_KEY` に設定 → `docker compose restart api`。詳細は [../app/ai/README.md](../app/ai/README.md)。
+### 3.5 Dify 未起動 / 未設定でも他機能は動く
 
-未起動 (or APIキー未設定) でも他の機能には影響しません (AI接客のみエラー応答)。
+`DIFY_API_KEY` 未設定や Dify 未起動でも、AI 接客以外の機能 (商品閲覧・カート・注文等) は動作する。AI 接客 API のみ `bad_gateway` (`code: ai_unavailable`) を返す ([../app/api/app/controllers/api/v1/ai_concierge/messages_controller.rb](../app/api/app/controllers/api/v1/ai_concierge/messages_controller.rb))。
 
 ## 4. モバイル (Expo) の接続方法
 

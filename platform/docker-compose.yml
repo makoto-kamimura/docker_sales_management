@@ -101,51 +101,9 @@ services:
       - web
     networks: [appnet]
 
-  # Dify (AI接客プラットフォーム) - 外部 docker-compose を別ネットワークで起動するのが推奨。
-  # ここでは API から呼び出す前提でリンクのみ提供。詳細は doc/dify-setup.md 参照。
-  dify-api:
-    image: langgenius/dify-api:latest
-    container_name: dr_dify_api
-    profiles: ["ai"]
-    environment:
-      MODE: api
-      LOG_LEVEL: INFO
-      SECRET_KEY: ${DIFY_SECRET_KEY:-sk-please-change-me}
-      DB_USERNAME: ${POSTGRES_USER:-app}
-      DB_PASSWORD: ${POSTGRES_PASSWORD:-app_password}
-      DB_HOST: postgres
-      DB_PORT: "5432"
-      DB_DATABASE: dify
-      REDIS_HOST: redis
-      REDIS_PORT: "6379"
-      VECTOR_STORE: pgvector
-    depends_on:
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_started
-    ports:
-      - "5001:5001"
-    networks: [appnet]
-
-  dify-web:
-    image: langgenius/dify-web:latest
-    container_name: dr_dify_web
-    profiles: ["ai"]
-    environment:
-      CONSOLE_API_URL: http://localhost:5001
-      APP_API_URL: http://localhost:5001
-    ports:
-      - "3002:3000"
-    depends_on:
-      - dify-api
-    networks: [appnet]
-
-  redis:
-    image: redis:7-alpine
-    container_name: dr_redis
-    profiles: ["ai"]
-    networks: [appnet]
+  # Dify (AI接客プラットフォーム) は公式 compose を別ディレクトリで起動する構成に統一。
+  # Rails からは host.docker.internal:8080 経由で Dify nginx を叩く。
+  # 詳細: doc/operation.md §3, app/ai/README.md
 
 volumes:
   postgres_data:

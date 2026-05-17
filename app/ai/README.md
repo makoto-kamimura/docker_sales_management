@@ -13,31 +13,46 @@ Nginx → Rails (/api/v1/ai_concierge/*)
 
 Rails 側で会話履歴を `ai_conversations` に保存し、Dify には `inputs` として会員情報・商品コンテキスト・カート情報を渡す。
 
-## 起動 (任意)
+## 起動
 
-リポジトリ同梱の compose は `ai` プロファイルで Dify をオプション起動できる:
+Dify は本リポジトリの compose には含めず、公式 [langgenius/dify](https://github.com/langgenius/dify) の compose を **別ディレクトリで起動**する構成 (同一オリジン要件で同梱が困難なため)。
 
 ```bash
-cd ../../platform
-docker compose --profile ai up dify-api dify-web redis
+# 初回のみ
+git clone --depth 1 https://github.com/langgenius/dify.git ~/dify
+cp ~/dify/docker/.env.example ~/dify/docker/.env
+# ~/dify/docker/.env を編集:
+#   EXPOSE_NGINX_PORT=8080
+#   EXPOSE_NGINX_SSL_PORT=8443
+#   SECRET_KEY=sk-<ランダム>
+
+# 2回目以降
+cd ~/dify/docker && docker compose up -d        # 起動
+cd ~/dify/docker && docker compose stop          # 停止
 ```
 
-- Dify Console: http://localhost:3002
-- Dify API:     http://localhost:5001
+- Dify Console / Web:  http://localhost:8080
+- Dify Service API:     http://localhost:8080/v1   (Rails からはこちら経由)
 
-> 本番運用や本格利用は公式の [langgenius/dify](https://github.com/langgenius/dify) リポジトリの compose を別環境で構築するのが推奨。同梱版は開発・検証用の最小構成。
+> 詳細手順・ポート設計の意図は [../../doc/operation.md §3](../../doc/operation.md) を参照。
 
 ## Workflow の登録 (初回)
 
-1. Dify Console (`http://localhost:3002`) でアカウント作成
+1. Dify Console (`http://localhost:8080/install`) でアカウント作成
 2. 「Studio → Create from Blank → Chatflow」で「AI接客」ワークフロー作成
 3. Variables に以下を追加:
    - `member_name` (string)
    - `cart_items` (string, JSON文字列)
    - `recent_orders` (string, JSON文字列)
-4. LLM ノードのプロンプトに [./prompts/concierge_system.md](./prompts/concierge_system.md) を貼り付け
-5. 公開後、API キーを取得し `platform/.env` の `DIFY_API_KEY` に設定
-6. `docker compose restart api`
+4. LLM ノードのモデルプロバイダ設定 (OpenAI/Anthropic 等の API キーは Dify 側で登録)
+5. プロンプトに [./prompts/concierge_system.md](./prompts/concierge_system.md) を貼り付け
+6. **Publish** → アプリの「API Access」画面で **API Key** を発行 (`app-xxxxxxxx`)
+7. `platform/.env` に次の2行を設定:
+   ```
+   DIFY_API_BASE=http://host.docker.internal:8080/v1
+   DIFY_API_KEY=app-xxxxxxxxxxxxxxxxxx
+   ```
+8. Rails を再起動: `cd platform && docker compose restart api`
 
 ## ナレッジベース (商品検索 RAG)
 

@@ -70,14 +70,23 @@ docker compose up
 
 ## 5. Dify (任意)
 
+Dify は本リポジトリの compose には含めず、**公式 [langgenius/dify](https://github.com/langgenius/dify) の compose を別ディレクトリで起動**する構成。
+
 ```bash
-docker compose --profile ai up -d dify-api dify-web redis
+git clone --depth 1 https://github.com/langgenius/dify.git ~/dify
+cp ~/dify/docker/.env.example ~/dify/docker/.env
+# ~/dify/docker/.env を編集して以下を変更:
+#   EXPOSE_NGINX_PORT=8080      (本プロジェクト nginx の 80 と衝突回避)
+#   EXPOSE_NGINX_SSL_PORT=8443
+#   SECRET_KEY=sk-<ランダム文字列>
+cd ~/dify/docker && docker compose up -d
 ```
 
-詳細は [../app/ai/README.md](../app/ai/README.md) を参照。
+- Dify Console: http://localhost:8080
+- Workflow 登録と API キー発行手順 → [../app/ai/README.md](../app/ai/README.md)
+- Rails への接続設定 → [./operation.md](./operation.md) §3
 
 ## トラブルシュート
 
 - `bundle install` 失敗 → `docker compose build --no-cache api`
 - node_modules 不整合 → `docker compose down -v` で named volume を削除
-- Postgres の `dify` DB が無い → `docker compose down -v` で初期化スクリプトを再実行
