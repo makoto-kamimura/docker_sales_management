@@ -20,45 +20,52 @@ export default function CartPage() {
     mutate();
   }
 
-  if (!token) return <p>ログインが必要です。</p>;
-  if (!cart) return <p>読み込み中…</p>;
+  if (!token) return <p className="card p-6 text-sm text-coffee-500">ログインが必要です。</p>;
+  if (!cart) return <p className="text-coffee-500 animate-pulse-soft">読み込み中…</p>;
 
   return (
-    <div className="space-y-4">
-      <h1 className="text-xl font-bold">カート</h1>
+    <div className="space-y-5 max-w-3xl">
+      <h1 className="text-2xl font-bold">カート</h1>
       {cart.items.length === 0 ? (
-        <p className="text-sm text-coffee-500">カートは空です。<Link href="/search" className="underline">商品を探す</Link></p>
+        <div className="card p-10 text-center text-sm text-coffee-500">
+          カートは空です。
+          <Link href="/search" className="text-caramel hover:underline ml-1">商品を探す →</Link>
+        </div>
       ) : (
-        <table className="w-full bg-white border rounded-xl overflow-hidden">
-          <thead className="bg-coffee-50 text-sm">
-            <tr><th className="p-3 text-left">商品</th><th className="p-3 text-right">単価</th><th className="p-3 text-center">数量</th><th className="p-3 text-right">小計</th><th></th></tr>
-          </thead>
-          <tbody className="text-sm">
-            {cart.items.map((i) => (
-              <tr key={i.id} className="border-t">
-                <td className="p-3">{i.name}</td>
-                <td className="p-3 text-right">{yen(i.unit_price_cents)}</td>
-                <td className="p-3 text-center">
-                  <input type="number" min={1} max={99} value={i.quantity}
-                         onChange={(e) => setQty(i.id, Number(e.target.value))}
-                         className="w-16 rounded border px-2 py-1 text-center" />
-                </td>
-                <td className="p-3 text-right">{yen(i.line_total_cents)}</td>
-                <td className="p-3 text-right"><button onClick={() => remove(i.id)} className="text-xs text-rose-600 underline">削除</button></td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+        <div className="card overflow-hidden">
+          <table className="w-full">
+            <thead className="bg-coffee-50 text-xs uppercase tracking-wide text-coffee-500">
+              <tr><th className="p-3 text-left font-semibold">商品</th><th className="p-3 text-right font-semibold">単価</th><th className="p-3 text-center font-semibold">数量</th><th className="p-3 text-right font-semibold">小計</th><th></th></tr>
+            </thead>
+            <tbody className="text-sm">
+              {cart.items.map((i) => (
+                <tr key={i.id} className="border-t border-coffee-100">
+                  <td className="p-3 font-medium">{i.name}</td>
+                  <td className="p-3 text-right tabular-nums">{yen(i.unit_price_cents)}</td>
+                  <td className="p-3 text-center">
+                    <input type="number" min={1} max={99} value={i.quantity}
+                           onChange={(e) => setQty(i.id, Number(e.target.value))}
+                           className="input !w-16 text-center" />
+                  </td>
+                  <td className="p-3 text-right font-semibold tabular-nums">{yen(i.line_total_cents)}</td>
+                  <td className="p-3 text-right"><button onClick={() => remove(i.id)} className="text-xs text-rose-500 hover:text-rose-600 hover:underline">削除</button></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          <div className="flex items-center justify-between border-t border-coffee-100 px-4 py-3 bg-coffee-50/50">
+            <span className="text-sm text-coffee-500">合計</span>
+            <span className="text-xl font-bold">{yen(cart.subtotal_cents)}</span>
+          </div>
+        </div>
       )}
-      <div className="flex items-center justify-between">
-        <span className="text-sm text-coffee-500">合計</span>
-        <span className="text-lg font-bold">{yen(cart.subtotal_cents)}</span>
-      </div>
-      <div className="text-right">
-        <Link href="/checkout" className="inline-block rounded bg-espresso text-white px-4 py-2">
-          注文へ進む
-        </Link>
-      </div>
+      {cart.items.length > 0 && (
+        <div className="text-right">
+          <Link href="/checkout" className="btn btn-primary">
+            注文へ進む →
+          </Link>
+        </div>
+      )}
     </div>
   );
 }

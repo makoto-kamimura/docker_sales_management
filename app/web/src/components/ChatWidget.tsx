@@ -52,53 +52,65 @@ export function ChatWidget() {
     <>
       <button
         onClick={() => setOpen((v) => !v)}
-        className="fixed bottom-5 right-5 rounded-full bg-caramel hover:bg-coffee-500 text-white w-14 h-14 shadow-lg z-50 text-xl transition-colors"
+        className="fixed bottom-5 right-5 grid place-items-center rounded-full bg-gradient-to-br from-[#d98c4a] to-caramel text-white w-14 h-14 z-50 text-2xl shadow-lift transition-transform hover:scale-105 active:scale-95"
         aria-label="AI接客"
         title="AI接客チャット"
       >
-        ☕
+        {open ? "×" : "☕"}
       </button>
       {open && (
-        <div className="fixed bottom-24 right-5 w-80 h-[28rem] bg-cream border border-coffee-200 rounded-xl shadow-xl flex flex-col z-50">
-          <div className="px-3 py-2 border-b border-coffee-200 font-semibold bg-espresso text-coffee-50 rounded-t-xl">
-            AI接客
+        <div className="fixed bottom-24 right-5 w-[22rem] max-w-[calc(100vw-2.5rem)] h-[30rem] bg-white border border-coffee-200/70 rounded-2xl shadow-lift flex flex-col z-50 overflow-hidden animate-in">
+          <div className="px-4 py-3 bg-gradient-to-r from-coffee-700 to-espresso text-coffee-50 flex items-center gap-2">
+            <span className="grid place-items-center h-8 w-8 rounded-full bg-white/15 text-base">☕</span>
+            <div>
+              <div className="font-semibold text-sm leading-tight">AI接客コンシェルジュ</div>
+              <div className="text-[11px] text-coffee-100/80">商品・注文のご相談はこちら</div>
+            </div>
           </div>
-          <div ref={scrollRef} className="flex-1 overflow-auto p-3 space-y-2 text-sm">
+          <div ref={scrollRef} className="flex-1 overflow-auto p-3 space-y-2.5 text-sm bg-coffee-50/40">
             {messages.length === 0 && (
-              <p className="text-coffee-500">商品の質問や注文状況など、お気軽にどうぞ。</p>
+              <p className="text-coffee-500 text-center mt-8 px-4 leading-relaxed">
+                商品の質問や注文状況など、<br />お気軽にどうぞ。
+              </p>
             )}
             {messages.map((m) => (
-              <div key={m.id} className={m.role === "user" ? "text-right" : ""}>
+              <div key={m.id} className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}>
                 <span
-                  className={`inline-block px-3 py-2 rounded-2xl max-w-[85%] ${
+                  className={`inline-block px-3.5 py-2 max-w-[85%] text-sm leading-relaxed shadow-soft ${
                     m.role === "user"
-                      ? "bg-espresso text-coffee-50"
-                      : "bg-foam text-coffee-800"
+                      ? "bg-espresso text-coffee-50 rounded-2xl rounded-br-md"
+                      : "bg-white text-coffee-800 rounded-2xl rounded-bl-md border border-coffee-100"
                   }`}
                 >
                   {m.content}
-                  {m.cta && (
-                    <div className="text-xs mt-1 opacity-70">→ {m.cta}</div>
-                  )}
+                  {m.cta && <div className="text-xs mt-1 opacity-70">→ {m.cta}</div>}
                 </span>
               </div>
             ))}
-            {busy && <div className="text-coffee-400 text-xs">考え中…</div>}
+            {busy && (
+              <div className="flex justify-start">
+                <span className="inline-flex gap-1 bg-white border border-coffee-100 rounded-2xl rounded-bl-md px-3.5 py-2.5 shadow-soft">
+                  <span className="h-1.5 w-1.5 rounded-full bg-coffee-300 animate-pulse-soft" style={{ animationDelay: "0ms" }} />
+                  <span className="h-1.5 w-1.5 rounded-full bg-coffee-300 animate-pulse-soft" style={{ animationDelay: "200ms" }} />
+                  <span className="h-1.5 w-1.5 rounded-full bg-coffee-300 animate-pulse-soft" style={{ animationDelay: "400ms" }} />
+                </span>
+              </div>
+            )}
           </div>
           <form
             onSubmit={(e) => { e.preventDefault(); send(); }}
-            className="border-t border-coffee-200 p-2 flex gap-2"
+            className="border-t border-coffee-200/70 p-2.5 flex gap-2 bg-white"
           >
             <input
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              placeholder="メッセージ"
-              className="flex-1 rounded border border-coffee-200 px-2 py-1 text-sm"
+              placeholder="メッセージを入力…"
+              className="input !rounded-full !py-2"
             />
             <button
               type="submit"
               disabled={busy}
-              className="rounded bg-caramel hover:bg-coffee-500 text-white px-3 text-sm disabled:opacity-50 transition-colors"
+              className="btn btn-accent !rounded-full !px-4 shrink-0"
             >
               送信
             </button>

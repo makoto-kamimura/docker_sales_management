@@ -13,12 +13,22 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
   return (
     <html lang="ja" suppressHydrationWarning>
       <body
-        className="antialiased min-h-screen bg-cream text-coffee-800"
+        className="antialiased min-h-screen text-coffee-800 flex flex-col"
         suppressHydrationWarning
       >
         <AuthProvider>
           <Header />
-          <main className="max-w-6xl mx-auto px-4 py-6">{children}</main>
+          <main className="flex-1 w-full max-w-6xl mx-auto px-4 py-8 sm:py-10">
+            <div className="animate-in">{children}</div>
+          </main>
+          <footer className="mt-12 border-t border-coffee-200/60">
+            <div className="max-w-6xl mx-auto px-4 py-6 flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-coffee-500">
+              <span className="flex items-center gap-2">
+                <span aria-hidden>☕</span> docker_ruby ストア
+              </span>
+              <span>EC + サブスク + AI接客 · © {new Date().getFullYear()}</span>
+            </div>
+          </footer>
           <ChatWidget />
         </AuthProvider>
       </body>

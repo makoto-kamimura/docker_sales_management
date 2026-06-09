@@ -1,7 +1,7 @@
 @import "tailwindcss";
 
 /*
-  coffee shop palette
+  coffee shop palette — modernized
   --------------------------------------------------------------
   coffee-50  クリーム最薄 (背景)
   coffee-100 ラテフォーム (淡カード)
@@ -34,6 +34,16 @@
   --color-foam:     #f3e6cf;
   --color-espresso: #3f2a17;
   --color-caramel:  #c47b3a;
+
+  --font-sans: ui-sans-serif, system-ui, -apple-system, "Hiragino Kaku Gothic ProN",
+    "Hiragino Sans", "Noto Sans JP", "BIZ UDPGothic", Meiryo, sans-serif;
+
+  /* modern soft shadows */
+  --shadow-soft: 0 1px 2px rgba(38, 24, 16, 0.04), 0 6px 20px -8px rgba(38, 24, 16, 0.12);
+  --shadow-lift: 0 4px 12px rgba(38, 24, 16, 0.08), 0 18px 40px -16px rgba(38, 24, 16, 0.22);
+
+  --radius-xl: 1rem;
+  --ease-out-soft: cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 :root {
@@ -43,10 +53,28 @@
 }
 
 @layer base {
-  html, body {
-    background: var(--background);
-    color: var(--foreground);
+  html {
+    scroll-behavior: smooth;
+    -webkit-text-size-adjust: 100%;
   }
+
+  html, body {
+    color: var(--foreground);
+    font-family: var(--font-sans);
+  }
+
+  /* warm, modern背景: 微妙なグラデーションとアクセントのにじみ */
+  body {
+    min-height: 100vh;
+    background-color: var(--color-cream);
+    background-image:
+      radial-gradient(60rem 40rem at 110% -10%, rgba(196, 123, 58, 0.10), transparent 60%),
+      radial-gradient(50rem 36rem at -10% 0%, rgba(63, 42, 23, 0.06), transparent 55%);
+    background-attachment: fixed;
+    letter-spacing: 0.01em;
+  }
+
+  h1, h2, h3 { letter-spacing: -0.01em; }
 
   /* フォーム要素はuser-agent styleが入りやすいのでcurrentColorを継承 (base layer なのでTailwindで上書き可) */
   input, textarea, select {
@@ -63,9 +91,145 @@
 
   ::placeholder { color: var(--color-coffee-400); }
 
+  /* キーボードフォーカスを上品なリングに統一 */
+  :focus-visible {
+    outline: 2px solid var(--color-caramel);
+    outline-offset: 2px;
+    border-radius: 0.5rem;
+  }
+
   /* スクロールバーもコーヒー色に */
   ::-webkit-scrollbar { width: 10px; height: 10px; }
-  ::-webkit-scrollbar-track { background: var(--color-coffee-50); }
-  ::-webkit-scrollbar-thumb { background: var(--color-coffee-300); border-radius: 5px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--color-coffee-300); border-radius: 999px; }
   ::-webkit-scrollbar-thumb:hover { background: var(--color-coffee-400); }
+}
+
+/* ------------------------------------------------------------------ */
+/* 再利用するモダンなコンポーネントクラス                              */
+/* ------------------------------------------------------------------ */
+@layer components {
+  /* カード: 柔らかい影・薄いボーダー・大きめ角丸 */
+  .card {
+    background-color: #ffffff;
+    border: 1px solid color-mix(in srgb, var(--color-coffee-200) 70%, transparent);
+    border-radius: var(--radius-xl);
+    box-shadow: var(--shadow-soft);
+  }
+  /* ホバーで浮き上がるインタラクティブカード */
+  .card-interactive {
+    transition: transform 0.25s var(--ease-out-soft), box-shadow 0.25s var(--ease-out-soft),
+      border-color 0.25s var(--ease-out-soft);
+  }
+  .card-interactive:hover {
+    transform: translateY(-3px);
+    box-shadow: var(--shadow-lift);
+    border-color: color-mix(in srgb, var(--color-caramel) 45%, transparent);
+  }
+
+  /* ボタン共通 */
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    border-radius: 0.75rem;
+    padding: 0.55rem 1.1rem;
+    font-weight: 600;
+    font-size: 0.875rem;
+    line-height: 1.2;
+    cursor: pointer;
+    transition: transform 0.15s var(--ease-out-soft), box-shadow 0.2s var(--ease-out-soft),
+      background-color 0.2s, color 0.2s, border-color 0.2s, opacity 0.2s;
+    white-space: nowrap;
+  }
+  .btn:active { transform: translateY(1px) scale(0.99); }
+  .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  .btn-primary {
+    color: #fff;
+    background-image: linear-gradient(135deg, var(--color-coffee-700), var(--color-espresso));
+    box-shadow: 0 8px 18px -10px rgba(63, 42, 23, 0.7);
+  }
+  .btn-primary:hover:not(:disabled) {
+    box-shadow: 0 12px 24px -10px rgba(63, 42, 23, 0.85);
+    filter: brightness(1.06);
+  }
+
+  .btn-accent {
+    color: #fff;
+    background-image: linear-gradient(135deg, #d98c4a, var(--color-caramel));
+    box-shadow: 0 8px 18px -10px rgba(196, 123, 58, 0.8);
+  }
+  .btn-accent:hover:not(:disabled) {
+    box-shadow: 0 12px 24px -10px rgba(196, 123, 58, 0.95);
+    filter: brightness(1.05);
+  }
+
+  .btn-outline {
+    color: var(--color-coffee-700);
+    background-color: #fff;
+    border: 1px solid var(--color-coffee-200);
+  }
+  .btn-outline:hover:not(:disabled) {
+    border-color: var(--color-caramel);
+    color: var(--color-coffee-800);
+    background-color: var(--color-coffee-50);
+  }
+
+  /* フォーム入力: 角丸・フォーカスリング */
+  .input {
+    width: 100%;
+    border-radius: 0.625rem;
+    border: 1px solid var(--color-coffee-200);
+    background-color: #fff;
+    padding: 0.5rem 0.75rem;
+    font-size: 0.875rem;
+    transition: border-color 0.18s, box-shadow 0.18s;
+  }
+  .input:focus {
+    outline: none;
+    border-color: var(--color-caramel);
+    box-shadow: 0 0 0 3px rgba(196, 123, 58, 0.18);
+  }
+
+  .field-label {
+    display: block;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--color-coffee-500);
+    margin-bottom: 0.25rem;
+  }
+
+  /* バッジ (pill) */
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    border-radius: 999px;
+    padding: 0.15rem 0.6rem;
+    font-size: 0.7rem;
+    font-weight: 600;
+    line-height: 1.4;
+  }
+  .badge-accent { background-color: var(--color-foam); color: var(--color-coffee-700); }
+  .badge-success { background-color: #e7f6ec; color: #1f7a46; }
+  .badge-muted { background-color: var(--color-coffee-50); color: var(--color-coffee-500); }
+}
+
+@layer utilities {
+  .shadow-soft { box-shadow: var(--shadow-soft); }
+  .shadow-lift { box-shadow: var(--shadow-lift); }
+
+  @keyframes fade-in-up {
+    from { opacity: 0; transform: translateY(8px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  .animate-in { animation: fade-in-up 0.4s var(--ease-out-soft) both; }
+
+  @keyframes pulse-soft {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.45; }
+  }
+  .animate-pulse-soft { animation: pulse-soft 1.4s ease-in-out infinite; }
 }

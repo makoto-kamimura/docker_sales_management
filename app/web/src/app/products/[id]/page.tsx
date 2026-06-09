@@ -30,35 +30,42 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
     }
   }
 
-  if (!p) return <p>読み込み中…</p>;
+  if (!p) return <p className="text-coffee-500 animate-pulse-soft">読み込み中…</p>;
 
   return (
-    <article className="bg-white border rounded-xl p-6 space-y-4 max-w-2xl">
-      <div>
-        <p className="text-xs text-coffee-500">{p.sku}</p>
-        <h1 className="text-xl font-bold">{p.name}</h1>
+    <article className="grid md:grid-cols-2 gap-6 max-w-4xl">
+      <div className="card grid place-items-center aspect-square md:aspect-auto md:min-h-[20rem] bg-gradient-to-br from-coffee-50 to-foam text-7xl">
+        ☕
       </div>
-      <p className="text-sm text-coffee-700 whitespace-pre-line">{p.description}</p>
-      <div className="flex flex-wrap gap-2 text-xs">
-        {p.tags.map((t) => <span key={t} className="bg-foam rounded-full px-2 py-0.5">{t}</span>)}
-      </div>
-      <div className="flex items-center justify-between">
-        <span className="text-2xl font-bold">{yen(p.price_cents)}</span>
-        <span className={`text-sm ${p.in_stock ? "text-emerald-600" : "text-rose-600"}`}>
-          {p.in_stock ? `在庫: ${p.stock ?? "あり"}` : "在庫切れ"}
-        </span>
-      </div>
-      <div className="flex items-center gap-3">
-        <input type="number" min={1} max={99} value={qty} onChange={(e) => setQty(Number(e.target.value))}
-               className="w-20 rounded border px-2 py-1" />
-        <button onClick={addToCart} disabled={busy || !p.in_stock} className="rounded bg-espresso text-white px-4 py-2 disabled:opacity-50">
-          カートに追加
-        </button>
+      <div className="card p-6 space-y-5 self-start">
+        <div>
+          <p className="text-xs font-medium text-coffee-400">{p.sku}</p>
+          <h1 className="text-2xl font-bold mt-0.5">{p.name}</h1>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          {p.tags.map((t) => <span key={t} className="badge badge-accent">{t}</span>)}
+        </div>
+        <p className="text-sm text-coffee-700 whitespace-pre-line leading-relaxed">{p.description}</p>
+        <div className="flex items-center justify-between border-t border-coffee-100 pt-4">
+          <span className="text-3xl font-bold">{yen(p.price_cents)}</span>
+          <span className={`badge ${p.in_stock ? "badge-success" : "badge-muted"}`}>
+            {p.in_stock ? `在庫: ${p.stock ?? "あり"}` : "在庫切れ"}
+          </span>
+        </div>
+        <div className="flex items-center gap-3">
+          <input type="number" min={1} max={99} value={qty} onChange={(e) => setQty(Number(e.target.value))}
+                 className="input !w-20 text-center" />
+          <button onClick={addToCart} disabled={busy || !p.in_stock} className="btn btn-primary flex-1">
+            カートに追加
+          </button>
+        </div>
         {p.is_subscribable && (
-          <a href="/subscriptions" className="text-sm underline">サブスクで購入</a>
+          <a href="/subscriptions" className="block text-sm text-caramel hover:underline">
+            🔁 サブスクで定期購入する →
+          </a>
         )}
+        {msg && <p className="text-sm rounded-lg bg-emerald-50 text-emerald-700 px-3 py-2">{msg}</p>}
       </div>
-      {msg && <p className="text-sm">{msg}</p>}
     </article>
   );
 }

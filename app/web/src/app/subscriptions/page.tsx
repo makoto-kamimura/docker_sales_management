@@ -21,7 +21,7 @@ export default function SubscriptionsPage() {
   const [addressId, setAddressId] = useState("");
   const [err, setErr] = useState<string | null>(null);
 
-  if (!token) return <p>ログインが必要です。</p>;
+  if (!token) return <p className="card p-6 text-sm text-coffee-500">ログインが必要です。</p>;
 
   async function create() {
     setErr(null);
@@ -56,49 +56,55 @@ export default function SubscriptionsPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8 max-w-3xl">
       <section>
-        <h1 className="text-xl font-bold mb-3">サブスクリプション</h1>
-        {!subs?.length && <p className="text-sm text-coffee-500">購読中のサブスクはありません</p>}
-        <ul className="space-y-2">
+        <h1 className="text-2xl font-bold mb-4">サブスクリプション</h1>
+        {!subs?.length && (
+          <div className="card p-10 text-center text-sm text-coffee-500">購読中のサブスクはありません</div>
+        )}
+        <ul className="space-y-3">
           {subs?.map((s) => (
-            <li key={s.id} className="bg-white border rounded p-4">
-              <div className="flex justify-between items-center">
+            <li key={s.id} className="card p-5">
+              <div className="flex justify-between items-start gap-3">
                 <div>
-                  <div className="font-medium">{s.product.name}</div>
-                  <div className="text-xs text-coffee-500">{s.plan.name} · 次回 {s.next_delivery_on} · ステータス {s.status}</div>
+                  <div className="font-semibold">{s.product.name}</div>
+                  <div className="text-xs text-coffee-500 mt-1 flex flex-wrap items-center gap-x-2 gap-y-1">
+                    <span className="badge badge-accent">{s.plan.name}</span>
+                    <span>次回 {s.next_delivery_on}</span>
+                    <span className={`badge ${s.status === "active" ? "badge-success" : "badge-muted"}`}>{s.status}</span>
+                  </div>
                 </div>
-                <div className="font-semibold">{yen(s.product.price_cents)}</div>
+                <div className="font-bold text-lg tabular-nums">{yen(s.product.price_cents)}</div>
               </div>
-              <div className="mt-2 flex gap-2 text-xs">
-                {s.status === "active" && <button onClick={() => update(s.id, "pause")} className="rounded border px-2 py-1">一時停止</button>}
-                {s.status === "paused" && <button onClick={() => update(s.id, "resume")} className="rounded border px-2 py-1">再開</button>}
-                {s.status !== "cancelled" && <button onClick={() => skip(s.id)} className="rounded border px-2 py-1">次回スキップ</button>}
-                {s.status !== "cancelled" && <button onClick={() => cancel(s.id)} className="rounded border px-2 py-1 text-rose-600">解約</button>}
+              <div className="mt-3 flex flex-wrap gap-2">
+                {s.status === "active" && <button onClick={() => update(s.id, "pause")} className="btn btn-outline !py-1.5 !px-3 !text-xs">一時停止</button>}
+                {s.status === "paused" && <button onClick={() => update(s.id, "resume")} className="btn btn-outline !py-1.5 !px-3 !text-xs">再開</button>}
+                {s.status !== "cancelled" && <button onClick={() => skip(s.id)} className="btn btn-outline !py-1.5 !px-3 !text-xs">次回スキップ</button>}
+                {s.status !== "cancelled" && <button onClick={() => cancel(s.id)} className="btn btn-outline !py-1.5 !px-3 !text-xs !text-rose-600 hover:!border-rose-300">解約</button>}
               </div>
             </li>
           ))}
         </ul>
       </section>
 
-      <section className="bg-white border rounded-xl p-4 space-y-3">
+      <section className="card p-5 space-y-4">
         <h2 className="font-semibold">新規購読</h2>
-        <div className="grid grid-cols-3 gap-2 text-sm">
-          <select className="rounded border px-2 py-1" value={planId} onChange={(e) => setPlanId(e.target.value)}>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <select className="input" value={planId} onChange={(e) => setPlanId(e.target.value)}>
             <option value="">プラン</option>
             {plans?.map((p) => <option key={p.id} value={p.id}>{p.name} ({p.interval_days}日 / -{p.discount_percent}%)</option>)}
           </select>
-          <select className="rounded border px-2 py-1" value={productId} onChange={(e) => setProductId(e.target.value)}>
+          <select className="input" value={productId} onChange={(e) => setProductId(e.target.value)}>
             <option value="">商品</option>
             {products?.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
           </select>
-          <select className="rounded border px-2 py-1" value={addressId} onChange={(e) => setAddressId(e.target.value)}>
+          <select className="input" value={addressId} onChange={(e) => setAddressId(e.target.value)}>
             <option value="">お届け先</option>
             {addresses?.map((a) => <option key={a.id} value={a.id}>{a.recipient} / {a.prefecture}{a.city}</option>)}
           </select>
         </div>
         {err && <p className="text-sm text-rose-600">{err}</p>}
-        <button onClick={create} className="rounded bg-espresso text-white px-4 py-2">購読開始</button>
+        <button onClick={create} className="btn btn-primary">購読開始</button>
       </section>
     </div>
   );

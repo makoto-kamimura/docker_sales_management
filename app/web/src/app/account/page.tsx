@@ -17,7 +17,7 @@ export default function AccountPage() {
 
   useEffect(() => { setErr(null); }, [form]);
 
-  if (!user) return <p>ログインが必要です。</p>;
+  if (!user) return <p className="card p-6 text-sm text-coffee-500">ログインが必要です。</p>;
 
   async function addAddress(e: React.FormEvent) {
     e.preventDefault();
@@ -31,40 +31,46 @@ export default function AccountPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <section className="bg-white border rounded-xl p-6">
-        <h1 className="text-xl font-bold mb-2">アカウント</h1>
-        <dl className="text-sm grid grid-cols-[6rem_1fr] gap-y-1">
-          <dt className="text-coffee-500">氏名</dt><dd>{user.name}</dd>
-          <dt className="text-coffee-500">メール</dt><dd>{user.email}</dd>
-          <dt className="text-coffee-500">権限</dt><dd>{user.role}</dd>
-        </dl>
+    <div className="space-y-6 max-w-2xl">
+      <section className="card p-6">
+        <div className="flex items-center gap-4 mb-4">
+          <span className="grid h-14 w-14 place-items-center rounded-2xl bg-gradient-to-br from-coffee-700 to-espresso text-xl font-bold text-coffee-50 shadow-soft">
+            {user.name?.slice(0, 1) || "?"}
+          </span>
+          <div>
+            <h1 className="text-xl font-bold">{user.name}</h1>
+            <p className="text-sm text-coffee-500">{user.email}</p>
+          </div>
+          <span className="badge badge-accent ml-auto">{user.role}</span>
+        </div>
       </section>
 
-      <section className="bg-white border rounded-xl p-6 space-y-4">
+      <section className="card p-6 space-y-4">
         <h2 className="font-semibold">住所</h2>
         <ul className="space-y-2">
           {addresses?.map((a) => (
-            <li key={a.id} className="border rounded p-3 text-sm">
-              <div className="font-medium">{a.recipient} {a.is_default && <span className="text-xs text-emerald-700">[既定]</span>}</div>
-              <div className="text-coffee-600">〒{a.postal_code} {a.prefecture}{a.city}{a.line1}{a.line2 ?? ""}</div>
+            <li key={a.id} className="rounded-xl border border-coffee-100 bg-coffee-50/40 p-3.5 text-sm">
+              <div className="font-medium flex items-center gap-2">{a.recipient} {a.is_default && <span className="badge badge-success">既定</span>}</div>
+              <div className="text-coffee-600 mt-0.5">〒{a.postal_code} {a.prefecture}{a.city}{a.line1}{a.line2 ?? ""}</div>
             </li>
           ))}
           {addresses && addresses.length === 0 && <li className="text-sm text-coffee-500">登録された住所はありません</li>}
         </ul>
 
-        <details>
-          <summary className="cursor-pointer text-sm">新しい住所を追加</summary>
-          <form onSubmit={addAddress} className="grid grid-cols-2 gap-2 mt-3 text-sm">
-            <input placeholder="宛名" required value={form.recipient ?? ""} onChange={(e) => setForm({ ...form, recipient: e.target.value })} className="border rounded px-2 py-1 col-span-2" />
-            <input placeholder="郵便番号 (100-0001)" required value={form.postal_code ?? ""} onChange={(e) => setForm({ ...form, postal_code: e.target.value })} className="border rounded px-2 py-1" />
-            <input placeholder="都道府県" required value={form.prefecture ?? ""} onChange={(e) => setForm({ ...form, prefecture: e.target.value })} className="border rounded px-2 py-1" />
-            <input placeholder="市区町村" required value={form.city ?? ""} onChange={(e) => setForm({ ...form, city: e.target.value })} className="border rounded px-2 py-1 col-span-2" />
-            <input placeholder="住所1" required value={form.line1 ?? ""} onChange={(e) => setForm({ ...form, line1: e.target.value })} className="border rounded px-2 py-1 col-span-2" />
-            <input placeholder="住所2" value={form.line2 ?? ""} onChange={(e) => setForm({ ...form, line2: e.target.value })} className="border rounded px-2 py-1 col-span-2" />
-            <input placeholder="電話" value={form.phone ?? ""} onChange={(e) => setForm({ ...form, phone: e.target.value })} className="border rounded px-2 py-1 col-span-2" />
+        <details className="group">
+          <summary className="cursor-pointer text-sm font-medium text-caramel hover:underline list-none select-none">
+            + 新しい住所を追加
+          </summary>
+          <form onSubmit={addAddress} className="grid grid-cols-2 gap-3 mt-4 text-sm">
+            <input placeholder="宛名" required value={form.recipient ?? ""} onChange={(e) => setForm({ ...form, recipient: e.target.value })} className="input col-span-2" />
+            <input placeholder="郵便番号 (100-0001)" required value={form.postal_code ?? ""} onChange={(e) => setForm({ ...form, postal_code: e.target.value })} className="input" />
+            <input placeholder="都道府県" required value={form.prefecture ?? ""} onChange={(e) => setForm({ ...form, prefecture: e.target.value })} className="input" />
+            <input placeholder="市区町村" required value={form.city ?? ""} onChange={(e) => setForm({ ...form, city: e.target.value })} className="input col-span-2" />
+            <input placeholder="住所1" required value={form.line1 ?? ""} onChange={(e) => setForm({ ...form, line1: e.target.value })} className="input col-span-2" />
+            <input placeholder="住所2" value={form.line2 ?? ""} onChange={(e) => setForm({ ...form, line2: e.target.value })} className="input col-span-2" />
+            <input placeholder="電話" value={form.phone ?? ""} onChange={(e) => setForm({ ...form, phone: e.target.value })} className="input col-span-2" />
             {err && <p className="text-rose-600 col-span-2">{err}</p>}
-            <button className="col-span-2 rounded bg-espresso text-white py-2">追加</button>
+            <button className="btn btn-primary col-span-2">追加</button>
           </form>
         </details>
       </section>

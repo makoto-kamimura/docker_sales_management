@@ -20,8 +20,8 @@ export default function AdminOrdersPage() {
     () => api<AdminOrder[]>(`/admin/orders${status ? `?status=${status}` : ""}`, { auth: token })
   );
 
-  if (!user) return <p>ログインが必要です。</p>;
-  if (user.role !== "admin") return <p>権限がありません。</p>;
+  if (!user) return <p className="card p-6 text-sm text-coffee-500">ログインが必要です。</p>;
+  if (user.role !== "admin") return <p className="card p-6 text-sm text-coffee-500">権限がありません。</p>;
 
   async function setStatusOf(id: number, newStatus: string) {
     await api(`/admin/orders/${id}`, { method: "PATCH", body: jsonBody({ status: newStatus }), auth: token });
@@ -29,44 +29,46 @@ export default function AdminOrdersPage() {
   }
 
   return (
-    <div className="space-y-4">
-      <h1 className="text-xl font-bold">販売管理 / 注文一覧</h1>
+    <div className="space-y-5">
+      <h1 className="text-2xl font-bold">販売管理 <span className="text-coffee-400 font-normal">/ 注文一覧</span></h1>
       <div className="flex gap-2 items-center text-sm">
-        <span>ステータス:</span>
-        <select value={status} onChange={(e) => setStatus(e.target.value)} className="rounded border px-2 py-1">
+        <span className="field-label !mb-0">ステータス</span>
+        <select value={status} onChange={(e) => setStatus(e.target.value)} className="input !w-auto">
           <option value="">すべて</option>
           {["pending", "paid", "shipped", "delivered", "cancelled"].map((s) => <option key={s} value={s}>{s}</option>)}
         </select>
       </div>
-      <table className="w-full bg-white border rounded-xl overflow-hidden text-sm">
-        <thead className="bg-coffee-50">
-          <tr>
-            <th className="p-2 text-left">#</th>
-            <th className="p-2 text-left">顧客</th>
-            <th className="p-2 text-left">日時</th>
-            <th className="p-2 text-right">金額</th>
-            <th className="p-2">ステータス</th>
-            <th className="p-2">操作</th>
-          </tr>
-        </thead>
-        <tbody>
-          {orders?.map((o) => (
-            <tr key={o.id} className="border-t">
-              <td className="p-2"><Link className="underline" href={`/orders/${o.id}`}>#{o.id}</Link></td>
-              <td className="p-2">{o.user.name}<div className="text-xs text-coffee-500">{o.user.email}</div></td>
-              <td className="p-2">{fmtDate(o.placed_at)}</td>
-              <td className="p-2 text-right">{yen(o.total_cents)}</td>
-              <td className="p-2 text-center">{o.status}</td>
-              <td className="p-2">
-                <select defaultValue={o.status} onChange={(e) => setStatusOf(o.id, e.target.value)}
-                        className="rounded border px-2 py-1 text-xs">
-                  {["pending", "paid", "shipped", "delivered", "cancelled"].map((s) => <option key={s} value={s}>{s}</option>)}
-                </select>
-              </td>
+      <div className="card overflow-x-auto">
+        <table className="w-full text-sm min-w-[40rem]">
+          <thead className="bg-coffee-50 text-xs uppercase tracking-wide text-coffee-500">
+            <tr>
+              <th className="p-3 text-left font-semibold">#</th>
+              <th className="p-3 text-left font-semibold">顧客</th>
+              <th className="p-3 text-left font-semibold">日時</th>
+              <th className="p-3 text-right font-semibold">金額</th>
+              <th className="p-3 font-semibold">ステータス</th>
+              <th className="p-3 font-semibold">操作</th>
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {orders?.map((o) => (
+              <tr key={o.id} className="border-t border-coffee-100 hover:bg-coffee-50/40 transition-colors">
+                <td className="p-3"><Link className="font-medium text-caramel hover:underline" href={`/orders/${o.id}`}>#{o.id}</Link></td>
+                <td className="p-3">{o.user.name}<div className="text-xs text-coffee-400">{o.user.email}</div></td>
+                <td className="p-3 text-coffee-600">{fmtDate(o.placed_at)}</td>
+                <td className="p-3 text-right font-semibold tabular-nums">{yen(o.total_cents)}</td>
+                <td className="p-3 text-center"><span className="badge badge-accent">{o.status}</span></td>
+                <td className="p-3">
+                  <select defaultValue={o.status} onChange={(e) => setStatusOf(o.id, e.target.value)}
+                          className="input !w-auto !py-1 !text-xs">
+                    {["pending", "paid", "shipped", "delivered", "cancelled"].map((s) => <option key={s} value={s}>{s}</option>)}
+                  </select>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }

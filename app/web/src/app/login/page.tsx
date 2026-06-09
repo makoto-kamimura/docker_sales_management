@@ -26,26 +26,30 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="max-w-md mx-auto bg-white border rounded-xl p-6">
-      <h1 className="text-xl font-bold mb-4">ログイン</h1>
-      <form onSubmit={onSubmit} className="space-y-3">
+    <div className="max-w-md mx-auto card p-7 sm:p-8">
+      <div className="text-center mb-6">
+        <div className="mx-auto grid h-12 w-12 place-items-center rounded-2xl bg-gradient-to-br from-coffee-700 to-espresso text-2xl text-coffee-50 shadow-soft">☕</div>
+        <h1 className="text-xl font-bold mt-3">おかえりなさい</h1>
+        <p className="text-sm text-coffee-500 mt-1">アカウントにログイン</p>
+      </div>
+      <form onSubmit={onSubmit} className="space-y-4">
         <label className="block">
-          <span className="text-sm">メールアドレス</span>
+          <span className="field-label">メールアドレス</span>
           <input type="email" required value={email} onChange={(e) => setEmail(e.target.value)}
-                 className="mt-1 w-full rounded border px-3 py-2" />
+                 className="input" />
         </label>
         <label className="block">
-          <span className="text-sm">パスワード</span>
+          <span className="field-label">パスワード</span>
           <input type="password" required value={password} onChange={(e) => setPassword(e.target.value)}
-                 className="mt-1 w-full rounded border px-3 py-2" />
+                 className="input" />
         </label>
         {err && <p className="text-sm text-rose-600">{err}</p>}
-        <button disabled={busy} className="w-full rounded bg-espresso text-white py-2 disabled:opacity-50">
+        <button disabled={busy} className="btn btn-primary w-full">
           ログイン
         </button>
       </form>
-      <p className="text-xs text-coffee-500 mt-4">
-        テスト: member@example.com / password　管理者: admin@example.com / password
+      <p className="text-xs text-coffee-500 mt-5 rounded-lg bg-coffee-50 p-3 leading-relaxed">
+        テスト: member@example.com / password<br />管理者: admin@example.com / password
       </p>
     </div>
   );
