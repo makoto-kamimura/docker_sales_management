@@ -1,13 +1,24 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import useSWR from "swr";
 import { api } from "@/lib/api";
 import { yen } from "@/lib/format";
 import type { Product, Category } from "@/lib/types";
 
 export default function SearchPage() {
+  return (
+    <Suspense fallback={<p className="text-coffee-500 animate-pulse-soft">読み込み中…</p>}>
+      <SearchInner />
+    </Suspense>
+  );
+}
+
+function SearchInner() {
+  const searchParams = useSearchParams();
+  const slugParam = searchParams.get("category");
   const [q, setQ] = useState("");
   const [submitted, setSubmitted] = useState("");
   const [mode, setMode] = useState<"keyword" | "semantic">("keyword");
@@ -33,11 +44,18 @@ export default function SearchPage() {
 
   useEffect(() => { setSubmitted(""); }, [mode]);
 
+  // ?category=<slug> で来たらカテゴリを事前選択する
+  useEffect(() => {
+    if (!slugParam || !cats) return;
+    const c = cats.find((x) => x.slug === slugParam);
+    if (c) setCategoryId(String(c.id));
+  }, [slugParam, cats]);
+
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold">商品検索</h1>
-        <p className="text-sm text-coffee-500 mt-1">キーワードやAIセマンティック検索でお気に入りの一品を。</p>
+        <h1 className="text-2xl font-bold">商品を探す</h1>
+        <p className="text-sm text-coffee-500 mt-1">コーヒー豆・パーツ・整備・ナビを、キーワードやAIセマンティック検索で。</p>
       </div>
       <section className="card p-5">
         <form
@@ -46,7 +64,7 @@ export default function SearchPage() {
         >
           <div className="flex-1 min-w-[16rem]">
             <label className="field-label">キーワード / 質問</label>
-            <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="例: 浅煎り、香りが華やか"
+            <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="例: 浅煎り / チェーンオイル / ツーリング向けナビ"
                    className="input" />
           </div>
           <div>

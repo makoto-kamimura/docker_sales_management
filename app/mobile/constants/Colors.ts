@@ -1,19 +1,19 @@
-const tintColorLight = '#2f95dc';
-const tintColorDark = '#fff';
+// ROUTE & ROAST — モダン・ミニマル (モノトーン + ライダーズオレンジ)
+const accent = '#ff5722';
 
 export default {
   light: {
-    text: '#000',
-    background: '#fff',
-    tint: tintColorLight,
-    tabIconDefault: '#ccc',
-    tabIconSelected: tintColorLight,
+    text: '#1b1b19',
+    background: '#f7f7f5',
+    tint: accent,
+    tabIconDefault: '#bcbcb6',
+    tabIconSelected: accent,
   },
   dark: {
-    text: '#fff',
-    background: '#000',
-    tint: tintColorDark,
-    tabIconDefault: '#ccc',
-    tabIconSelected: tintColorDark,
+    text: '#f7f7f5',
+    background: '#141413',
+    tint: accent,
+    tabIconDefault: '#686863',
+    tabIconSelected: accent,
   },
 };

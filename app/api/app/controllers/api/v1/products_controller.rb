@@ -6,13 +6,15 @@ module Api
         page, per = pagination_params
         scope = Product.published
                        .by_category(params[:category_id])
+                       .by_category_slug(params[:category_slug])
                        .price_between(params[:min_price], params[:max_price])
                        .with_tags(params[:tags])
         scope = scope.keyword_search(params[:q]) if params[:q].present?
         scope = apply_sort(scope, params[:sort])
 
         set_pagination_headers(scope, page: page, per: per)
-        render json: scope.offset((page - 1) * per).limit(per).map { |p| serialize(p) }
+        rows = scope.includes(:category, :inventory).offset((page - 1) * per).limit(per)
+        render json: rows.map { |p| serialize(p) }
       end
 
       def show
@@ -28,7 +30,7 @@ module Api
                 .nearest_neighbors(:embedding, embedding, distance: "cosine")
                 .limit(20)
                 .pluck(:product_id)
-        products = Product.where(id: ids).index_by(&:id)
+        products = Product.where(id: ids).includes(:category, :inventory).index_by(&:id)
         render json: ids.filter_map { |id| products[id] }.map { |p| serialize(p) }
       end
 
@@ -47,6 +49,7 @@ module Api
         base = {
           id: p.id, sku: p.sku, name: p.name, price_cents: p.price_cents,
           currency: p.currency, tags: p.tags, category_id: p.category_id,
+          category_slug: p.category.slug, image_url: p.image_url,
           is_subscribable: p.is_subscribable,
           in_stock: p.in_stock?(1)
         }

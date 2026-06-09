@@ -2,6 +2,7 @@ class Product < ApplicationRecord
   include PgSearch::Model
 
   belongs_to :category
+  has_one_attached :image
   has_one  :inventory, dependent: :destroy
   has_one  :embedding, class_name: "ProductEmbedding", dependent: :destroy
   has_many :cart_items, dependent: :restrict_with_error
@@ -21,6 +22,9 @@ class Product < ApplicationRecord
 
   scope :published, -> { where("published_at IS NOT NULL AND published_at <= ?", Time.current) }
   scope :by_category, ->(id) { where(category_id: id) if id.present? }
+  scope :by_category_slug, ->(slug) {
+    slug.present? ? joins(:category).where(categories: { slug: slug }) : all
+  }
   scope :price_between, ->(min, max) {
     s = self
     s = s.where("price_cents >= ?", min.to_i) if min.present?

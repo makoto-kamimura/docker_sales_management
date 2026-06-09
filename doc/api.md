@@ -20,10 +20,12 @@
 
 | Method | Path | 説明 |
 |--------|------|------|
-| GET | `/products` | 一覧 (params: `q`, `category_id`, `min_price`, `max_price`, `tags[]`, `sort`, `page`) |
+| GET | `/products` | 一覧 (params: `q`, `category_id`, `category_slug`, `min_price`, `max_price`, `tags[]`, `sort`, `page`) |
 | GET | `/products/:id` | 詳細 |
 | GET | `/products/search` | ベクトル検索 (`q` 必須) |
 | GET | `/categories` | カテゴリ一覧 |
+
+商品レスポンスには `category_slug` / `image_url` を含む。`maintenance` / `system` カテゴリの商品はカート購入ではなく整備予約・開発依頼(要件7)へ誘導する。
 
 ## カート / 注文 (要件1)
 
@@ -45,6 +47,7 @@
 | PATCH | `/admin/orders/:id` | ステータス更新 |
 | GET | `/admin/products` | 商品管理 |
 | POST/PATCH/DELETE | `/admin/products[/:id]` | 商品CRUD |
+| POST | `/admin/products/:id/image` | 商品画像アップロード (multipart: `image`)。ActiveStorage に保存し `image_url` を更新 |
 | PATCH | `/admin/inventories/:product_id` | 在庫更新 |
 | GET | `/admin/dashboard/sales` | 売上サマリ |
 
@@ -59,7 +62,23 @@
 | DELETE | `/subscriptions/:id` | 解約 |
 | POST | `/subscriptions/:id/skip` | 次回スキップ |
 
-## AI接客 (要件4)
+## 整備予約 / システム開発依頼 (要件7)
+
+| Method | Path | 説明 |
+|--------|------|------|
+| GET | `/service_requests` | 自分の依頼一覧 (filter: `kind` = `maintenance` \| `system`) |
+| GET | `/service_requests/:id` | 依頼詳細 |
+| POST | `/service_requests` | 依頼作成 (body: `kind`, `product_id?`, `vehicle`, `preferred_at?`(整備は必須), `budget_cents?`, `body`, `contact_phone?`) |
+
+管理者:
+
+| Method | Path | 説明 |
+|--------|------|------|
+| GET | `/admin/service_requests` | 全依頼 (filter: `kind`, `status`) |
+| GET | `/admin/service_requests/:id` | 詳細 |
+| PATCH | `/admin/service_requests/:id` | ステータス更新 (body: `status`) |
+
+## AIコンシェルジュ (要件4)
 
 | Method | Path | 説明 |
 |--------|------|------|

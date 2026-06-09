@@ -34,7 +34,10 @@ Rails.application.routes.draw do
         member { post :skip }
       end
 
-      # AI接客 (要件4)
+      # 整備の予約 / システムの開発依頼
+      resources :service_requests, only: %i[index show create]
+
+      # AIコンシェルジュ (要件4)
       namespace :ai_concierge do
         resources :conversations, only: %i[create show] do
           resources :messages, only: %i[create]
@@ -44,7 +47,10 @@ Rails.application.routes.draw do
       # 販売管理 (要件2, admin)
       namespace :admin do
         resources :orders, only: %i[index show update]
-        resources :products, except: %i[new edit]
+        resources :products, except: %i[new edit] do
+          member { post :image, action: :upload_image }
+        end
+        resources :service_requests, only: %i[index show update]
         resources :inventories, only: %i[update], param: :product_id
         namespace :dashboard do
           get :sales

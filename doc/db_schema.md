@@ -19,7 +19,9 @@ PostgreSQL 16, Rails 7.2 migrations 前提。
 | `subscription_plans` | サブスクプランマスタ | 6 |
 | `subscriptions` | 会員別サブスク契約 | 6 |
 | `subscription_deliveries` | 各回配送スケジュール | 6 |
-| `ai_conversations` / `ai_messages` | AI接客の対話履歴 | 4 |
+| `service_requests` | 整備予約 / システム開発依頼 | 7 |
+| `active_storage_*` | 商品画像 (ActiveStorage: blobs / attachments / variant_records) | 1, 5 |
+| `ai_conversations` / `ai_messages` | AIコンシェルジュの対話履歴 | 4 |
 
 ## ER 概要
 
@@ -31,6 +33,7 @@ users 1─┬─* addresses
         │            └─1 shipments
         ├─* subscriptions ─* subscription_deliveries
         │     └─1 subscription_plans
+        ├─* service_requests ─0..1 products
         └─* ai_conversations ─* ai_messages
 
 products *─1 categories
@@ -59,6 +62,22 @@ products 1─1 product_embeddings (vector(1536))
 - `currency` string default 'JPY'
 - `is_subscribable` boolean default false
 - `published_at` datetime nullable
+- `image_url` string default '' (商品画像URL / 空なら SKU プレースホルダ表示)
+- timestamps
+
+### service_requests
+- `id` bigint pk
+- `user_id` bigint fk
+- `product_id` bigint fk nullable (参照する整備メニュー / 機器)
+- `kind` string ('maintenance' | 'system')
+- `status` string
+  - maintenance: 'pending' → 'confirmed' → 'completed' / 'cancelled'
+  - system: 'pending' → 'quoted' → 'in_progress' → 'completed' / 'cancelled'
+- `vehicle` string (車種・型式)
+- `preferred_at` datetime nullable (整備の希望日時 / maintenance では必須)
+- `budget_cents` integer nullable (システムの想定予算)
+- `body` text (要件 / 相談内容)
+- `contact_phone` string
 - timestamps
 
 ### product_embeddings

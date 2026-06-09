@@ -1,10 +1,24 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import { api, jsonBody } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 
 type Msg = { id: number | string; role: "user" | "assistant"; content: string; cta?: string | null };
+
+// AIが返す [CTA: <action>] を画面内リンクに対応づける
+function ctaLink(cta: string): { href: string; label: string } | null {
+  const [action, arg] = cta.split(":");
+  switch (action) {
+    case "open_maintenance_booking": return { href: "/maintenance", label: "整備を予約する" };
+    case "open_system_request":      return { href: "/system", label: "開発を依頼する" };
+    case "open_subscription_settings": return { href: "/subscriptions", label: "サブスク設定へ" };
+    case "view_order":               return arg ? { href: `/orders/${arg}`, label: `注文 #${arg} を見る` } : null;
+    case "view_requests":            return { href: "/requests", label: "依頼状況を見る" };
+    default: return null;
+  }
+}
 
 export function ChatWidget() {
   const { token } = useAuth();
@@ -52,19 +66,19 @@ export function ChatWidget() {
     <>
       <button
         onClick={() => setOpen((v) => !v)}
-        className="fixed bottom-5 right-5 grid place-items-center rounded-full bg-gradient-to-br from-[#d98c4a] to-caramel text-white w-14 h-14 z-50 text-2xl shadow-lift transition-transform hover:scale-105 active:scale-95"
-        aria-label="AI接客"
-        title="AI接客チャット"
+        className="fixed bottom-5 right-5 grid place-items-center rounded-full bg-caramel text-white w-14 h-14 z-50 text-xl font-bold shadow-lift transition-transform hover:scale-105 active:scale-95"
+        aria-label="AIコンシェルジュ"
+        title="AIコンシェルジュ"
       >
-        {open ? "×" : "☕"}
+        {open ? "×" : "R&R"}
       </button>
       {open && (
-        <div className="fixed bottom-24 right-5 w-[22rem] max-w-[calc(100vw-2.5rem)] h-[30rem] bg-white border border-coffee-200/70 rounded-2xl shadow-lift flex flex-col z-50 overflow-hidden animate-in">
-          <div className="px-4 py-3 bg-gradient-to-r from-coffee-700 to-espresso text-coffee-50 flex items-center gap-2">
-            <span className="grid place-items-center h-8 w-8 rounded-full bg-white/15 text-base">☕</span>
+        <div className="fixed bottom-24 right-5 w-[22rem] max-w-[calc(100vw-2.5rem)] h-[30rem] bg-white border border-coffee-200 rounded-2xl shadow-lift flex flex-col z-50 overflow-hidden animate-in">
+          <div className="px-4 py-3 bg-espresso text-coffee-50 flex items-center gap-2.5">
+            <span className="h-2.5 w-2.5 rounded-full bg-caramel" />
             <div>
-              <div className="font-semibold text-sm leading-tight">AI接客コンシェルジュ</div>
-              <div className="text-[11px] text-coffee-100/80">商品・注文のご相談はこちら</div>
+              <div className="font-semibold text-sm leading-tight tracking-wide">AIコンシェルジュ</div>
+              <div className="text-[11px] text-coffee-400">豆・パーツ・整備・ナビのご相談</div>
             </div>
           </div>
           <div ref={scrollRef} className="flex-1 overflow-auto p-3 space-y-2.5 text-sm bg-coffee-50/40">
@@ -83,7 +97,20 @@ export function ChatWidget() {
                   }`}
                 >
                   {m.content}
-                  {m.cta && <div className="text-xs mt-1 opacity-70">→ {m.cta}</div>}
+                  {m.cta && (() => {
+                    const link = ctaLink(m.cta);
+                    return link ? (
+                      <Link
+                        href={link.href}
+                        onClick={() => setOpen(false)}
+                        className="mt-1.5 inline-flex text-xs font-semibold text-caramel hover:underline"
+                      >
+                        {link.label} →
+                      </Link>
+                    ) : (
+                      <div className="text-xs mt-1 opacity-70">→ {m.cta}</div>
+                    );
+                  })()}
                 </span>
               </div>
             ))}

@@ -21,9 +21,10 @@ member.addresses.find_or_create_by!(label: "self") do |a|
 end
 
 cats = {
-  "coffee" => Category.find_or_create_by!(slug: "coffee") { |c| c.name = "コーヒー豆" },
-  "tea"    => Category.find_or_create_by!(slug: "tea")    { |c| c.name = "紅茶" },
-  "snack"  => Category.find_or_create_by!(slug: "snack")  { |c| c.name = "お菓子" }
+  "coffee"      => Category.find_or_create_by!(slug: "coffee")      { |c| c.name = "コーヒー豆" },
+  "parts"       => Category.find_or_create_by!(slug: "parts")       { |c| c.name = "パーツ" },
+  "maintenance" => Category.find_or_create_by!(slug: "maintenance") { |c| c.name = "整備" },
+  "system"      => Category.find_or_create_by!(slug: "system")      { |c| c.name = "システム" }
 }
 
 [
@@ -33,14 +34,31 @@ cats = {
 ].each { |attrs| SubscriptionPlan.find_or_create_by!(code: attrs[:code]) { |p| p.assign_attributes(attrs.merge(active: true)) } }
 
 products = [
+  # COFFEE — 走る前の一杯
   { sku: "COF-001", cat: "coffee", name: "エチオピア イルガチェフェ 200g", price_cents: 1_800,
-    description: "華やかな柑橘と花の香り、明るい酸味のシングルオリジン。", tags: %w[シングル 浅煎り], subscribable: true },
-  { sku: "COF-002", cat: "coffee", name: "ブラジル サントス No.2 200g", price_cents: 1_400,
-    description: "ナッツとチョコレートの優しい甘み。バランス型。", tags: %w[ブレンドベース 中煎り], subscribable: true },
-  { sku: "TEA-001", cat: "tea",    name: "ダージリン ファーストフラッシュ 50g", price_cents: 2_200,
-    description: "春摘み。マスカテルフレーバーと爽やかな渋み。", tags: %w[ストレート], subscribable: true },
-  { sku: "SNK-001", cat: "snack",  name: "クッキー詰め合わせ 12個入り", price_cents: 1_600,
-    description: "コーヒー・紅茶のお供に。アソート。", tags: %w[ギフト], subscribable: false }
+    description: "華やかな柑橘と花の香り、明るい酸味のシングルオリジン。ツーリング前の目覚めの一杯に。", tags: %w[シングル 浅煎り], subscribable: true },
+  { sku: "COF-002", cat: "coffee", name: "ライダーズブレンド 深煎り 200g", price_cents: 1_500,
+    description: "ビターチョコのコクと香ばしさ。早朝出発でもしっかり目が覚める深煎り。", tags: %w[ブレンド 深煎り], subscribable: true },
+
+  # PARTS — タイヤ・オイル・カスタムパーツ
+  { sku: "PRT-001", cat: "parts", name: "ツーリングタイヤ 前後セット (17インチ)", price_cents: 38_000,
+    description: "ウェットグリップとライフを両立するスポーツツーリング向け。長距離派におすすめ。", tags: %w[タイヤ ツーリング], subscribable: false },
+  { sku: "PRT-002", cat: "parts", name: "全合成エンジンオイル 10W-40 1L", price_cents: 2_400,
+    description: "高温でも安定する100%化学合成油。定期交換でエンジンを長持ちさせる。", tags: %w[オイル 消耗品], subscribable: true },
+  { sku: "PRT-003", cat: "parts", name: "ブレーキパッド (フロント)", price_cents: 4_800,
+    description: "コントロール性に優れたシンタード。鳴きを抑え制動を安定させる。", tags: %w[ブレーキ カスタム], subscribable: false },
+
+  # MAINTENANCE — 整備メニュー / 工賃
+  { sku: "MNT-001", cat: "maintenance", name: "定期点検パック (12ヶ月)", price_cents: 12_000,
+    description: "各部点検・調整・油脂類チェックの基本パック。ご予約はAIコンシェルジュからどうぞ。", tags: %w[点検 予約], subscribable: false },
+  { sku: "MNT-002", cat: "maintenance", name: "タイヤ交換工賃 (前後)", price_cents: 6_600,
+    description: "脱着・組み換え・バランス調整込み。パーツと同時購入で当日施工可。", tags: %w[工賃 タイヤ], subscribable: false },
+
+  # SYSTEM — ナビ・電装機器
+  { sku: "SYS-001", cat: "system", name: "バイク用ツーリングナビ 5インチ防水", price_cents: 42_000,
+    description: "グローブ操作対応・防水・高輝度ディスプレイ。林道もカバーする地図を搭載。", tags: %w[ナビ 防水], subscribable: false },
+  { sku: "SYS-002", cat: "system", name: "Bluetoothインカム (2台セット)", price_cents: 18_000,
+    description: "タンデム・グループツーリングでの通話に。ナビ音声・音楽連携も対応。", tags: %w[インカム 電装], subscribable: false }
 ]
 
 products.each do |p|

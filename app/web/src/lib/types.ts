@@ -7,9 +7,27 @@ export type Product = {
   currency: string;
   tags: string[];
   category_id: number;
+  category_slug: string;
+  image_url: string;
   is_subscribable: boolean;
   in_stock: boolean;
   stock?: number;
+};
+
+export const SERVICE_SLUGS = ["maintenance", "system"] as const;
+export type ServiceKind = (typeof SERVICE_SLUGS)[number];
+
+export type ServiceRequest = {
+  id: number;
+  kind: ServiceKind;
+  status: string;
+  vehicle: string;
+  preferred_at: string | null;
+  budget_cents: number | null;
+  body: string;
+  contact_phone: string;
+  created_at: string;
+  product: { id: number; sku: string; name: string } | null;
 };
 
 export type Category = {

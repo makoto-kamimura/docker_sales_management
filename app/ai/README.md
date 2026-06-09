@@ -1,6 +1,6 @@
 # AI (Dify)
 
-AI 接客機能のバックエンドとして [Dify](https://dify.ai/) を使用する。Rails API から Dify の Workflow API を呼び出す構成。
+AIコンシェルジュ機能のバックエンドとして [Dify](https://dify.ai/) を使用する。Rails API から Dify の Workflow API を呼び出す構成。
 
 ## 構成
 
@@ -39,7 +39,7 @@ cd ~/dify/docker && docker compose stop          # 停止
 ## Workflow の登録 (初回)
 
 1. Dify Console (`http://localhost:8080/install`) でアカウント作成
-2. 「Studio → Create from Blank → Chatflow」で「AI接客」ワークフロー作成
+2. 「Studio → Create from Blank → Chatflow」で「AIコンシェルジュ」ワークフロー作成
 3. Variables に以下を追加:
    - `member_name` (string)
    - `cart_items` (string, JSON文字列)
@@ -54,6 +54,24 @@ cd ~/dify/docker && docker compose stop          # 停止
    ```
 8. Rails を再起動: `cd platform && docker compose restart api`
 
-## ナレッジベース (商品検索 RAG)
+## ナレッジベース (商品・FAQ)
 
-商品データを Dify のナレッジベースに同期するスクリプト: [./sync_knowledge.rb](./sync_knowledge.rb) (Rails runner で実行)。
+AIコンシェルジュが参照するナレッジソースは [./knowledge/](./knowledge/) に置く。
+
+- [./knowledge/catalog.md](./knowledge/catalog.md) — 取り扱いカタログ (coffee / parts / maintenance / system)
+- [./knowledge/faq.md](./knowledge/faq.md) — よくある質問 (整備の予約・システムの依頼・サブスク等)
+
+### 再構築手順 (商品やカテゴリを変更したとき)
+
+1. `catalog.md` を DB から再生成する:
+   ```bash
+   cd platform
+   docker compose run --rm -T api bin/rails runner /rails/../ai/sync_knowledge.rb > ../app/ai/knowledge/catalog.md
+   ```
+   ※ app/ai がコンテナにマウントされていない場合はホスト側で出力をリダイレクトする。
+2. Dify Console → 対象アプリ → **Knowledge** で `catalog.md` / `faq.md` を再アップロード（既存ドキュメントは差し替え）。
+3. ドキュメントの **再インデックス (Embedding)** が完了するまで待つ。
+4. Chatflow の Knowledge Retrieval ノードが当該ナレッジを参照していることを確認し、**Publish**。
+
+> カテゴリは coffee / parts / maintenance / system の4本立て。旧 tea / snack / navi は廃止済み（[../../app/api/lib/tasks/legacy.rake](../../app/api/lib/tasks/legacy.rake) で掃除）。
+> プロンプト本体は [./prompts/concierge_system.md](./prompts/concierge_system.md)。CTA(`open_maintenance_booking` 等)はクライアント側でリンク化される。

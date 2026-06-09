@@ -26,7 +26,7 @@ export default function TabLayout() {
       <Tabs.Screen name="search" options={{ title: '検索', tabBarIcon: ({ color }) => <TabBarIcon name="search" color={color} /> }} />
       <Tabs.Screen name="cart" options={{ title: 'カート', tabBarIcon: ({ color }) => <TabBarIcon name="shopping-cart" color={color} /> }} />
       <Tabs.Screen name="subscriptions" options={{ title: 'サブスク', tabBarIcon: ({ color }) => <TabBarIcon name="refresh" color={color} /> }} />
-      <Tabs.Screen name="chat" options={{ title: 'AI接客', tabBarIcon: ({ color }) => <TabBarIcon name="comments" color={color} /> }} />
+      <Tabs.Screen name="chat" options={{ title: 'AIコンシェルジュ', tabBarIcon: ({ color }) => <TabBarIcon name="comments" color={color} /> }} />
       <Tabs.Screen name="account" options={{ title: 'アカウント', tabBarIcon: ({ color }) => <TabBarIcon name="user" color={color} /> }} />
       <Tabs.Screen name="two" options={{ href: null }} />
     </Tabs>

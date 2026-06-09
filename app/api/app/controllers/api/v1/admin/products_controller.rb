@@ -2,7 +2,7 @@ module Api
   module V1
     module Admin
       class ProductsController < BaseController
-        before_action :set_product, only: %i[show update destroy]
+        before_action :set_product, only: %i[show update destroy upload_image]
 
         def index
           page, per = pagination_params
@@ -35,6 +35,14 @@ module Api
           head :no_content
         end
 
+        # 画像アップロード (ActiveStorage)。保存後 image_url に配信パスを設定する。
+        def upload_image
+          @product.image.attach(params.require(:image))
+          path = Rails.application.routes.url_helpers.rails_blob_path(@product.image, only_path: true)
+          @product.update!(image_url: path)
+          render json: serialize(@product, detail: true)
+        end
+
         private
 
         def set_product
@@ -43,7 +51,7 @@ module Api
 
         def product_params
           params.permit(:category_id, :sku, :name, :description, :price_cents, :currency,
-                        :is_subscribable, :published_at, tags: [])
+                        :is_subscribable, :published_at, :image_url, tags: [])
         end
 
         def enqueue_embedding(product)
@@ -56,7 +64,7 @@ module Api
         end
 
         def serialize(p, detail: false)
-          base = p.attributes.slice("id", "sku", "name", "price_cents", "currency", "tags", "category_id", "is_subscribable", "published_at")
+          base = p.attributes.slice("id", "sku", "name", "price_cents", "currency", "tags", "category_id", "is_subscribable", "published_at", "image_url")
           if detail
             base.merge!(description: p.description, stock: p.inventory&.stock || 0, reserved: p.inventory&.reserved || 0)
           end

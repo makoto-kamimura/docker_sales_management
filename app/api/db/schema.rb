@@ -10,13 +10,41 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_05_17_000012) do
+ActiveRecord::Schema[7.2].define(version: 2026_05_17_000015) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "citext"
   enable_extension "pg_trgm"
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
   enable_extension "vector"
+
+  create_table "active_storage_attachments", force: :cascade do |t|
+    t.string "name", null: false
+    t.string "record_type", null: false
+    t.bigint "record_id", null: false
+    t.bigint "blob_id", null: false
+    t.datetime "created_at", null: false
+    t.index ["blob_id"], name: "index_active_storage_attachments_on_blob_id"
+    t.index ["record_type", "record_id", "name", "blob_id"], name: "index_active_storage_attachments_uniqueness", unique: true
+  end
+
+  create_table "active_storage_blobs", force: :cascade do |t|
+    t.string "key", null: false
+    t.string "filename", null: false
+    t.string "content_type"
+    t.text "metadata"
+    t.string "service_name", null: false
+    t.bigint "byte_size", null: false
+    t.string "checksum"
+    t.datetime "created_at", null: false
+    t.index ["key"], name: "index_active_storage_blobs_on_key", unique: true
+  end
+
+  create_table "active_storage_variant_records", force: :cascade do |t|
+    t.bigint "blob_id", null: false
+    t.string "variation_digest", null: false
+    t.index ["blob_id", "variation_digest"], name: "index_active_storage_variant_records_uniqueness", unique: true
+  end
 
   create_table "addresses", force: :cascade do |t|
     t.bigint "user_id", null: false
@@ -154,6 +182,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_05_17_000012) do
     t.string "currency", default: "JPY", null: false
     t.boolean "is_subscribable", default: false, null: false
     t.datetime "published_at"
+    t.string "image_url", default: "", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["category_id"], name: "index_products_on_category_id"
@@ -162,6 +191,24 @@ ActiveRecord::Schema[7.2].define(version: 2026_05_17_000012) do
     t.index ["published_at"], name: "index_products_on_published_at"
     t.index ["sku"], name: "index_products_on_sku", unique: true
     t.index ["tags"], name: "index_products_on_tags", using: :gin
+  end
+
+  create_table "service_requests", force: :cascade do |t|
+    t.bigint "user_id", null: false
+    t.bigint "product_id"
+    t.string "kind", null: false
+    t.string "status", default: "pending", null: false
+    t.string "vehicle", default: "", null: false
+    t.datetime "preferred_at"
+    t.integer "budget_cents"
+    t.text "body", default: "", null: false
+    t.string "contact_phone", default: "", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["product_id"], name: "index_service_requests_on_product_id"
+    t.index ["status"], name: "index_service_requests_on_status"
+    t.index ["user_id", "kind"], name: "index_service_requests_on_user_id_and_kind"
+    t.index ["user_id"], name: "index_service_requests_on_user_id"
   end
 
   create_table "shipments", force: :cascade do |t|
@@ -234,6 +281,8 @@ ActiveRecord::Schema[7.2].define(version: 2026_05_17_000012) do
     t.index ["role"], name: "index_users_on_role"
   end
 
+  add_foreign_key "active_storage_attachments", "active_storage_blobs", column: "blob_id"
+  add_foreign_key "active_storage_variant_records", "active_storage_blobs", column: "blob_id"
   add_foreign_key "addresses", "users"
   add_foreign_key "ai_conversations", "users"
   add_foreign_key "ai_messages", "ai_conversations"
@@ -250,6 +299,8 @@ ActiveRecord::Schema[7.2].define(version: 2026_05_17_000012) do
   add_foreign_key "payment_methods", "users"
   add_foreign_key "product_embeddings", "products"
   add_foreign_key "products", "categories"
+  add_foreign_key "service_requests", "products"
+  add_foreign_key "service_requests", "users"
   add_foreign_key "shipments", "orders"
   add_foreign_key "subscription_deliveries", "orders"
   add_foreign_key "subscription_deliveries", "subscriptions"

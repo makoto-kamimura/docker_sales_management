@@ -28,7 +28,7 @@ export default function LoginPage() {
   return (
     <div className="max-w-md mx-auto card p-7 sm:p-8">
       <div className="text-center mb-6">
-        <div className="mx-auto grid h-12 w-12 place-items-center rounded-2xl bg-gradient-to-br from-coffee-700 to-espresso text-2xl text-coffee-50 shadow-soft">☕</div>
+        <div className="mx-auto grid h-12 w-12 place-items-center rounded-xl bg-espresso text-xs font-bold tracking-wide text-coffee-50 shadow-soft">R&amp;R</div>
         <h1 className="text-xl font-bold mt-3">おかえりなさい</h1>
         <p className="text-sm text-coffee-500 mt-1">アカウントにログイン</p>
       </div>

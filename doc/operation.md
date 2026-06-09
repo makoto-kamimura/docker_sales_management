@@ -78,7 +78,7 @@ docker compose up -d
 docker compose logs -f api web
 ```
 
-## 3. Dify (AI接客) を起動
+## 3. Dify (AIコンシェルジュ) を起動
 
 > ⚠️ Dify は **公式 [langgenius/dify](https://github.com/langgenius/dify) の docker compose** を**別ディレクトリで起動**する構成。  
 > 本リポジトリの `platform/docker-compose.yml` には Dify サービスを含めない（同梱 nginx／Rails と同一オリジン化できず Cookie 認証が壊れるため）。
@@ -120,7 +120,7 @@ cd ~/dify/docker && docker compose ps
 初回のみ：
 
 1. http://localhost:8080/install で管理者アカウント作成
-2. ログイン後、Studio → Create from Blank → **Chatflow** で「AI接客」ワークフローを作成
+2. ログイン後、Studio → Create from Blank → **Chatflow** で「AIコンシェルジュ」ワークフローを作成
 3. Variables に以下を追加 (型はすべて string):
    - `member_name`
    - `cart_items` (JSON 文字列)
@@ -150,7 +150,7 @@ docker compose restart api
 
 ### 3.5 Dify 未起動 / 未設定でも他機能は動く
 
-`DIFY_API_KEY` 未設定や Dify 未起動でも、AI 接客以外の機能 (商品閲覧・カート・注文等) は動作する。AI 接客 API のみ `bad_gateway` (`code: ai_unavailable`) を返す ([../app/api/app/controllers/api/v1/ai_concierge/messages_controller.rb](../app/api/app/controllers/api/v1/ai_concierge/messages_controller.rb))。
+`DIFY_API_KEY` 未設定や Dify 未起動でも、AIコンシェルジュ以外の機能 (商品閲覧・カート・注文等) は動作する。AIコンシェルジュ API のみ `bad_gateway` (`code: ai_unavailable`) を返す ([../app/api/app/controllers/api/v1/ai_concierge/messages_controller.rb](../app/api/app/controllers/api/v1/ai_concierge/messages_controller.rb))。
 
 ## 4. モバイル (Expo) の接続方法
 

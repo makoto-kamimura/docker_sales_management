@@ -7,9 +7,26 @@ export type Product = {
   currency: string;
   tags: string[];
   category_id: number;
+  category_slug: string;
+  image_url: string;
   is_subscribable: boolean;
   in_stock: boolean;
   stock?: number;
+};
+
+export type ServiceKind = "maintenance" | "system";
+
+export type ServiceRequest = {
+  id: number;
+  kind: ServiceKind;
+  status: string;
+  vehicle: string;
+  preferred_at: string | null;
+  budget_cents: number | null;
+  body: string;
+  contact_phone: string;
+  created_at: string;
+  product: { id: number; sku: string; name: string } | null;
 };
 
 export type CartItem = {

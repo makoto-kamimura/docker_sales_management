@@ -19,7 +19,7 @@
               └─────────────────┘    └─┬──────────┬──────┘
                                        │          │
                               ┌────────▼──┐  ┌────▼───────────┐
-                              │ Postgres  │  │ Dify (AI接客)  │
+                              │ Postgres  │  │ Dify (AIコンシェルジュ)  │
                               │ :5432     │  │ Workflow API   │
                               │ pgvector  │  │ :5001          │
                               │ pg_trgm   │  └────────────────┘
@@ -35,7 +35,7 @@
 
 | レイヤ | 技術 | 責務 |
 |--------|------|------|
-| モバイル | React Native (Expo + Expo Router) | iOS/Android 体験。認証, 注文, AI接客, サブスク管理 |
+| モバイル | React Native (Expo + Expo Router) | iOS/Android 体験。認証, 注文, AIコンシェルジュ, サブスク管理 |
 | Web | Next.js 15 (App Router) | ブラウザ向け全機能 + 管理画面 |
 | API | Rails 7.2 (API mode) | ビジネスロジック, DB アクセス, 認証, Stripe, Dify 仲介 |
 | AI | Dify (Chatflow + Knowledge) | LLM オーケストレーション, 商品 RAG |

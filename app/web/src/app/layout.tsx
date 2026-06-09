@@ -5,8 +5,8 @@ import { Header } from "@/components/Header";
 import { ChatWidget } from "@/components/ChatWidget";
 
 export const metadata: Metadata = {
-  title: "docker_ruby ストア",
-  description: "EC + サブスク + AI接客",
+  title: "ROUTE & ROAST — Riders Cafe",
+  description: "コーヒーと、走るための全部。豆・パーツ・整備・ナビを揃えるライダーズカフェ。",
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
@@ -21,12 +21,13 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
           <main className="flex-1 w-full max-w-6xl mx-auto px-4 py-8 sm:py-10">
             <div className="animate-in">{children}</div>
           </main>
-          <footer className="mt-12 border-t border-coffee-200/60">
-            <div className="max-w-6xl mx-auto px-4 py-6 flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-coffee-500">
-              <span className="flex items-center gap-2">
-                <span aria-hidden>☕</span> docker_ruby ストア
+          <footer className="mt-16 border-t border-coffee-200">
+            <div className="max-w-6xl mx-auto px-4 py-8 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-coffee-500">
+              <span className="flex items-center gap-2 font-semibold tracking-wide text-coffee-800">
+                <span aria-hidden className="text-caramel">●</span> ROUTE &amp; ROAST
+                <span className="font-normal text-coffee-400">Riders Cafe</span>
               </span>
-              <span>EC + サブスク + AI接客 · © {new Date().getFullYear()}</span>
+              <span className="tracking-wide">COFFEE · PARTS · MAINTENANCE · SYSTEM · © {new Date().getFullYear()}</span>
             </div>
           </footer>
           <ChatWidget />

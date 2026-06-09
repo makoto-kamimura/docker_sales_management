@@ -29,7 +29,7 @@ export default function RegisterPage() {
   return (
     <div className="max-w-md mx-auto card p-7 sm:p-8">
       <div className="text-center mb-6">
-        <div className="mx-auto grid h-12 w-12 place-items-center rounded-2xl bg-gradient-to-br from-[#d98c4a] to-caramel text-2xl text-white shadow-soft">☕</div>
+        <div className="mx-auto grid h-12 w-12 place-items-center rounded-xl bg-caramel text-xs font-bold tracking-wide text-white shadow-soft">R&amp;R</div>
         <h1 className="text-xl font-bold mt-3">会員登録</h1>
         <p className="text-sm text-coffee-500 mt-1">はじめての方はこちら</p>
       </div>

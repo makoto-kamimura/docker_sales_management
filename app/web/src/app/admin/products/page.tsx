@@ -31,6 +31,14 @@ export default function AdminProductsPage() {
     mutate();
   }
 
+  async function uploadImage(productId: number, file: File) {
+    const fd = new FormData();
+    fd.append("image", file);
+    // FormData の場合 api ヘルパーは Content-Type を設定せず、ブラウザが multipart 境界を付与する
+    await api(`/admin/products/${productId}/image`, { method: "POST", body: fd, auth: token });
+    mutate();
+  }
+
   async function create(e: React.FormEvent) {
     e.preventDefault(); setErr(null);
     try {
@@ -57,6 +65,7 @@ export default function AdminProductsPage() {
         <table className="w-full text-sm min-w-[36rem]">
           <thead className="bg-coffee-50 text-xs uppercase tracking-wide text-coffee-500">
             <tr>
+              <th className="p-3 text-left font-semibold">画像</th>
               <th className="p-3 text-left font-semibold">SKU</th>
               <th className="p-3 text-left font-semibold">名前</th>
               <th className="p-3 text-right font-semibold">価格</th>
@@ -67,6 +76,23 @@ export default function AdminProductsPage() {
           <tbody>
             {products?.map((p) => (
               <tr key={p.id} className="border-t border-coffee-100 hover:bg-coffee-50/40 transition-colors">
+                <td className="p-3">
+                  <div className="flex items-center gap-2">
+                    <div className="h-10 w-10 overflow-hidden rounded-md bg-coffee-50 border border-coffee-100 grid place-items-center shrink-0">
+                      {p.image_url ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={p.image_url} alt={p.name} className="h-full w-full object-cover" />
+                      ) : (
+                        <span className="text-[8px] text-coffee-300">no img</span>
+                      )}
+                    </div>
+                    <label className="text-xs text-caramel hover:underline cursor-pointer">
+                      変更
+                      <input type="file" accept="image/*" className="hidden"
+                             onChange={(e) => { const f = e.target.files?.[0]; if (f) uploadImage(p.id, f); }} />
+                    </label>
+                  </div>
+                </td>
                 <td className="p-3 text-coffee-500">{p.sku}</td>
                 <td className="p-3 font-medium">{p.name}</td>
                 <td className="p-3 text-right tabular-nums">{yen(p.price_cents)}</td>

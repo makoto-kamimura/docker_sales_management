@@ -8,6 +8,7 @@ class User < ApplicationRecord
   has_one  :cart, dependent: :destroy
   has_many :orders, dependent: :destroy
   has_many :subscriptions, dependent: :destroy
+  has_many :service_requests, dependent: :destroy
   has_many :ai_conversations, dependent: :nullify
 
   validates :email, presence: true, uniqueness: { case_sensitive: false },

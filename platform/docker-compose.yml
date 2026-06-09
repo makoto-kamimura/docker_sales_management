@@ -101,7 +101,7 @@ services:
       - web
     networks: [appnet]
 
-  # Dify (AI接客プラットフォーム) は公式 compose を別ディレクトリで起動する構成に統一。
+  # Dify (AIコンシェルジュプラットフォーム) は公式 compose を別ディレクトリで起動する構成に統一。
   # Rails からは host.docker.internal:8080 経由で Dify nginx を叩く。
   # 詳細: doc/operation.md §3, app/ai/README.md
 
