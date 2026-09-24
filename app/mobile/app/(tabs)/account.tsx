@@ -47,7 +47,7 @@ export default function AccountScreen() {
             <Pressable style={styles.row}>
               <View style={{ flex: 1 }}>
                 <Text style={{ fontWeight: '600' }}>#{item.id}</Text>
-                <Text style={{ opacity: 0.6, fontSize: 12 }}>{item.status} · {new Date(item.placed_at).toLocaleString('ja-JP')}</Text>
+                <Text style={{ opacity: 0.6, fontSize: 12 }}>{item.status_label} · {new Date(item.placed_at).toLocaleString('ja-JP')}</Text>
               </View>
               <Text style={{ fontWeight: 'bold' }}>{yen(item.total_cents)}</Text>
             </Pressable>

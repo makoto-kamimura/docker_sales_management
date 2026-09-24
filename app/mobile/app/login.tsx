@@ -7,8 +7,8 @@ import { useAuth } from '@/lib/auth';
 
 export default function LoginScreen() {
   const { login } = useAuth();
-  const [email, setEmail] = useState('member@example.com');
-  const [password, setPassword] = useState('password');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [err, setErr] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -35,9 +35,6 @@ export default function LoginScreen() {
         <Text style={{ color: '#fff' }}>{busy ? '...' : 'ログイン'}</Text>
       </Pressable>
       <Link href="/register" style={{ color: '#2563eb', marginTop: 12, textAlign: 'center' }}>会員登録はこちら</Link>
-      <Text style={{ opacity: 0.5, fontSize: 12, marginTop: 16, textAlign: 'center' }}>
-        テスト: member@example.com / password{'\n'}管理者: admin@example.com / password
-      </Text>
     </View>
   );
 }

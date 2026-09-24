@@ -6,18 +6,21 @@ import { Text, View } from '@/components/Themed';
 import { api, jsonBody } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { yen } from '@/lib/format';
-import type { Product, ServiceKind } from '@/lib/types';
+import type { Order, Product, RequestKind } from '@/lib/types';
 
 const ACCENT = '#ff5722';
 
+// 問い合わせ (inquiry) / オーダーメイド制作依頼 (custom)
 export default function ServiceRequestScreen() {
-  const params = useLocalSearchParams<{ kind?: string }>();
-  const kind: ServiceKind = params.kind === 'system' ? 'system' : 'maintenance';
+  const params = useLocalSearchParams<{ kind?: string; order_id?: string; product_id?: string }>();
+  const kind: RequestKind = params.kind === 'custom' ? 'custom' : 'inquiry';
   const { token } = useAuth();
 
   const [menu, setMenu] = useState<Product[]>([]);
-  const [productId, setProductId] = useState<number | null>(null);
-  const [vehicle, setVehicle] = useState('');
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [productId, setProductId] = useState<number | null>(params.product_id ? Number(params.product_id) : null);
+  const [orderId, setOrderId] = useState<number | null>(params.order_id ? Number(params.order_id) : null);
+  const [subject, setSubject] = useState('');
   const [preferredAt, setPreferredAt] = useState('');
   const [budget, setBudget] = useState('');
   const [body, setBody] = useState('');
@@ -25,17 +28,19 @@ export default function ServiceRequestScreen() {
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 
-  const title = kind === 'maintenance' ? '整備の予約' : 'システム開発依頼';
+  const title = kind === 'custom' ? 'オーダーメイド制作の依頼' : 'お問い合わせ';
 
-  const loadMenu = useCallback(async () => {
+  // オーダーメイド: 制作メニュー / 問い合わせ: 対象の注文
+  const loadChoices = useCallback(async () => {
     try {
-      setMenu(await api<Product[]>(`/products?category_slug=${kind}`));
+      if (kind === 'custom') setMenu(await api<Product[]>('/products?category_slug=custom'));
+      else if (token) setOrders(await api<Order[]>('/orders', { auth: token }));
     } catch {
-      setMenu([]);
+      setMenu([]); setOrders([]);
     }
-  }, [kind]);
+  }, [kind, token]);
 
-  useEffect(() => { loadMenu(); }, [loadMenu]);
+  useEffect(() => { loadChoices(); }, [loadChoices]);
 
   async function submit() {
     if (!token) { router.push('/login'); return; }
@@ -45,12 +50,13 @@ export default function ServiceRequestScreen() {
         method: 'POST',
         body: jsonBody({
           kind,
-          product_id: productId,
-          vehicle,
+          subject,
           body,
           contact_phone: phone,
-          preferred_at: kind === 'maintenance' && preferredAt ? preferredAt : null,
-          budget_cents: kind === 'system' && budget ? Number(budget) : null,
+          product_id: kind === 'custom' ? productId : null,
+          order_id: kind === 'inquiry' ? orderId : null,
+          preferred_at: kind === 'custom' && preferredAt ? preferredAt : null,
+          budget_cents: kind === 'custom' && budget ? Number(budget) : null,
         }),
         auth: token,
       });
@@ -70,34 +76,46 @@ export default function ServiceRequestScreen() {
         <Text style={styles.notice}>送信にはログインが必要です。送信時にログイン画面へ移動します。</Text>
       )}
 
-      <Text style={styles.label}>{kind === 'maintenance' ? '整備メニュー' : 'システム / 機器'}（任意）</Text>
-      <View style={styles.chips}>
-        <Chip label="選択しない" active={productId === null} onPress={() => setProductId(null)} />
-        {menu.map((m) => (
-          <Chip key={m.id} label={`${m.name}（${yen(m.price_cents)}）`} active={productId === m.id} onPress={() => setProductId(m.id)} />
-        ))}
-      </View>
-
-      <Text style={styles.label}>車種・型式</Text>
-      <TextInput value={vehicle} onChangeText={setVehicle} style={styles.input} placeholder="例: CB400SF / 2018年式" />
-
-      {kind === 'maintenance' && (
+      {kind === 'custom' ? (
         <>
-          <Text style={styles.label}>希望日時</Text>
-          <TextInput value={preferredAt} onChangeText={setPreferredAt} style={styles.input} placeholder="例: 2026-06-20 10:00" />
+          <Text style={styles.label}>制作メニュー（任意）</Text>
+          <View style={styles.chips}>
+            <Chip label="選択しない" active={productId === null} onPress={() => setProductId(null)} />
+            {menu.map((m) => (
+              <Chip key={m.id} label={`${m.name}（${yen(m.price_cents)}〜）`} active={productId === m.id} onPress={() => setProductId(m.id)} />
+            ))}
+          </View>
+        </>
+      ) : (
+        orders.length > 0 && (
+          <>
+            <Text style={styles.label}>対象の注文（任意）</Text>
+            <View style={styles.chips}>
+              <Chip label="選択しない" active={orderId === null} onPress={() => setOrderId(null)} />
+              {orders.slice(0, 8).map((o) => (
+                <Chip key={o.id} label={`#${o.id} ${o.status_label}`} active={orderId === o.id} onPress={() => setOrderId(o.id)} />
+              ))}
+            </View>
+          </>
+        )
+      )}
+
+      <Text style={styles.label}>{kind === 'custom' ? '作りたいもの' : '件名'}</Text>
+      <TextInput value={subject} onChangeText={setSubject} style={styles.input}
+                 placeholder={kind === 'custom' ? '例: イニシャル入りの名刺入れ' : '例: 納期について'} />
+
+      {kind === 'custom' && (
+        <>
+          <Text style={styles.label}>希望納期（任意）</Text>
+          <TextInput value={preferredAt} onChangeText={setPreferredAt} style={styles.input} placeholder="例: 2026-10-01" />
+          <Text style={styles.label}>ご予算（円・任意）</Text>
+          <TextInput value={budget} onChangeText={setBudget} keyboardType="number-pad" style={styles.input} placeholder="例: 8000" />
         </>
       )}
 
-      {kind === 'system' && (
-        <>
-          <Text style={styles.label}>想定予算（円・任意）</Text>
-          <TextInput value={budget} onChangeText={setBudget} keyboardType="number-pad" style={styles.input} placeholder="例: 50000" />
-        </>
-      )}
-
-      <Text style={styles.label}>{kind === 'maintenance' ? '整備内容・ご相談' : 'ご依頼内容・要件'}</Text>
+      <Text style={styles.label}>{kind === 'custom' ? 'ご依頼内容（サイズ・素材・色・数量など）' : 'お問い合わせ内容'}</Text>
       <TextInput value={body} onChangeText={setBody} multiline style={[styles.input, styles.textarea]}
-                 placeholder={kind === 'maintenance' ? '例: 12ヶ月点検とチェーン清掃' : '例: ナビとインカムを取り付けたい'} />
+                 placeholder={kind === 'custom' ? '例: ヌメ革の名刺入れに「H.S」と刻印してほしい' : '例: いつ頃発送になりますか？'} />
 
       <Text style={styles.label}>連絡先電話番号（任意）</Text>
       <TextInput value={phone} onChangeText={setPhone} keyboardType="phone-pad" style={styles.input} placeholder="090-0000-0000" />
@@ -105,10 +123,10 @@ export default function ServiceRequestScreen() {
       {err && <Text style={styles.err}>{err}</Text>}
 
       <Pressable onPress={submit} disabled={busy} style={styles.button}>
-        <Text style={{ color: '#fff', fontWeight: '600' }}>{busy ? '送信中…' : (kind === 'maintenance' ? '予約を申し込む' : '開発依頼を送信する')}</Text>
+        <Text style={{ color: '#fff', fontWeight: '600' }}>{busy ? '送信中…' : (kind === 'custom' ? '制作を依頼する' : '送信する')}</Text>
       </Pressable>
 
-      <Link href="/requests" style={styles.link}>依頼状況を見る →</Link>
+      <Link href="/requests" style={styles.link}>問い合わせ一覧を見る →</Link>
     </ScrollView>
   );
 }

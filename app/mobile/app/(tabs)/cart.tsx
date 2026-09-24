@@ -54,12 +54,16 @@ export default function CartScreen() {
               <Text style={{ fontWeight: '600' }}>{item.name}</Text>
               <Text style={{ opacity: 0.6 }}>{yen(item.unit_price_cents)} × </Text>
             </View>
-            <TextInput
-              defaultValue={String(item.quantity)}
-              keyboardType="number-pad"
-              onEndEditing={(e) => update(item.id, Number(e.nativeEvent.text) || 1)}
-              style={styles.qty}
-            />
+            {item.is_digital ? (
+              <Text style={[styles.qty, { borderWidth: 0, opacity: 0.6 }]}>データ</Text>
+            ) : (
+              <TextInput
+                defaultValue={String(item.quantity)}
+                keyboardType="number-pad"
+                onEndEditing={(e) => update(item.id, Number(e.nativeEvent.text) || 1)}
+                style={styles.qty}
+              />
+            )}
             <Text style={{ width: 80, textAlign: 'right' }}>{yen(item.line_total_cents)}</Text>
             <Pressable onPress={() => remove(item.id)}><Text style={{ color: '#dc2626', marginLeft: 8 }}>削除</Text></Pressable>
           </View>

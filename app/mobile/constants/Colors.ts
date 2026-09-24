@@ -1,4 +1,4 @@
-// ROUTE & ROAST — モダン・ミニマル (モノトーン + ライダーズオレンジ)
+// CraftFlow — モダン・ミニマル (モノトーン + クラフトオレンジ)
 const accent = '#ff5722';
 
 export default {

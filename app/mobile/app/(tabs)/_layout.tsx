@@ -1,5 +1,6 @@
 import React from 'react';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
+import FontAwesome5 from '@expo/vector-icons/FontAwesome5';
 import { Tabs } from 'expo-router';
 
 import Colors from '@/constants/Colors';
@@ -26,7 +27,8 @@ export default function TabLayout() {
       <Tabs.Screen name="search" options={{ title: '検索', tabBarIcon: ({ color }) => <TabBarIcon name="search" color={color} /> }} />
       <Tabs.Screen name="cart" options={{ title: 'カート', tabBarIcon: ({ color }) => <TabBarIcon name="shopping-cart" color={color} /> }} />
       <Tabs.Screen name="subscriptions" options={{ title: 'サブスク', tabBarIcon: ({ color }) => <TabBarIcon name="refresh" color={color} /> }} />
-      <Tabs.Screen name="chat" options={{ title: 'AIコンシェルジュ', tabBarIcon: ({ color }) => <TabBarIcon name="comments" color={color} /> }} />
+      {/* コンシェルジュベル (FontAwesome5 では solid のみ) */}
+      <Tabs.Screen name="chat" options={{ title: 'AIコンシェルジュ', tabBarIcon: ({ color }) => <FontAwesome5 name="concierge-bell" solid size={22} color={color} style={{ marginBottom: -3 }} /> }} />
       <Tabs.Screen name="account" options={{ title: 'アカウント', tabBarIcon: ({ color }) => <TabBarIcon name="user" color={color} /> }} />
       <Tabs.Screen name="two" options={{ href: null }} />
     </Tabs>

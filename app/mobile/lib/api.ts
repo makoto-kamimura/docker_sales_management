@@ -27,3 +27,22 @@ export async function api<T = unknown>(path: string, opts: FetchOpts = {}): Prom
 }
 
 export const jsonBody = (data: unknown) => JSON.stringify(data);
+
+/** API が返すサーバー相対パス (/rails/...) を API と同じオリジンの絶対 URL にする。
+ *  React Native の URL は相対パスを正しく解決しないので、オリジンを切り出して連結する */
+export function apiOriginUrl(path: string) {
+  const origin = API_BASE.match(/^https?:\/\/[^/]+/)?.[0] ?? '';
+  return `${origin}${path}`;
+}
+
+/** 購入済み3Dモデルデータの期限付きダウンロードURLを取得する */
+export async function fetchDownloadUrl(productId: number, token: string | null) {
+  const { url } = await api<{ url: string }>(`/downloads/${productId}`, { auth: token });
+  return apiOriginUrl(url);
+}
+
+/** 購入した3Dモデルの組み立て説明書 (PDF) の期限付きURLを取得する */
+export async function fetchAssemblyGuideUrl(productId: number, token: string | null) {
+  const { url } = await api<{ url: string }>(`/downloads/${productId}/assembly`, { auth: token });
+  return apiOriginUrl(url);
+}

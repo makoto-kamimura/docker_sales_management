@@ -31,12 +31,12 @@ export default function HomeScreen() {
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={async () => { setRefreshing(true); await load(); setRefreshing(false); }} />}
         ListHeaderComponent={
           <View style={{ padding: 16 }}>
-            <Text style={styles.brand}>ROUTE & ROAST</Text>
-            <Text style={styles.tagline}>RIDERS CAFE · COFFEE · PARTS · MAINTENANCE · SYSTEM</Text>
+            <Text style={styles.brand}>CraftFlow</Text>
+            <Text style={styles.tagline}>つくる人のネットショップ · 3D PRINT · HANDMADE · CUSTOM</Text>
             <View style={styles.actions}>
-              <Link href={{ pathname: '/service-request', params: { kind: 'maintenance' } }} style={styles.actionBtn}>整備を予約</Link>
-              <Link href={{ pathname: '/service-request', params: { kind: 'system' } }} style={styles.actionBtn}>開発を依頼</Link>
-              <Link href="/requests" style={styles.actionBtnOutline}>依頼状況</Link>
+              <Link href={{ pathname: '/service-request', params: { kind: 'custom' } }} style={styles.actionBtn}>オーダーメイド</Link>
+              <Link href={{ pathname: '/service-request', params: { kind: 'inquiry' } }} style={styles.actionBtn}>問い合わせ</Link>
+              <Link href="/requests" style={styles.actionBtnOutline}>問い合わせ一覧</Link>
             </View>
             <Text style={styles.section}>新着商品</Text>
           </View>
@@ -48,6 +48,7 @@ export default function HomeScreen() {
               <Text style={styles.cardSub}>{item.sku}</Text>
               <Text style={styles.price}>{yen(item.price_cents)}</Text>
               {item.is_subscribable && <Text style={styles.tag}>サブスク対応</Text>}
+              {item.is_digital && <Text style={styles.tag}>⬇ 3Dデータ</Text>}
             </Pressable>
           </Link>
         )}

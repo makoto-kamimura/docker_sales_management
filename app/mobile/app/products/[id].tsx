@@ -5,7 +5,7 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { Text, View } from '@/components/Themed';
 import { api, jsonBody } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
-import { yen } from '@/lib/format';
+import { fileSize, yen } from '@/lib/format';
 import type { Product } from '@/lib/types';
 
 export default function ProductDetail() {
@@ -25,7 +25,7 @@ export default function ProductDetail() {
     if (!token) { router.push('/login'); return; }
     setMsg(null);
     try {
-      await api('/cart/items', { method: 'POST', body: jsonBody({ product_id: Number(id), quantity: Number(qty) || 1 }), auth: token });
+      await api('/cart/items', { method: 'POST', body: jsonBody({ product_id: Number(id), quantity: p?.is_digital ? 1 : Number(qty) || 1 }), auth: token });
       setMsg('カートに追加しました');
     } catch (e) {
       setMsg(e instanceof Error ? e.message : 'エラー');
@@ -45,11 +45,20 @@ export default function ProductDetail() {
         ))}
       </View>
       <Text style={styles.price}>{yen(p.price_cents)}</Text>
-      <Text style={{ color: p.in_stock ? '#059669' : '#dc2626', marginTop: 4 }}>
-        {p.in_stock ? `在庫: ${p.stock ?? 'あり'}` : '在庫切れ'}
-      </Text>
+      {p.is_digital ? (
+        <View style={styles.digital}>
+          <Text style={{ fontWeight: '600' }}>⬇ ダウンロード販売{p.in_stock ? '' : ' (準備中)'}</Text>
+          <Text style={styles.digitalRow}>形式: {p.file_format ?? '—'} {fileSize(p.file_size)}</Text>
+          <Text style={styles.digitalRow}>ライセンス: {p.license || '—'}</Text>
+          <Text style={styles.digitalRow}>お支払い確認後、注文詳細からダウンロードできます</Text>
+        </View>
+      ) : (
+        <Text style={{ color: p.in_stock ? '#059669' : '#dc2626', marginTop: 4 }}>
+          {p.in_stock ? `在庫: ${p.stock ?? 'あり'}` : '在庫切れ'}
+        </Text>
+      )}
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 16 }}>
-        <TextInput value={qty} onChangeText={setQty} keyboardType="number-pad" style={styles.qty} />
+        {!p.is_digital && <TextInput value={qty} onChangeText={setQty} keyboardType="number-pad" style={styles.qty} />}
         <Pressable onPress={add} disabled={!p.in_stock} style={[styles.button, !p.in_stock && { opacity: 0.4 }]}>
           <Text style={{ color: '#fff' }}>カートに追加</Text>
         </Pressable>
@@ -65,4 +74,6 @@ const styles = StyleSheet.create({
   price: { fontSize: 24, fontWeight: 'bold', marginTop: 8 },
   qty: { borderWidth: 1, borderColor: '#ddd', borderRadius: 6, padding: 8, width: 60, textAlign: 'center' },
   button: { backgroundColor: '#111', paddingHorizontal: 16, paddingVertical: 10, borderRadius: 6 },
+  digital: { marginTop: 8, padding: 12, borderRadius: 8, borderWidth: 1, borderColor: '#dededa', backgroundColor: '#fafaf8' },
+  digitalRow: { marginTop: 4, fontSize: 12, opacity: 0.7 },
 });

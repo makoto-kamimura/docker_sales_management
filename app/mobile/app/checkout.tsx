@@ -31,11 +31,14 @@ export default function CheckoutScreen() {
     })();
   }, [token]);
 
+  const needsAddress = cart?.requires_shipping ?? true; // デジタル商品のみなら配送先不要
+
   async function place() {
-    if (!addressId) { setErr('住所が未登録です'); return; }
+    if (needsAddress && !addressId) { setErr('住所が未登録です'); return; }
     setBusy(true); setErr(null);
     try {
-      const o = await api<Order>('/orders', { method: 'POST', body: jsonBody({ address_id: addressId }), auth: token });
+      const body = needsAddress ? { address_id: addressId } : {};
+      const o = await api<Order>('/orders', { method: 'POST', body: jsonBody(body), auth: token });
       router.replace({ pathname: '/orders/[id]', params: { id: String(o.id) } });
     } catch (e) {
       setErr(e instanceof Error ? e.message : 'エラー');
@@ -46,27 +49,37 @@ export default function CheckoutScreen() {
 
   if (!token) return <Text style={{ padding: 16 }}>ログインが必要です。</Text>;
   if (!cart) return <Text style={{ padding: 16 }}>読み込み中…</Text>;
+  const disabled = busy || cart.items.length === 0 || (needsAddress && addresses.length === 0);
 
   return (
     <ScrollView contentContainerStyle={{ padding: 16 }}>
       <Text style={styles.title}>ご注文確認</Text>
 
-      <Text style={styles.h2}>お届け先</Text>
-      {addresses.length === 0 ? (
-        <Text>先にアプリのアカウント画面で住所を登録してください。</Text>
+      {needsAddress ? (
+        <>
+          <Text style={styles.h2}>お届け先</Text>
+          {addresses.length === 0 ? (
+            <Text>先にアプリのアカウント画面で住所を登録してください。</Text>
+          ) : (
+            addresses.map((a) => (
+              <Pressable key={a.id} onPress={() => setAddressId(a.id)} style={[styles.address, a.id === addressId && styles.selected]}>
+                <Text style={{ fontWeight: '600' }}>{a.recipient}</Text>
+                <Text style={{ fontSize: 12, opacity: 0.7 }}>〒{a.postal_code} {a.prefecture}{a.city}{a.line1}</Text>
+              </Pressable>
+            ))
+          )}
+        </>
       ) : (
-        addresses.map((a) => (
-          <Pressable key={a.id} onPress={() => setAddressId(a.id)} style={[styles.address, a.id === addressId && styles.selected]}>
-            <Text style={{ fontWeight: '600' }}>{a.recipient}</Text>
-            <Text style={{ fontSize: 12, opacity: 0.7 }}>〒{a.postal_code} {a.prefecture}{a.city}{a.line1}</Text>
-          </Pressable>
-        ))
+        <>
+          <Text style={styles.h2}>お届け方法</Text>
+          <Text style={{ fontSize: 13, opacity: 0.7 }}>ダウンロード (配送なし・送料無料)。お支払い確認後、注文詳細からダウンロードできます。</Text>
+        </>
       )}
 
       <Text style={styles.h2}>明細</Text>
       {cart.items.map((i) => (
         <View key={i.id} style={styles.row}>
-          <Text style={{ flex: 1 }}>{i.name} × {i.quantity}</Text>
+          <Text style={{ flex: 1 }}>{i.name} {i.is_digital ? '(データ)' : `× ${i.quantity}`}</Text>
           <Text>{yen(i.line_total_cents)}</Text>
         </View>
       ))}
@@ -77,8 +90,7 @@ export default function CheckoutScreen() {
       <Text style={{ fontSize: 12, opacity: 0.5, marginTop: 4 }}>※ 税/送料はサーバー側で計算</Text>
 
       {err && <Text style={{ color: '#dc2626', marginTop: 8 }}>{err}</Text>}
-      <Pressable onPress={place} disabled={busy || cart.items.length === 0 || addresses.length === 0}
-                 style={[styles.cta, (busy || cart.items.length === 0 || addresses.length === 0) && { opacity: 0.5 }]}>
+      <Pressable onPress={place} disabled={disabled} style={[styles.cta, disabled && { opacity: 0.5 }]}>
         <Text style={{ color: '#fff' }}>注文を確定する</Text>
       </Pressable>
     </ScrollView>
