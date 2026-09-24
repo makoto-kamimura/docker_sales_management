@@ -19,6 +19,8 @@ Rails.application.configure do
   config.hosts << "api"
   config.hosts << "nginx"
   config.hosts << "web"
+  config.hosts << "demo-sales-api"
+  config.hosts << "sales.makoto-kamimura.com"
   config.hosts << /\Aapi\..*/  # サブドメイン許容
 
   # Enable server timing.
