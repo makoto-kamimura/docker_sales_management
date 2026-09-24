@@ -34,3 +34,11 @@ group :development, :test do
   gem "faker"
   gem "dotenv-rails"
 end
+
+gem "prawn", "~> 2.5"
+
+gem "kramdown", "~> 2.5"
+
+gem "kramdown-parser-gfm", "~> 1.1"
+
+gem "rubyzip", "~> 2.4"

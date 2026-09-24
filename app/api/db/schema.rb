@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_05_17_000015) do
+ActiveRecord::Schema[7.2].define(version: 2026_09_14_000004) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "citext"
   enable_extension "pg_trgm"
@@ -80,6 +80,16 @@ ActiveRecord::Schema[7.2].define(version: 2026_05_17_000015) do
     t.index ["ai_conversation_id"], name: "index_ai_messages_on_ai_conversation_id"
   end
 
+  create_table "assembly_steps", force: :cascade do |t|
+    t.bigint "model_asset_id", null: false
+    t.integer "position", null: false
+    t.string "title", default: "", null: false
+    t.text "body", default: "", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["model_asset_id"], name: "index_assembly_steps_on_model_asset_id"
+  end
+
   create_table "cart_items", force: :cascade do |t|
     t.bigint "cart_id", null: false
     t.bigint "product_id", null: false
@@ -118,6 +128,71 @@ ActiveRecord::Schema[7.2].define(version: 2026_05_17_000015) do
     t.index ["product_id"], name: "index_inventories_on_product_id", unique: true
   end
 
+  create_table "materials", force: :cascade do |t|
+    t.string "code", null: false
+    t.string "name", null: false
+    t.string "unit", default: "個", null: false
+    t.decimal "stock", precision: 12, scale: 2, default: "0.0", null: false
+    t.decimal "reorder_point", precision: 12, scale: 2, default: "0.0", null: false
+    t.integer "unit_cost_cents", default: 0, null: false
+    t.string "supplier", default: "", null: false
+    t.text "note", default: "", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["code"], name: "index_materials_on_code", unique: true
+  end
+
+  create_table "model_assets", force: :cascade do |t|
+    t.string "name", null: false
+    t.text "description", default: "", null: false
+    t.string "license", default: "", null: false
+    t.text "assembly_notes", default: "", null: false
+    t.boolean "for_sale", default: false, null: false
+    t.integer "price_cents", default: 0, null: false
+    t.bigint "product_id"
+    t.bigint "created_by_id"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["created_by_id"], name: "index_model_assets_on_created_by_id"
+    t.index ["product_id"], name: "index_model_assets_on_product_id", unique: true
+  end
+
+  create_table "model_photos", force: :cascade do |t|
+    t.bigint "model_asset_id", null: false
+    t.string "kind", null: false
+    t.string "caption", default: "", null: false
+    t.integer "position", null: false
+    t.boolean "featured", default: false, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["model_asset_id", "kind", "position"], name: "index_model_photos_on_model_asset_id_and_kind_and_position"
+    t.index ["model_asset_id"], name: "index_model_photos_on_model_asset_id"
+  end
+
+  create_table "model_versions", force: :cascade do |t|
+    t.bigint "model_asset_id", null: false
+    t.integer "number", null: false
+    t.text "note", default: "", null: false
+    t.bigint "created_by_id"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["created_by_id"], name: "index_model_versions_on_created_by_id"
+    t.index ["model_asset_id", "number"], name: "index_model_versions_on_model_asset_id_and_number", unique: true
+    t.index ["model_asset_id"], name: "index_model_versions_on_model_asset_id"
+  end
+
+  create_table "order_events", force: :cascade do |t|
+    t.bigint "order_id", null: false
+    t.bigint "actor_id"
+    t.string "from_status"
+    t.string "status", null: false
+    t.string "note", default: "", null: false
+    t.datetime "created_at", null: false
+    t.index ["actor_id"], name: "index_order_events_on_actor_id"
+    t.index ["order_id"], name: "index_order_events_on_order_id"
+    t.index ["status", "created_at"], name: "index_order_events_on_status_and_created_at"
+  end
+
   create_table "order_items", force: :cascade do |t|
     t.bigint "order_id", null: false
     t.bigint "product_id", null: false
@@ -132,9 +207,9 @@ ActiveRecord::Schema[7.2].define(version: 2026_05_17_000015) do
 
   create_table "orders", force: :cascade do |t|
     t.bigint "user_id", null: false
-    t.bigint "address_id", null: false
+    t.bigint "address_id"
     t.bigint "payment_method_id"
-    t.string "status", default: "pending", null: false
+    t.string "status", default: "received", null: false
     t.integer "subtotal_cents", default: 0, null: false
     t.integer "tax_cents", default: 0, null: false
     t.integer "shipping_cents", default: 0, null: false
@@ -144,7 +219,12 @@ ActiveRecord::Schema[7.2].define(version: 2026_05_17_000015) do
     t.datetime "placed_at"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.datetime "paid_at"
+    t.datetime "materials_consumed_at"
+    t.date "due_on"
+    t.bigint "assignee_id"
     t.index ["address_id"], name: "index_orders_on_address_id"
+    t.index ["assignee_id"], name: "index_orders_on_assignee_id"
     t.index ["payment_method_id"], name: "index_orders_on_payment_method_id"
     t.index ["placed_at"], name: "index_orders_on_placed_at"
     t.index ["status"], name: "index_orders_on_status"
@@ -172,6 +252,17 @@ ActiveRecord::Schema[7.2].define(version: 2026_05_17_000015) do
     t.index ["product_id"], name: "index_product_embeddings_on_product_id"
   end
 
+  create_table "product_materials", force: :cascade do |t|
+    t.bigint "product_id", null: false
+    t.bigint "material_id", null: false
+    t.decimal "quantity", precision: 12, scale: 3, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["material_id"], name: "index_product_materials_on_material_id"
+    t.index ["product_id", "material_id"], name: "index_product_materials_on_product_id_and_material_id", unique: true
+    t.index ["product_id"], name: "index_product_materials_on_product_id"
+  end
+
   create_table "products", force: :cascade do |t|
     t.bigint "category_id", null: false
     t.string "sku", null: false
@@ -182,11 +273,14 @@ ActiveRecord::Schema[7.2].define(version: 2026_05_17_000015) do
     t.string "currency", default: "JPY", null: false
     t.boolean "is_subscribable", default: false, null: false
     t.datetime "published_at"
-    t.string "image_url", default: "", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.string "image_url", default: "", null: false
+    t.boolean "is_digital", default: false, null: false
+    t.string "license", default: "", null: false
     t.index ["category_id"], name: "index_products_on_category_id"
     t.index ["description"], name: "index_products_on_description_trgm", opclass: :gin_trgm_ops, using: :gin
+    t.index ["is_digital"], name: "index_products_on_is_digital"
     t.index ["name"], name: "index_products_on_name_trgm", opclass: :gin_trgm_ops, using: :gin
     t.index ["published_at"], name: "index_products_on_published_at"
     t.index ["sku"], name: "index_products_on_sku", unique: true
@@ -198,13 +292,17 @@ ActiveRecord::Schema[7.2].define(version: 2026_05_17_000015) do
     t.bigint "product_id"
     t.string "kind", null: false
     t.string "status", default: "pending", null: false
-    t.string "vehicle", default: "", null: false
+    t.string "subject", default: "", null: false
     t.datetime "preferred_at"
     t.integer "budget_cents"
     t.text "body", default: "", null: false
     t.string "contact_phone", default: "", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.bigint "order_id"
+    t.text "reply", default: "", null: false
+    t.datetime "replied_at"
+    t.index ["order_id"], name: "index_service_requests_on_order_id"
     t.index ["product_id"], name: "index_service_requests_on_product_id"
     t.index ["status"], name: "index_service_requests_on_status"
     t.index ["user_id", "kind"], name: "index_service_requests_on_user_id_and_kind"
@@ -269,6 +367,22 @@ ActiveRecord::Schema[7.2].define(version: 2026_05_17_000015) do
     t.index ["user_id"], name: "index_subscriptions_on_user_id"
   end
 
+  create_table "tips", force: :cascade do |t|
+    t.bigint "order_id", null: false
+    t.bigint "user_id", null: false
+    t.integer "amount_cents", null: false
+    t.text "message", default: "", null: false
+    t.string "status", default: "pending", null: false
+    t.datetime "paid_at"
+    t.bigint "confirmed_by_id"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["confirmed_by_id"], name: "index_tips_on_confirmed_by_id"
+    t.index ["order_id"], name: "index_tips_on_order_id"
+    t.index ["status", "created_at"], name: "index_tips_on_status_and_created_at"
+    t.index ["user_id"], name: "index_tips_on_user_id"
+  end
+
   create_table "users", force: :cascade do |t|
     t.string "email", null: false
     t.string "password_digest", null: false
@@ -277,6 +391,8 @@ ActiveRecord::Schema[7.2].define(version: 2026_05_17_000015) do
     t.string "stripe_customer_id"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.text "admin_note", default: "", null: false
+    t.string "permissions", default: [], null: false, array: true
     t.index ["email"], name: "index_users_on_email", unique: true
     t.index ["role"], name: "index_users_on_role"
   end
@@ -286,19 +402,31 @@ ActiveRecord::Schema[7.2].define(version: 2026_05_17_000015) do
   add_foreign_key "addresses", "users"
   add_foreign_key "ai_conversations", "users"
   add_foreign_key "ai_messages", "ai_conversations"
+  add_foreign_key "assembly_steps", "model_assets"
   add_foreign_key "cart_items", "carts"
   add_foreign_key "cart_items", "products"
   add_foreign_key "carts", "users"
   add_foreign_key "categories", "categories", column: "parent_id"
   add_foreign_key "inventories", "products"
+  add_foreign_key "model_assets", "products"
+  add_foreign_key "model_assets", "users", column: "created_by_id"
+  add_foreign_key "model_photos", "model_assets"
+  add_foreign_key "model_versions", "model_assets"
+  add_foreign_key "model_versions", "users", column: "created_by_id"
+  add_foreign_key "order_events", "orders"
+  add_foreign_key "order_events", "users", column: "actor_id"
   add_foreign_key "order_items", "orders"
   add_foreign_key "order_items", "products"
   add_foreign_key "orders", "addresses"
   add_foreign_key "orders", "payment_methods"
   add_foreign_key "orders", "users"
+  add_foreign_key "orders", "users", column: "assignee_id"
   add_foreign_key "payment_methods", "users"
   add_foreign_key "product_embeddings", "products"
+  add_foreign_key "product_materials", "materials"
+  add_foreign_key "product_materials", "products"
   add_foreign_key "products", "categories"
+  add_foreign_key "service_requests", "orders"
   add_foreign_key "service_requests", "products"
   add_foreign_key "service_requests", "users"
   add_foreign_key "shipments", "orders"
@@ -309,4 +437,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_05_17_000015) do
   add_foreign_key "subscriptions", "products"
   add_foreign_key "subscriptions", "subscription_plans"
   add_foreign_key "subscriptions", "users"
+  add_foreign_key "tips", "orders"
+  add_foreign_key "tips", "users"
+  add_foreign_key "tips", "users", column: "confirmed_by_id"
 end

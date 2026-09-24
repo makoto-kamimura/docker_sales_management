@@ -1,23 +1,26 @@
 class ServiceRequest < ApplicationRecord
-  # 整備の予約 (maintenance) と システムの開発依頼 (system) を共通のテーブルで扱う。
-  KINDS = %w[maintenance system].freeze
+  # 顧客からの 問い合わせ (inquiry) と オーダーメイド制作依頼 (custom) を共通のテーブルで扱う。
+  KINDS = %w[inquiry custom].freeze
 
-  # kind ごとに取りうるステータス遷移を定義
+  # kind ごとに取りうるステータス
   STATUSES = {
-    "maintenance" => %w[pending confirmed completed cancelled].freeze,
-    "system"      => %w[pending quoted in_progress completed cancelled].freeze
+    "inquiry" => %w[pending answered closed].freeze,
+    "custom"  => %w[pending quoted in_progress completed cancelled].freeze
   }.freeze
 
   belongs_to :user
-  belongs_to :product, optional: true
+  belongs_to :product, optional: true # オーダーメイド: 参考にする商品
+  belongs_to :order, optional: true   # 問い合わせ: 対象の注文
 
   validates :kind, inclusion: { in: KINDS }
   validates :body, presence: true
+  validates :subject, presence: true, if: -> { kind == "inquiry" }
   validate  :status_allowed_for_kind
-  validate  :preferred_at_for_maintenance
+  validate  :order_belongs_to_user
 
   scope :recent,  -> { order(created_at: :desc, id: :desc) }
   scope :by_kind, ->(kind) { kind.present? ? where(kind: kind) : all }
+  scope :open,    -> { where(status: %w[pending quoted in_progress]) }
 
   def statuses
     STATUSES.fetch(kind, [])
@@ -28,6 +31,13 @@ class ServiceRequest < ApplicationRecord
     update!(status: new_status)
   end
 
+  # 店舗からの回答。未対応の問い合わせは回答と同時に「回答済み」にする
+  def reply!(text)
+    attrs = { reply: text, replied_at: Time.current }
+    attrs[:status] = "answered" if kind == "inquiry" && status == "pending"
+    update!(attrs)
+  end
+
   private
 
   def status_allowed_for_kind
@@ -35,9 +45,7 @@ class ServiceRequest < ApplicationRecord
     errors.add(:status, "は#{kind}では使用できません")
   end
 
-  # 整備予約は希望日時を必須にする
-  def preferred_at_for_maintenance
-    return unless kind == "maintenance"
-    errors.add(:preferred_at, "を指定してください") if preferred_at.blank?
+  def order_belongs_to_user
+    errors.add(:order, "が見つかりません") if order && order.user_id != user_id
   end
 end

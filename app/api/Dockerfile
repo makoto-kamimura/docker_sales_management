@@ -15,6 +15,7 @@ RUN apt-get update -qq && \
       libyaml-dev \
       libffi-dev \
       pkg-config \
+      fonts-ipaexfont-gothic \
       tzdata && \
     rm -rf /var/lib/apt/lists/*
 
