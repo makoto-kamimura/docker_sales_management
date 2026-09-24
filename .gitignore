@@ -27,6 +27,10 @@ logs/
 tmp/
 .cache/
 
+# ---- バックアップ (手作業で退避したファイル: *.bak, *.bak.YYYYMMDD-xxx) ----
+*.bak
+*.bak.*
+
 # ---- Node / フロント共通（各サブプロジェクトの .gitignore も併用） ----
 node_modules/
 
