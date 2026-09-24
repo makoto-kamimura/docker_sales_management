@@ -58,8 +58,8 @@ cd ~/dify/docker && docker compose stop          # 停止
 
 AIコンシェルジュが参照するナレッジソースは [./knowledge/](./knowledge/) に置く。
 
-- [./knowledge/catalog.md](./knowledge/catalog.md) — 取り扱いカタログ (coffee / parts / maintenance / system)
-- [./knowledge/faq.md](./knowledge/faq.md) — よくある質問 (整備の予約・システムの依頼・サブスク等)
+- [./knowledge/catalog.md](./knowledge/catalog.md) — 取り扱いカタログ (3d-prints / 3d-models / handmade / materials / custom)
+- [./knowledge/faq.md](./knowledge/faq.md) — よくある質問 (制作状況・オーダーメイド・3Dデータ・サブスク等)
 
 ### 再構築手順 (商品やカテゴリを変更したとき)
 
@@ -73,5 +73,5 @@ AIコンシェルジュが参照するナレッジソースは [./knowledge/](./
 3. ドキュメントの **再インデックス (Embedding)** が完了するまで待つ。
 4. Chatflow の Knowledge Retrieval ノードが当該ナレッジを参照していることを確認し、**Publish**。
 
-> カテゴリは coffee / parts / maintenance / system の4本立て。旧 tea / snack / navi は廃止済み（[../../app/api/lib/tasks/legacy.rake](../../app/api/lib/tasks/legacy.rake) で掃除）。
-> プロンプト本体は [./prompts/concierge_system.md](./prompts/concierge_system.md)。CTA(`open_maintenance_booking` 等)はクライアント側でリンク化される。
+> カテゴリは 3d-prints / 3d-models / handmade / materials / custom の5本立て。旧コンセプト (汎用EC・ライダーズカフェ) のカテゴリは [../../app/api/lib/tasks/legacy.rake](../../app/api/lib/tasks/legacy.rake) で掃除する。
+> プロンプト本体は [./prompts/concierge_system.md](./prompts/concierge_system.md)。CTA(`open_custom_request` / `open_contact` 等)はクライアント側でリンク化される。直近の注文は `status_label` (制作・発送の工程名) つきで渡す。

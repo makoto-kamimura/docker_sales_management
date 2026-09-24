@@ -9,31 +9,33 @@
 #   出力された catalog.md と faq.md を Dify のナレッジベースへ再アップロードする。
 
 KIND_HEADING = {
-  "coffee"      => "## COFFEE（コーヒー豆 / 物販・サブスク対象）",
-  "parts"       => "## PARTS（パーツ / 物販）",
-  "maintenance" => "## MAINTENANCE（整備 / 予約制サービス）",
-  "system"      => "## SYSTEM（ナビ・電装 / 取付・開発の依頼制サービス）"
+  "3d-prints" => "## 3D PRINTS（3Dプリント品 / 受注後に制作する物販）",
+  "3d-models" => "## 3D MODELS（3Dプリンタ用モデルデータ / ダウンロード販売）",
+  "handmade"  => "## HANDMADE（ハンドメイド雑貨 / 物販）",
+  "materials" => "## MATERIALS（素材・キット / 物販・一部サブスク対象）",
+  "custom"    => "## CUSTOM（オーダーメイド / 依頼制）"
 }.freeze
 
-puts "# ROUTE & ROAST 取り扱いカタログ"
+puts "# CraftFlow 取り扱いカタログ"
 puts
-puts "ライダーズカフェ「ROUTE & ROAST」の取り扱い一覧。AIコンシェルジュのナレッジベース用ソース。"
+puts "つくる人のネットショップ「CraftFlow」の取り扱い一覧。AIコンシェルジュのナレッジベース用ソース。"
 puts "自動生成: #{Time.current.iso8601}"
 puts
 
 Category.order(:position, :id).each do |cat|
-  products = cat.products.where("published_at IS NOT NULL").order(:sku)
+  products = cat.products.where("published_at IS NOT NULL").order(:sku) # 旧カテゴリの非公開商品は出さない
   next if products.empty?
 
   puts KIND_HEADING.fetch(cat.slug, "## #{cat.name}")
   puts
   if cat.service?
-    puts "カートには入らない。予約・依頼フローから車種等を添えて申し込む。"
+    puts "カートには入らない。オーダーメイド依頼フォーム (/custom) から、作りたいもの・サイズ・素材・希望納期を添えて依頼する。"
     puts
   end
   products.each do |p|
     suffix = cat.service? ? "〜（目安）" : ""
     sub = p.is_subscribable ? " サブスク対応。" : ""
+    sub += " ダウンロード販売 (#{p.model_file_format || '形式未登録'})。ライセンス: #{p.license.presence || '—'}。" if p.is_digital?
     tags = p.tags.any? ? " タグ: #{p.tags.join(' / ')}。" : ""
     puts "- **#{p.sku} #{p.name}** — ¥#{p.price_cents.to_s.reverse.gsub(/(\d{3})(?=\d)/, '\\1,').reverse}#{suffix}"
     puts "  #{p.description}#{tags}#{sub}"
