@@ -2,13 +2,14 @@ module Api
   module V1
     module Admin
       class ProductsController < BaseController
-        before_action :set_product, only: %i[show update destroy upload_image]
+        requires_permission :sales
+        before_action :set_product, only: %i[show update destroy upload_image upload_model_file]
 
         def index
           page, per = pagination_params
           scope = Product.order(id: :desc)
           set_pagination_headers(scope, page: page, per: per)
-          render json: scope.offset((page - 1) * per).limit(per).map { |p| serialize(p) }
+          render json: scope.includes(:inventory, model_file_attachment: :blob).offset((page - 1) * per).limit(per).map { |p| serialize(p) }
         end
 
         def show
@@ -43,6 +44,16 @@ module Api
           render json: serialize(@product, detail: true)
         end
 
+        # 3Dモデルデータ (STL/3MF/OBJ/STEP/ZIP) のアップロード。購入者のみ DownloadsController 経由で取得できる
+        def upload_model_file
+          unless @product.is_digital?
+            return render_error(code: "not_digital", message: "デジタル商品ではありません", status: :unprocessable_entity)
+          end
+          @product.model_file = params.require(:model_file)
+          @product.save! # 形式・サイズ不正は RecordInvalid → 422
+          render json: serialize(@product, detail: true)
+        end
+
         private
 
         def set_product
@@ -51,7 +62,7 @@ module Api
 
         def product_params
           params.permit(:category_id, :sku, :name, :description, :price_cents, :currency,
-                        :is_subscribable, :published_at, :image_url, tags: [])
+                        :is_subscribable, :is_digital, :license, :published_at, :image_url, tags: [])
         end
 
         def enqueue_embedding(product)
@@ -64,9 +75,13 @@ module Api
         end
 
         def serialize(p, detail: false)
-          base = p.attributes.slice("id", "sku", "name", "price_cents", "currency", "tags", "category_id", "is_subscribable", "published_at", "image_url")
+          base = p.attributes.slice("id", "sku", "name", "price_cents", "currency", "tags", "category_id", "is_subscribable",
+                                    "is_digital", "license", "published_at", "image_url")
+          base[:stock] = p.inventory&.stock || 0
+          base[:file_format] = p.model_file_format
+          base[:file_name] = p.model_file.attached? ? p.model_file.filename.to_s : nil
           if detail
-            base.merge!(description: p.description, stock: p.inventory&.stock || 0, reserved: p.inventory&.reserved || 0)
+            base.merge!(description: p.description, reserved: p.inventory&.reserved || 0)
           end
           base
         end

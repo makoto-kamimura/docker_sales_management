@@ -1,56 +1,50 @@
 module Api
   module V1
     module Admin
+      # 注文管理: 一覧・詳細・ステータス/発送の更新
       class OrdersController < BaseController
+        requires_permission :orders
+        include OrderJson
+
         def index
           page, per = pagination_params
           scope = Order.recent
           scope = scope.where(status: params[:status]) if params[:status].present?
+          scope = scope.where(assignee_id: params[:assignee_id]) if params[:assignee_id].present?
           scope = scope.for_period(parse_date(params[:from]), parse_date(params[:to]))
 
           set_pagination_headers(scope, page: page, per: per)
-          render json: scope.includes(:user).offset((page - 1) * per).limit(per).map { |o| serialize(o) }
+          rows = scope.includes(*ORDER_PRELOAD).offset((page - 1) * per).limit(per)
+          render json: rows.map { |o| order_card(o) }
         end
 
         def show
-          render json: detail(Order.find(params[:id]))
+          render json: order_detail(find_order)
         end
 
+        # status / assignee_id / due_on / carrier / tracking_number
         def update
-          order = Order.find(params[:id])
-          if (new_status = params[:status])
-            order.transition_to!(new_status)
-            if new_status == "shipped"
-              order.shipment&.update!(status: "shipped", shipped_at: Time.current,
-                                      carrier: params[:carrier], tracking_number: params[:tracking_number])
-            elsif new_status == "delivered"
-              order.shipment&.update!(status: "delivered", delivered_at: Time.current)
-            end
+          order = find_order
+          workflow = OrderWorkflow.new(order, actor: current_user)
+          workflow.plan!(params.permit(:assignee_id, :due_on))
+          if params[:status].present?
+            workflow.transition!(
+              params[:status], note: params[:note], carrier: params[:carrier], tracking_number: params[:tracking_number]
+            )
           end
-          render json: detail(order.reload)
+          render json: order_detail(find_order)
+        rescue OrderWorkflow::Error => e
+          render_error(code: "bad_transition", message: e.message, status: :unprocessable_entity)
         end
 
         private
 
+        def find_order
+          Order.includes(*ORDER_PRELOAD, :address, :shipment, events: :actor).find(params[:id])
+        end
+
         def parse_date(s)
           s.present? ? Date.parse(s.to_s) : nil
-        end
-
-        def serialize(o)
-          {
-            id: o.id, user: { id: o.user_id, email: o.user.email, name: o.user.name },
-            status: o.status, total_cents: o.total_cents, currency: o.currency,
-            placed_at: o.placed_at
-          }
-        end
-
-        def detail(o)
-          serialize(o).merge(
-            items: o.items.includes(:product).map { |i|
-              { product_id: i.product_id, name: i.product.name, quantity: i.quantity, line_total_cents: i.line_total_cents }
-            },
-            shipment: o.shipment&.attributes&.slice("status", "carrier", "tracking_number", "shipped_at", "delivered_at")
-          )
         end
       end
     end

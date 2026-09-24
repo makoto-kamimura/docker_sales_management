@@ -44,7 +44,7 @@ module Api
               { sku: i.product.sku, name: i.product.name, qty: i.quantity }
             } || []
             recent = current_user.orders.recent.limit(3).map { |o|
-              { id: o.id, status: o.status, total: o.total_cents, placed_at: o.placed_at }
+              { id: o.id, status: o.status, status_label: o.status_label, total: o.total_cents, placed_at: o.placed_at }
             }
             {
               member_name: current_user.name,

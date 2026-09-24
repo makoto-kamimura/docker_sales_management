@@ -6,10 +6,14 @@ module Api
       def create
         cart = current_user.cart || current_user.create_cart!
         product = Product.find(params.require(:product_id))
+        if current_user.owns_digital?(product)
+          return render_error(code: "already_purchased", message: "購入済みのデータです。注文履歴から再ダウンロードできます",
+                              status: :unprocessable_entity)
+        end
         qty = params.fetch(:quantity, 1).to_i.clamp(1, 99)
 
         item = cart.items.find_or_initialize_by(product: product)
-        item.quantity = (item.new_record? ? 0 : item.quantity) + qty
+        item.quantity = clamp_quantity(product, (item.new_record? ? 0 : item.quantity) + qty)
         item.save!
 
         render json: serialize(item), status: :created
@@ -17,7 +21,7 @@ module Api
 
       def update
         item = current_user.cart.items.find(params[:id])
-        item.update!(quantity: params.require(:quantity).to_i.clamp(1, 99))
+        item.update!(quantity: clamp_quantity(item.product, params.require(:quantity).to_i))
         render json: serialize(item)
       end
 
@@ -28,6 +32,11 @@ module Api
       end
 
       private
+
+      # デジタル商品は1ライセンス単位なので数量は常に 1
+      def clamp_quantity(product, qty)
+        product.is_digital? ? 1 : qty.clamp(1, 99)
+      end
 
       def serialize(i)
         {

@@ -2,6 +2,7 @@ module Api
   module V1
     module Admin
       class InventoriesController < BaseController
+        requires_permission :sales
         def update
           inventory = Inventory.find_by!(product_id: params[:product_id])
           inventory.update!(stock: params.require(:stock).to_i)

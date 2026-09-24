@@ -23,6 +23,15 @@ class ApplicationController < ActionController::API
     raise ForbiddenError, "管理者権限が必要です" unless current_user.admin?
   end
 
+  # 販売 / 制作 / 注文 のいずれかの権限 (管理者はすべて持つ)
+  def require_permission!(*permissions)
+    authenticate!
+    return if permissions.any? { |p| current_user.can?(p) }
+
+    labels = permissions.map { |p| User::PERMISSIONS.fetch(p.to_s) }.join("または")
+    raise ForbiddenError, "#{labels}の権限が必要です"
+  end
+
   private
 
   def authenticate_user

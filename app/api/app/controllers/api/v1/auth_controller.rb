@@ -38,7 +38,7 @@ module Api
       end
 
       def user_json(user)
-        { id: user.id, email: user.email, name: user.name, role: user.role }
+        { id: user.id, email: user.email, name: user.name, role: user.role, permissions: user.effective_permissions }
       end
     end
   end

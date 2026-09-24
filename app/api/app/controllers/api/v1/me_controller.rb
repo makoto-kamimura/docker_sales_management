@@ -20,7 +20,7 @@ module Api
 
       def user_json(u)
         {
-          id: u.id, email: u.email, name: u.name, role: u.role,
+          id: u.id, email: u.email, name: u.name, role: u.role, permissions: u.effective_permissions,
           default_address_id: u.default_address&.id,
           default_payment_method_id: u.default_payment_method&.id
         }
