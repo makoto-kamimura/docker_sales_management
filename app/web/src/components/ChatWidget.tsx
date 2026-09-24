@@ -11,13 +11,27 @@ type Msg = { id: number | string; role: "user" | "assistant"; content: string; c
 function ctaLink(cta: string): { href: string; label: string } | null {
   const [action, arg] = cta.split(":");
   switch (action) {
-    case "open_maintenance_booking": return { href: "/maintenance", label: "整備を予約する" };
-    case "open_system_request":      return { href: "/system", label: "開発を依頼する" };
+    case "open_custom_request":      return { href: "/custom", label: "オーダーメイドを依頼する" };
+    case "open_contact":             return { href: "/contact", label: "問い合わせる" };
     case "open_subscription_settings": return { href: "/subscriptions", label: "サブスク設定へ" };
     case "view_order":               return arg ? { href: `/orders/${arg}`, label: `注文 #${arg} を見る` } : null;
-    case "view_requests":            return { href: "/requests", label: "依頼状況を見る" };
+    case "view_requests":            return { href: "/requests", label: "問い合わせ・依頼を見る" };
     default: return null;
   }
+}
+
+/** コンシェルジュベル (ホテルの受付にある呼び鈴) */
+function ConciergeBell({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round"
+         strokeLinejoin="round" aria-hidden className={className}>
+      <circle cx="12" cy="5.5" r="1.3" fill="currentColor" stroke="none" />
+      <path d="M12 7v2" />
+      <path d="M4 17a8 8 0 0 1 16 0" />
+      <path d="M3 17h18" />
+      <path d="M2.5 20.5h19" />
+    </svg>
+  );
 }
 
 export function ChatWidget() {
@@ -64,21 +78,35 @@ export function ChatWidget() {
 
   return (
     <>
+      {/* 狭い画面はベルのみ (AI バッジつき)、広い画面は「AIコンシェルジュ」の文字も出す */}
       <button
         onClick={() => setOpen((v) => !v)}
-        className="fixed bottom-5 right-5 grid place-items-center rounded-full bg-caramel text-white w-14 h-14 z-50 text-xl font-bold shadow-lift transition-transform hover:scale-105 active:scale-95"
-        aria-label="AIコンシェルジュ"
+        className="fixed bottom-5 right-5 z-50 inline-flex h-14 items-center gap-2 rounded-full bg-caramel px-4 text-white shadow-lift transition-transform hover:scale-105 active:scale-95 sm:pr-5"
+        aria-label={open ? "AIコンシェルジュを閉じる" : "AIコンシェルジュに相談する"}
+        aria-expanded={open}
         title="AIコンシェルジュ"
       >
-        {open ? "×" : "R&R"}
+        {open ? (
+          <span aria-hidden className="w-6 text-center text-2xl leading-none">×</span>
+        ) : (
+          <span className="relative">
+            <ConciergeBell className="h-6 w-6" />
+            <span aria-hidden className="absolute -right-2.5 -top-2 rounded-full bg-espresso px-1 text-[9px] font-bold leading-[14px] text-coffee-50 ring-2 ring-caramel sm:hidden">
+              AI
+            </span>
+          </span>
+        )}
+        <span className="hidden whitespace-nowrap text-sm font-bold sm:inline">{open ? "閉じる" : "AIコンシェルジュ"}</span>
       </button>
       {open && (
         <div className="fixed bottom-24 right-5 w-[22rem] max-w-[calc(100vw-2.5rem)] h-[30rem] bg-white border border-coffee-200 rounded-2xl shadow-lift flex flex-col z-50 overflow-hidden animate-in">
           <div className="px-4 py-3 bg-espresso text-coffee-50 flex items-center gap-2.5">
-            <span className="h-2.5 w-2.5 rounded-full bg-caramel" />
+            <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-caramel text-white">
+              <ConciergeBell className="h-5 w-5" />
+            </span>
             <div>
               <div className="font-semibold text-sm leading-tight tracking-wide">AIコンシェルジュ</div>
-              <div className="text-[11px] text-coffee-400">豆・パーツ・整備・ナビのご相談</div>
+              <div className="text-[11px] text-coffee-400">作品・納期・オーダーメイドのご相談</div>
             </div>
           </div>
           <div ref={scrollRef} className="flex-1 overflow-auto p-3 space-y-2.5 text-sm bg-coffee-50/40">

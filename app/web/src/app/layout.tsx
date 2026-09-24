@@ -5,8 +5,8 @@ import { Header } from "@/components/Header";
 import { ChatWidget } from "@/components/ChatWidget";
 
 export const metadata: Metadata = {
-  title: "ROUTE & ROAST — Riders Cafe",
-  description: "コーヒーと、走るための全部。豆・パーツ・整備・ナビを揃えるライダーズカフェ。",
+  title: "CraftFlow — つくる人のネットショップ",
+  description: "3Dプリント・ハンドメイド作品の販売から、制作状況の見える化・顧客管理まで。つくる人のためのネットショップ。",
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
@@ -24,10 +24,10 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
           <footer className="mt-16 border-t border-coffee-200">
             <div className="max-w-6xl mx-auto px-4 py-8 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-coffee-500">
               <span className="flex items-center gap-2 font-semibold tracking-wide text-coffee-800">
-                <span aria-hidden className="text-caramel">●</span> ROUTE &amp; ROAST
-                <span className="font-normal text-coffee-400">Riders Cafe</span>
+                <span aria-hidden className="text-caramel">●</span> CraftFlow
+                <span className="font-normal text-coffee-400">つくる人のネットショップ</span>
               </span>
-              <span className="tracking-wide">COFFEE · PARTS · MAINTENANCE · SYSTEM · © {new Date().getFullYear()}</span>
+              <span className="tracking-wide">3D PRINT · HANDMADE · MATERIALS · CUSTOM ORDER · © {new Date().getFullYear()}</span>
             </div>
           </footer>
           <ChatWidget />

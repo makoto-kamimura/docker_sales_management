@@ -1,0 +1,373 @@
+/* ============================================================
+   トップのヒーロー（doc/hero.html のアニメーションを元にしたもの）
+   ヒーローの枠の形で見せ方を切り替えます（下の @container 参照）。
+   - 縦長の枠（スマホ・縦向きタブレット）: 3場面を順に見せる  … keyframes hp-*
+       場面1 工程 → 場面2 キャッチコピー → 場面3 ブランドとボタン（ここで止まる）
+   - 横長の枠（PC・横向きスマホ）: 元のアニメーション           … keyframes hl-*
+       16:9 の舞台に全要素を並べ、すべてが出そろった最後のコマで止まる
+   背景の家具だけはどちらでも、本編と独立して入れ替わりながら回り続けます。
+   サイト全体のスタイルと衝突しないよう、セレクタは .hero 配下に閉じています。
+   ============================================================ */
+.hero{
+  --dur:   14s;        /* 本編の尺（縦長）。横長は .stage で 15s に上書き。HeroPromo.tsx の DURATION_MS は長いほうに揃える */
+  --loop:  9s;         /* 家具が テーブル→椅子→棚 と一巡する時間（本編終了後も繰り返す） */
+  --spin:  5s;         /* 家具が1回転する時間 */
+  /* 色は globals.css のトークン（以前のヒーローと同じ組み合わせ） */
+  --field: #141413;    /* espresso: 背景 */
+  --line:  #f7f7f5;    /* coffee-50: 主線・見出し */
+  --muted: #bcbcb6;    /* coffee-300: 本文 */
+  --sub:   #8c8c86;    /* coffee-400: 補助線・補足文 */
+  --live:  #ff5722;    /* caramel: 進行中・CTA */
+  --part:  #bcbcb6;    /* 造形物（積層）の色 */
+  --spark: #ff5722;    /* ノズル先端 */
+  --ghost: .22;        /* 背景の家具の濃さ */
+
+  position:relative;overflow:hidden;
+  display:flex;flex-direction:column;
+  /* ページ上端からヒーローまでの距離 (--hero-top) を引いて、画面の残りにぴったり収める */
+  height:calc(100svh - var(--hero-top, 6rem) - 1rem);min-height:18rem;
+  border-radius:1rem;background:var(--field);color:var(--line);
+  font-family:"Hiragino Kaku Gothic ProN","Hiragino Sans","Yu Gothic Medium","Noto Sans JP",system-ui,sans-serif;
+}
+/* 3Dプリントの積層を思わせる、ごく薄い横縞と周辺減光 */
+.hero::before{
+  content:"";position:absolute;inset:0;pointer-events:none;
+  background:
+    radial-gradient(130% 110% at 40% 45%,transparent 55%,rgba(0,0,0,.45) 100%),
+    repeating-linear-gradient(to bottom,rgba(255,255,255,.025) 0 1px,transparent 1px 5px);
+}
+/* 以前のヒーローの右端のアクセント帯 */
+.hero::after{
+  content:"";position:absolute;right:0;top:0;width:6px;height:100%;
+  background:var(--live);pointer-events:none;z-index:4;
+}
+
+/* ヒーローの枠が container。文字や図の大きさは枠の幅・高さ (cqw / cqh) から決める */
+.promo{position:relative;flex:1;min-height:0;overflow:hidden;container-type:size}
+.promo .stage{position:absolute;inset:0}
+
+/* ============================================================
+   基本（縦長の枠）: 3場面
+   ============================================================ */
+/* 3つの場面は同じ位置に重ね、不透明度で切り替える */
+.promo .scene{
+  position:absolute;inset:0;z-index:2;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  padding:2.5rem 1.5rem;text-align:center;pointer-events:none;opacity:0;
+}
+.promo .scene-flow{animation:hp-flow var(--dur) linear both}
+.promo .scene-head{animation:hp-head var(--dur) linear both}
+/* 見えていない間は押せないよう visibility も切り替える */
+.promo .scene-brand{
+  visibility:hidden;pointer-events:auto;font-size:clamp(14px, min(1.5cqw, 2.6cqh), 20px);
+  animation:hp-brand var(--dur) linear both;
+}
+
+/* --- 工程ダイアグラム（縦長は縦向き、横長は横向きを表示） --- */
+.promo .diagram{display:block;overflow:visible}
+.promo .diagram-h{display:none}
+.promo .diagram-v{flex:1;min-height:0;width:100%}
+.promo .diagram .st{fill:none;stroke:var(--line);stroke-width:3;stroke-linecap:round;stroke-linejoin:round}
+.promo .diagram .tick{stroke:var(--sub);stroke-width:1.5;opacity:.55}
+.promo .diagram text{fill:var(--line);font-weight:600;letter-spacing:.09em}
+.promo .diagram-h text{font-size:21px}
+.promo .diagram-v text{font-size:30px}
+
+.promo .track{fill:none;stroke:var(--sub);stroke-width:2;opacity:.55;
+  stroke-dasharray:100;stroke-dashoffset:100;animation:hp-track var(--dur) linear both}
+.promo .prog{fill:none;stroke:var(--live);stroke-width:4;stroke-linecap:round;
+  stroke-dasharray:100;stroke-dashoffset:100;animation:hp-prog var(--dur) linear both}
+.promo .dot{fill:var(--field);stroke:var(--line);stroke-width:2.5}
+.promo .on{fill:var(--live);opacity:0}
+.promo .on1{animation:hp-on1 var(--dur) linear both}
+.promo .on2{animation:hp-on2 var(--dur) linear both}
+.promo .on3{animation:hp-on3 var(--dur) linear both}
+.promo .on4{animation:hp-on4 var(--dur) linear both}
+.promo .ico{opacity:.22}
+.promo .ico1{animation:hp-ico1 var(--dur) linear both}
+.promo .ico2{animation:hp-ico2 var(--dur) linear both}
+.promo .ico3{animation:hp-ico3 var(--dur) linear both}
+.promo .ico4{animation:hp-ico4 var(--dur) linear both}
+.promo .pass{stroke:var(--live)}
+
+.promo .lay{fill:var(--part);opacity:0}
+.promo .lay1{animation:hp-lay1 var(--dur) linear both}
+.promo .lay2{animation:hp-lay2 var(--dur) linear both}
+.promo .lay3{animation:hp-lay3 var(--dur) linear both}
+.promo .lay4{animation:hp-lay4 var(--dur) linear both}
+.promo .nozzle{animation:hp-nozzle var(--dur) linear both}
+.promo .shipout{opacity:0;animation:hp-shipout var(--dur) linear both}
+/* 縦向きでは右に流すと「発送」の文字に重なるので、線の延長方向（下）へ流す */
+.promo .diagram-v .shipout{animation-name:hp-shipout-v}
+
+/* --- キャッチコピー ---------------------------------------- */
+/* 1行目（11文字）が枠の幅に収まる大きさ */
+.promo .head{font-size:clamp(22px, min(7.4cqw, 11cqh), 64px);font-weight:700;line-height:1.35;letter-spacing:.03em}
+.promo .head span{display:block;color:var(--sub);font-weight:600}
+
+/* --- ブランドとボタン -------------------------------------- */
+/* 縦長では .brand の箱を消し、ショップ名 → 紹介文 → 補足コピー → ボタン の順に縦に並べる */
+.promo .brand{display:contents}
+/* 字間の分だけ右にずれて見えるので、末尾の字間を打ち消して中央に揃える */
+.promo .shop{order:1;font-size:2.4em;font-weight:700;letter-spacing:.2em;margin-right:-.2em;line-height:1}
+.promo .tag{order:2;font-size:.95em;color:var(--sub);margin-top:.9em;letter-spacing:.05em}
+.promo .sub{order:3;margin-top:1.6em;max-width:40em;font-size:1.05em;line-height:1.8;color:var(--muted)}
+.promo .sub b{font-weight:700;color:var(--line)}
+.promo .actions{order:4;margin-top:1.8em;display:flex;flex-wrap:wrap;justify-content:center;gap:.8em}
+.promo .cta{display:inline-block;background:var(--live);color:#fff;border:1px solid var(--live);
+  font-size:1em;font-weight:600;padding:.8em 1.6em;border-radius:.6em;letter-spacing:.06em;
+  white-space:nowrap;transition:filter .2s,box-shadow .2s,background-color .2s,border-color .2s}
+.promo .cta:hover{filter:brightness(1.06);box-shadow:0 8px 20px -10px rgba(255,87,34,.7)}
+.promo .cta-outline{background:transparent;color:var(--line);border-color:rgba(255,255,255,.25)}
+.promo .cta-outline:hover{filter:none;box-shadow:none;background:rgba(255,255,255,.1);border-color:rgba(255,255,255,.4)}
+@container (max-width: 560px){
+  .promo .sub br{display:none}
+}
+
+/* ============================================================
+   背景：線 → テーブル → 椅子 → 棚（制作フェーズ以降・薄く）
+   位置は .ghost の left / top / font-size で調整できます
+   ============================================================ */
+.promo .ghost{
+  position:absolute;left:80%;top:13%;width:0;height:0;z-index:1;
+  font-size:min(1.7cqw, 1cqh);perspective:64em;perspective-origin:50% 50%;pointer-events:none;
+  opacity:0;animation:hp-ghostIn var(--dur) linear both;
+}
+.promo .gplan{
+  position:absolute;left:0;top:0;width:28em;overflow:visible;
+  transform:translate(-50%,calc(-50% - 2.14em));
+  animation:hp-gplanOut var(--dur) linear both;
+}
+.promo .gplan path{
+  fill:none;stroke:var(--line);stroke-width:1.5;vector-effect:non-scaling-stroke;
+  stroke-linecap:square;stroke-dasharray:100;stroke-dashoffset:100;
+  animation:hp-gdraw var(--dur) linear both;
+}
+.promo .gplan .g2{animation-name:hp-gdraw2}
+
+.promo .gbuild,.promo .grig,.promo .gspin,.promo .obj,.promo .box{position:absolute;width:0;height:0;transform-style:preserve-3d}
+.promo .gbuild{left:0;top:0}
+.promo .grig{transform:rotateX(-16deg)}
+/* 家具の回転と入れ替えだけは本編（--dur）と独立した無限ループ。制作フェーズから始まり、本編が止まっても回り続ける */
+.promo .gspin{animation:hp-gspin var(--spin) linear calc(var(--dur) * .36) infinite}
+
+/* 立体は「箱」を組み合わせて作ります。--w 幅 / --h 高さ / --d 奥行 */
+.promo .box>i{display:block;position:absolute;left:50%;top:50%;border:1px solid var(--line)}
+.promo .box>i::after{content:"";position:absolute;inset:0;background:var(--sub);opacity:0;
+  animation:hp-gfill var(--dur) linear both}
+.promo .box>.u {width:var(--w);height:var(--d);margin:calc(var(--d)/-2) 0 0 calc(var(--w)/-2);
+         transform:rotateX(90deg) translateZ(calc(var(--h)/2))}
+.promo .box>.fr{width:var(--w);height:var(--h);margin:calc(var(--h)/-2) 0 0 calc(var(--w)/-2);
+         transform:translateZ(calc(var(--d)/2))}
+.promo .box>.bk{width:var(--w);height:var(--h);margin:calc(var(--h)/-2) 0 0 calc(var(--w)/-2);
+         transform:rotateY(180deg) translateZ(calc(var(--d)/2))}
+.promo .box>.lf{width:var(--d);height:var(--h);margin:calc(var(--h)/-2) 0 0 calc(var(--d)/-2);
+         transform:rotateY(-90deg) translateZ(calc(var(--w)/2))}
+.promo .box>.rt{width:var(--d);height:var(--h);margin:calc(var(--h)/-2) 0 0 calc(var(--d)/-2);
+         transform:rotateY(90deg) translateZ(calc(var(--w)/2))}
+
+/* テーブル */
+.promo .o-table{transform:translateY(-4.45em)}
+.promo .b-top {--w:25.5em;--h:.95em;--d:15.3em}
+.promo .b-tleg{--w:1.2em;--h:8.9em;--d:1.2em}
+.promo .t1{transform:translate3d(-11em,4.925em, 5.95em)}
+.promo .t2{transform:translate3d( 11em,4.925em, 5.95em)}
+.promo .t3{transform:translate3d(-11em,4.925em,-5.95em)}
+.promo .t4{transform:translate3d( 11em,4.925em,-5.95em)}
+
+/* 椅子 */
+.promo .o-chair{transform:translateY(.55em)}
+.promo .b-seat{--w:11em;--h:.66em;--d:11em}
+.promo .b-cleg{--w:.83em;--h:6.6em;--d:.83em}
+.promo .c1{transform:translate3d(-4.78em,3.63em, 4.78em)}
+.promo .c2{transform:translate3d( 4.78em,3.63em, 4.78em)}
+.promo .c3{transform:translate3d(-4.78em,3.63em,-4.78em)}
+.promo .c4{transform:translate3d( 4.78em,3.63em,-4.78em)}
+.promo .b-back{--w:11em;--h:7.7em;--d:.66em;transform:translate3d(0,-4.18em,-5.17em)}
+
+/* 棚 */
+.promo .o-shelf{transform:none}
+.promo .b-side {--w:.9em;--h:13.5em;--d:7.5em}
+.promo .b-board{--w:15em;--h:.75em;--d:7.5em}
+.promo .s1{transform:translateX(-7.8em)}
+.promo .s2{transform:translateX( 7.8em)}
+.promo .s3{transform:translateY(-6.4em)}
+.promo .s5{transform:translateY( 6.4em)}
+
+/* 入れ替えのフェードは「面」にかけます。
+   親要素に opacity を置くと preserve-3d が解除されて平面になるためです */
+.promo .o-table>.box>i{opacity:0;animation:hp-oTable var(--loop) linear calc(var(--dur) * .34) infinite backwards}
+.promo .o-chair>.box>i{opacity:0;animation:hp-oChair var(--loop) linear calc(var(--dur) * .34) infinite backwards}
+.promo .o-shelf>.box>i{opacity:0;animation:hp-oShelf var(--loop) linear calc(var(--dur) * .34) infinite backwards}
+/* ヒーローが画面外にある間はループを止めておく（HeroPromo.tsx が .is-offscreen を付ける） */
+.promo.is-offscreen .gspin,.promo.is-offscreen .obj>.box>i{animation-play-state:paused}
+
+/* --- スキップ ---------------------------------------------- */
+.hero-skip{
+  position:absolute;right:1.25rem;top:1rem;z-index:5;
+  font-size:.75rem;letter-spacing:.1em;color:var(--sub);
+  padding:.35rem .9rem;border:1px solid rgba(255,255,255,.18);border-radius:999px;
+  background:rgba(20,20,19,.6);cursor:pointer;transition:color .2s,border-color .2s;
+}
+.hero-skip:hover{color:var(--line);border-color:rgba(255,255,255,.4)}
+
+/* ============================================================
+   横長の枠（PC・横向きスマホ）: 元のアニメーション
+   16:9 の舞台を枠の中央に最大サイズで置き、場面の箱は消して（display:contents）
+   見出し・工程図・補足コピー・ブランドをそれぞれ元の位置とタイムライン (hl-*) で動かす
+   ============================================================ */
+@container (orientation: landscape){
+  .promo .stage{
+    --dur:15s;
+    inset:0;margin:auto;width:min(100cqw, 177.78cqh);height:min(100cqh, 56.25cqw);
+    font-size:min(1.3333cqw, 2.37cqh);
+  }
+  /* 場面の箱を消す。visibility と pointer-events は子に継承されるので戻しておく */
+  .promo .scene{display:contents;animation:none;visibility:visible;pointer-events:auto}
+  .promo .scene-brand{font-size:inherit}
+
+  /* 見出し */
+  .promo .head{
+    position:absolute;left:5em;top:2.2em;z-index:3;
+    font-size:3em;line-height:1.3;text-align:left;
+    opacity:0;animation:hl-head var(--dur) linear both;
+  }
+
+  /* 工程ダイアグラム */
+  .promo .diagram-v{display:none}
+  .promo .diagram-h{
+    display:block;position:absolute;left:50%;top:50%;width:86%;height:auto;z-index:2;
+    transform:translate(-50%,-50%);opacity:0;animation:hl-band var(--dur) linear both;
+  }
+  .promo .track{animation-name:hl-track}
+  .promo .prog{animation-name:hl-prog}
+  .promo .on1{animation-name:hl-on1}
+  .promo .on2{animation-name:hl-on2}
+  .promo .on3{animation-name:hl-on3}
+  .promo .on4{animation-name:hl-on4}
+  .promo .ico1{animation-name:hl-ico1}
+  .promo .ico2{animation-name:hl-ico2}
+  .promo .ico3{animation-name:hl-ico3}
+  .promo .ico4{animation-name:hl-ico4}
+  .promo .lay1{animation-name:hl-lay1}
+  .promo .lay2{animation-name:hl-lay2}
+  .promo .lay3{animation-name:hl-lay3}
+  .promo .lay4{animation-name:hl-lay4}
+  .promo .nozzle{animation-name:hl-nozzle}
+  .promo .shipout{animation-name:hl-shipout}
+
+  /* 補足コピー（左下） */
+  .promo .sub{
+    /* 幅は一番長い行に合わせ、改行 (br) 以外では折り返さない。
+       文字の大きさは、1行目が右下のブランドにかからないように決めている */
+    position:absolute;left:5em;bottom:4.5em;z-index:3;width:max-content;max-width:none;margin:0;
+    font-size:1.1em;line-height:1.75;text-align:left;
+    opacity:0;animation:hl-subc var(--dur) linear both;
+  }
+
+  /* ブランド＋ボタン（右下）。見えていない間は押せないよう visibility も切り替える */
+  .promo .brand{
+    display:block;position:absolute;right:5em;bottom:4.5em;z-index:3;text-align:right;
+    opacity:0;visibility:hidden;animation:hl-brand var(--dur) linear both;
+  }
+  .promo .shop{font-size:2.2em;margin-right:0}
+  .promo .tag{margin:.8em 0 1.4em}
+  .promo .actions{margin-top:0;flex-wrap:nowrap;justify-content:flex-end}
+
+  /* 背景の家具（右上） */
+  .promo .ghost{left:78%;top:18%;font-size:.75em;animation-name:hl-ghostIn}
+  .promo .gplan{animation-name:hl-gplanOut}
+  .promo .gplan path{animation-name:hl-gdraw}
+  .promo .gplan .g2{animation-name:hl-gdraw2}
+  .promo .box>i::after{animation-name:hl-gfill}
+  .promo .gspin{animation-delay:calc(var(--dur) * .48)}
+  .promo .obj>.box>i{animation-delay:calc(var(--dur) * .46)}
+}
+
+/* ============================================================
+   タイムライン（縦長: 3場面。すべて同じ var(--dur) の中に並べ、場面3で止まる）
+     0〜57%   場面1 工程   受付 11% / 制作 23% / 検品 35% / 発送 47%
+     61〜83%  場面2 キャッチコピー
+     84%〜    場面3 ブランドとボタン
+   ============================================================ */
+@keyframes hp-flow    {0%{opacity:0} 2%,57%{opacity:1} 61%,100%{opacity:0}}
+@keyframes hp-track   {0%,2%{stroke-dashoffset:100} 9%,100%{stroke-dashoffset:0}}
+@keyframes hp-prog    {0%,11%{stroke-dashoffset:100} 47%,100%{stroke-dashoffset:0}}
+@keyframes hp-on1     {0%,10%{opacity:0} 12%,100%{opacity:1}}
+@keyframes hp-on2     {0%,22%{opacity:0} 24%,100%{opacity:1}}
+@keyframes hp-on3     {0%,34%{opacity:0} 36%,100%{opacity:1}}
+@keyframes hp-on4     {0%,46%{opacity:0} 48%,100%{opacity:1}}
+@keyframes hp-ico1    {0%,9%{opacity:.22} 13%,100%{opacity:1}}
+@keyframes hp-ico2    {0%,21%{opacity:.22} 25%,100%{opacity:1}}
+@keyframes hp-ico3    {0%,33%{opacity:.22} 37%,100%{opacity:1}}
+@keyframes hp-ico4    {0%,45%{opacity:.22} 49%,100%{opacity:1}}
+@keyframes hp-lay1    {0%,24%{opacity:0;transform:translateY(5px)} 26.5%,100%{opacity:1;transform:translateY(0)}}
+@keyframes hp-lay2    {0%,26%{opacity:0;transform:translateY(5px)} 28.5%,100%{opacity:1;transform:translateY(0)}}
+@keyframes hp-lay3    {0%,28%{opacity:0;transform:translateY(5px)} 30.5%,100%{opacity:1;transform:translateY(0)}}
+@keyframes hp-lay4    {0%,30%{opacity:0;transform:translateY(5px)} 32.5%,100%{opacity:1;transform:translateY(0)}}
+@keyframes hp-nozzle  {0%,22%{transform:translateX(-16px)} 25%{transform:translateX(16px)}
+                       28%{transform:translateX(-16px)} 31%{transform:translateX(16px)}
+                       33%,100%{transform:translateX(0)}}
+@keyframes hp-shipout {0%,48%{opacity:0;transform:translateX(0)} 50%{opacity:1}
+                       57%,100%{opacity:0;transform:translateX(140px)}}
+@keyframes hp-shipout-v {0%,48%{opacity:0;transform:translateY(0)} 50%{opacity:1}
+                       57%,100%{opacity:0;transform:translateY(90px)}}
+@keyframes hp-head    {0%,61%{opacity:0} 64%,80%{opacity:1} 83%,100%{opacity:0}}
+/* HeroPromo.tsx はこの hp-brand（横長は hl-brand）の終了で「最後まで再生した」とみなします */
+@keyframes hp-brand   {0%,84%{opacity:0;visibility:hidden} 84.1%{visibility:visible}
+                       89%,100%{opacity:1;visibility:visible}}
+
+/* 背景：制作フェーズ（23%）に線画が描かれ、立体になって入れ替わりながら回り続けます */
+@keyframes hp-ghostIn  {0%,21%{opacity:0} 25%,100%{opacity:var(--ghost)}}
+@keyframes hp-gdraw    {0%,22%{stroke-dashoffset:100} 32%,100%{stroke-dashoffset:0}}
+@keyframes hp-gdraw2   {0%,26%{stroke-dashoffset:100} 34%,100%{stroke-dashoffset:0}}
+@keyframes hp-gplanOut {0%,34%{opacity:1} 38%,100%{opacity:0}}
+@keyframes hp-gfill    {0%,40%{opacity:0} 48%,100%{opacity:.5}}
+
+/* ============================================================
+   タイムライン（横長: 元のアニメーション。すべてが出そろった最後のコマで止まる）
+   ============================================================ */
+@keyframes hl-head    {0%,3%{opacity:0} 7%,100%{opacity:1}}
+@keyframes hl-band    {0%{opacity:0} 3%,100%{opacity:1}}
+@keyframes hl-track   {0%,5%{stroke-dashoffset:100} 14%,100%{stroke-dashoffset:0}}
+@keyframes hl-prog    {0%,18%{stroke-dashoffset:100} 70%,100%{stroke-dashoffset:0}}
+@keyframes hl-on1     {0%,21%{opacity:0} 24%,100%{opacity:1}}
+@keyframes hl-on2     {0%,34%{opacity:0} 37%,100%{opacity:1}}
+@keyframes hl-on3     {0%,49%{opacity:0} 52%,100%{opacity:1}}
+@keyframes hl-on4     {0%,65%{opacity:0} 68%,100%{opacity:1}}
+@keyframes hl-ico1    {0%,20%{opacity:.22} 25%,100%{opacity:1}}
+@keyframes hl-ico2    {0%,33%{opacity:.22} 38%,100%{opacity:1}}
+@keyframes hl-ico3    {0%,48%{opacity:.22} 53%,100%{opacity:1}}
+@keyframes hl-ico4    {0%,64%{opacity:.22} 69%,100%{opacity:1}}
+@keyframes hl-lay1    {0%,34%{opacity:0;transform:translateY(5px)} 37%,100%{opacity:1;transform:translateY(0)}}
+@keyframes hl-lay2    {0%,36%{opacity:0;transform:translateY(5px)} 39%,100%{opacity:1;transform:translateY(0)}}
+@keyframes hl-lay3    {0%,38%{opacity:0;transform:translateY(5px)} 41%,100%{opacity:1;transform:translateY(0)}}
+@keyframes hl-lay4    {0%,40%{opacity:0;transform:translateY(5px)} 43%,100%{opacity:1;transform:translateY(0)}}
+@keyframes hl-nozzle  {0%,33%{transform:translateX(-16px)} 36%{transform:translateX(16px)}
+                       39%{transform:translateX(-16px)} 42%{transform:translateX(16px)}
+                       45%,100%{transform:translateX(0)}}
+@keyframes hl-shipout {0%,70%{opacity:0;transform:translateX(0)} 72%{opacity:1}
+                       79%,100%{opacity:0;transform:translateX(140px)}}
+@keyframes hl-subc    {0%,42%{opacity:0} 46%,100%{opacity:1}}
+@keyframes hl-brand   {0%,76%{opacity:0;visibility:hidden} 76.1%{visibility:visible}
+                       80%,100%{opacity:1;visibility:visible}}
+@keyframes hl-ghostIn  {0%,31%{opacity:0} 35%,100%{opacity:var(--ghost)}}
+@keyframes hl-gdraw    {0%,33%{stroke-dashoffset:100} 43%,100%{stroke-dashoffset:0}}
+@keyframes hl-gdraw2   {0%,38%{stroke-dashoffset:100} 47%,100%{stroke-dashoffset:0}}
+@keyframes hl-gplanOut {0%,46%{opacity:1} 50%,100%{opacity:0}}
+@keyframes hl-gfill    {0%,56%{opacity:0} 64%,100%{opacity:.5}}
+
+/* 家具のループ（縦長・横長共通。1周 = --spin / --loop）。最初と最後が同じ状態になるようにしています */
+@keyframes hp-gspin    {from{transform:rotateY(0deg)} to{transform:rotateY(360deg)}}
+@keyframes hp-oTable   {0%{opacity:0} 5%,30%{opacity:1} 36%,100%{opacity:0}}
+@keyframes hp-oChair   {0%,30%{opacity:0} 36%,63%{opacity:1} 69%,100%{opacity:0}}
+@keyframes hp-oShelf   {0%,63%{opacity:0} 69%,95%{opacity:1} 100%{opacity:0}}
+
+/* スキップ・2回目以降は最後のコマから見せます。
+   終了時刻より前に開始したことにして、本編のアニメーションを最終状態にしています
+   （家具のループも同じ遅延になり、途中の位相からそのまま回り続けます） */
+.hero.is-done *,.hero.is-done *::after{animation-delay:calc(var(--dur) * -1 - 1s) !important}
+/* 動きを抑える設定の人には、最後のコマを静止画として見せます（家具のループも止める） */
+@media (prefers-reduced-motion: reduce){
+  .hero *,.hero *::after{animation-delay:calc(var(--dur) * -1 - 1s) !important;animation-play-state:paused !important}
+}

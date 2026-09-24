@@ -7,8 +7,8 @@ import { useAuth } from "@/lib/auth";
 export default function LoginPage() {
   const { login } = useAuth();
   const router = useRouter();
-  const [email, setEmail] = useState("member@example.com");
-  const [password, setPassword] = useState("password");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [err, setErr] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -48,9 +48,6 @@ export default function LoginPage() {
           ログイン
         </button>
       </form>
-      <p className="text-xs text-coffee-500 mt-5 rounded-lg bg-coffee-50 p-3 leading-relaxed">
-        テスト: member@example.com / password<br />管理者: admin@example.com / password
-      </p>
     </div>
   );
 }

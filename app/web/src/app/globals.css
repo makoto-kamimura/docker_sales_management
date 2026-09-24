@@ -1,9 +1,9 @@
 @import "tailwindcss";
 
 /*
-  RIDERS CAFE — modern / minimal palette
+  CraftFlow — modern / minimal palette
   --------------------------------------------------------------
-  ライダーズカフェのコンセプト: コーヒー × 整備・パーツ・ナビ。
+  つくる人のネットショップ: 3Dプリント・ハンドメイドの販売 × 制作管理。
   「余白・モノトーン・1色アクセント」で構成するミニマル設計。
 
   既存コードは coffee-* / caramel / espresso などのトークン名を参照しているため、
@@ -20,9 +20,9 @@
   coffee-800 インク (本文 / 主要テキスト)
   coffee-900 ニアブラック (最も濃い)
 
-  caramel    アクセント = ライダーズオレンジ (CTA / リンク / ハイライト)
+  caramel    アクセント = クラフトオレンジ (CTA / リンク / ハイライト)
   cream      ペーパー背景の別名
-  espresso   ヘッダ・ダーク面の別名 (アスファルトブラック)
+  espresso   ヘッダ・ダーク面の別名 (ニアブラック)
 */
 @theme {
   --color-coffee-50:  #f7f7f5;
@@ -158,7 +158,7 @@
     background-color: var(--color-coffee-900);
   }
 
-  /* アクセントCTA: ライダーズオレンジ単色 */
+  /* アクセントCTA: クラフトオレンジ単色 */
   .btn-accent {
     color: #fff;
     background-color: var(--color-caramel);

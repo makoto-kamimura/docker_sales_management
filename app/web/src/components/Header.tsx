@@ -2,43 +2,41 @@
 
 import Link from "next/link";
 import { useAuth } from "@/lib/auth";
+import { adminHome } from "@/lib/permissions";
 
 export function Header() {
   const { user, logout } = useAuth();
+  const adminHref = adminHome(user);
   return (
     <header className="sticky top-0 z-40 border-b border-white/10 bg-espresso/95 text-coffee-50 backdrop-blur-md supports-[backdrop-filter]:bg-espresso/80">
-      <div className="max-w-6xl mx-auto px-4 h-16 flex items-center gap-6">
+      <div className="max-w-6xl mx-auto px-4 h-16 flex items-center gap-3 sm:gap-6">
         <Link
           href="/"
-          className="flex items-center gap-2.5 transition-opacity hover:opacity-80"
+          className="flex shrink-0 items-center gap-2.5 transition-opacity hover:opacity-80"
         >
           <span aria-hidden className="h-2.5 w-2.5 rounded-full bg-caramel" />
           <span className="flex flex-col leading-none">
-            <span className="font-bold text-base tracking-[0.04em]">ROUTE &amp; ROAST</span>
-            <span className="text-[10px] font-medium uppercase tracking-[0.32em] text-coffee-400">
-              Riders Cafe
+            <span className="font-bold text-base tracking-[0.04em]">CraftFlow</span>
+            <span className="hidden sm:block whitespace-nowrap text-[10px] font-medium tracking-[0.2em] text-coffee-400">
+              つくる人のネットショップ
             </span>
           </span>
         </Link>
-        <nav className="hidden md:flex gap-1 text-sm">
+        {/* 項目が入りきらない幅では折り返さず横スクロール */}
+        <nav className="hidden md:flex min-w-0 gap-0.5 overflow-x-auto text-sm">
           <NavLink href="/search">商品を探す</NavLink>
-          <NavLink href="/maintenance">整備</NavLink>
-          <NavLink href="/system">システム</NavLink>
+          <NavLink href="/3d">3Dプリント</NavLink>
+          <NavLink href="/custom">オーダーメイド</NavLink>
           <NavLink href="/cart">カート</NavLink>
-          <NavLink href="/requests">依頼状況</NavLink>
           <NavLink href="/orders">注文履歴</NavLink>
+          <NavLink href="/requests">問い合わせ</NavLink>
           <NavLink href="/subscriptions">サブスク</NavLink>
-          {user?.role === "admin" && (
-            <>
-              <span className="self-center mx-1 h-4 w-px bg-coffee-50/20" />
-              <NavLink href="/admin/orders" accent>販売管理</NavLink>
-              <NavLink href="/admin/requests" accent>受付管理</NavLink>
-              <NavLink href="/admin/products" accent>商品管理</NavLink>
-              <NavLink href="/admin/dashboard" accent>ダッシュボード</NavLink>
-            </>
-          )}
         </nav>
-        <div className="ml-auto flex items-center gap-3 text-sm">
+        <div className="ml-auto flex shrink-0 items-center gap-2 sm:gap-3 whitespace-nowrap text-sm">
+          {adminHref && (
+            // 管理画面の中は権限 (販売 / 制作 / 注文) ごとのサブナビで切り替える
+            <NavLink href={adminHref} accent>管理画面</NavLink>
+          )}
           {user ? (
             <>
               <Link
@@ -48,7 +46,7 @@ export function Header() {
                 <span className="grid place-items-center h-7 w-7 rounded-full bg-caramel/90 text-white text-xs font-bold">
                   {user.name?.slice(0, 1) || "?"}
                 </span>
-                <span className="hidden sm:inline">{user.name}</span>
+                <span className="hidden sm:inline max-w-[8rem] truncate">{user.name}</span>
               </Link>
               <button
                 onClick={logout}
@@ -85,7 +83,7 @@ function NavLink({
   return (
     <Link
       href={href}
-      className={`rounded-lg px-3 py-1.5 transition-colors hover:bg-white/10 ${
+      className={`whitespace-nowrap rounded-lg px-2.5 py-1.5 transition-colors hover:bg-white/10 ${
         accent ? "text-caramel hover:text-caramel" : "hover:text-caramel"
       }`}
     >

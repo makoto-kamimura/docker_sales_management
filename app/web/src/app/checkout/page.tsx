@@ -22,7 +22,8 @@ export default function CheckoutPage() {
     try {
       const order = await api<Order>("/orders", {
         method: "POST",
-        body: jsonBody({ address_id: Number(addressId || addresses?.[0]?.id) }),
+        // デジタル商品のみの注文は配送先なし
+        body: jsonBody(cart?.requires_shipping ? { address_id: Number(addressId || addresses?.[0]?.id) } : {}),
         auth: token,
       });
       router.push(`/orders/${order.id}`);
@@ -40,26 +41,33 @@ export default function CheckoutPage() {
     <div className="space-y-5 max-w-2xl">
       <h1 className="text-2xl font-bold">ご注文確認</h1>
 
-      <section className="card p-5">
-        <h2 className="font-semibold mb-3">お届け先</h2>
-        {addresses.length === 0 ? (
-          <p className="text-sm">先に <a href="/account" className="text-caramel hover:underline">住所を登録</a> してください。</p>
-        ) : (
-          <select value={addressId || String(addresses[0].id)} onChange={(e) => setAddressId(e.target.value)}
-                  className="input">
-            {addresses.map((a) => (
-              <option key={a.id} value={a.id}>{a.recipient} - {a.prefecture}{a.city}{a.line1}</option>
-            ))}
-          </select>
-        )}
-      </section>
+      {cart.requires_shipping ? (
+        <section className="card p-5">
+          <h2 className="font-semibold mb-3">お届け先</h2>
+          {addresses.length === 0 ? (
+            <p className="text-sm">先に <a href="/account" className="text-caramel hover:underline">住所を登録</a> してください。</p>
+          ) : (
+            <select value={addressId || String(addresses[0].id)} onChange={(e) => setAddressId(e.target.value)}
+                    className="input">
+              {addresses.map((a) => (
+                <option key={a.id} value={a.id}>{a.recipient} - {a.prefecture}{a.city}{a.line1}</option>
+              ))}
+            </select>
+          )}
+        </section>
+      ) : (
+        <section className="card p-5 text-sm">
+          <h2 className="font-semibold mb-1">お届け方法</h2>
+          <p className="text-coffee-600">ダウンロード (配送なし・送料無料)。お支払い確認後、注文詳細からダウンロードできます。</p>
+        </section>
+      )}
 
       <section className="card p-5 text-sm">
         <h2 className="font-semibold mb-3">明細</h2>
         <ul className="divide-y divide-coffee-100">
           {cart.items.map((i) => (
             <li key={i.id} className="flex justify-between py-2">
-              <span>{i.name} <span className="text-coffee-400">× {i.quantity}</span></span>
+              <span>{i.name} <span className="text-coffee-400">{i.is_digital ? "(データ)" : `× ${i.quantity}`}</span></span>
               <span className="tabular-nums">{yen(i.line_total_cents)}</span>
             </li>
           ))}
@@ -71,7 +79,7 @@ export default function CheckoutPage() {
       </section>
 
       {err && <p className="text-sm text-rose-600">{err}</p>}
-      <button onClick={placeOrder} disabled={busy || cart.items.length === 0 || addresses.length === 0}
+      <button onClick={placeOrder} disabled={busy || cart.items.length === 0 || (cart.requires_shipping && addresses.length === 0)}
               className="btn btn-primary w-full !py-3 text-base">
         注文を確定する
       </button>

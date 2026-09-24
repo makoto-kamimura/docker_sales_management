@@ -5,13 +5,16 @@ import useSWR from "swr";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { yen, fmtDate } from "@/lib/format";
+import { orderStatusBadge } from "@/lib/orderStatus";
+import { LoadError } from "@/components/LoadError";
 import type { Order } from "@/lib/types";
 
 export default function OrdersPage() {
   const { token } = useAuth();
-  const { data: orders } = useSWR<Order[]>(token ? "orders" : null, () => api<Order[]>("/orders", { auth: token }));
+  const { data: orders, error, mutate } = useSWR<Order[]>(token ? "orders" : null, () => api<Order[]>("/orders", { auth: token }));
 
   if (!token) return <p className="card p-6 text-sm text-coffee-500">ログインが必要です。</p>;
+  if (error && !orders) return <LoadError error={error} onRetry={() => mutate()} />;
   if (!orders) return <p className="text-coffee-500 animate-pulse-soft">読み込み中…</p>;
 
   return (
@@ -27,7 +30,7 @@ export default function OrdersPage() {
               <Link href={`/orders/${o.id}`} className="font-semibold hover:text-caramel transition-colors">注文 #{o.id}</Link>
               <div className="text-xs text-coffee-500 mt-1 flex items-center gap-2">
                 <span>{fmtDate(o.placed_at)}</span>
-                <span className={`badge ${statusBadge(o.status)}`}>{o.status}</span>
+                <span className={`badge ${orderStatusBadge(o.status)}`}>{o.status_label}</span>
               </div>
             </div>
             <div className="font-bold text-lg tabular-nums">{yen(o.total_cents)}</div>
@@ -36,10 +39,4 @@ export default function OrdersPage() {
       </ul>
     </div>
   );
-}
-
-function statusBadge(status: string) {
-  if (["delivered", "paid", "shipped"].includes(status)) return "badge-success";
-  if (status === "cancelled") return "badge-muted";
-  return "badge-accent";
 }

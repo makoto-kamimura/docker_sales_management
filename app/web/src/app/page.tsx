@@ -1,7 +1,9 @@
 import Link from "next/link";
 import { api } from "@/lib/api";
-import type { Product } from "@/lib/types";
+import { SERVICE_SLUGS, type Product } from "@/lib/types";
 import { yen } from "@/lib/format";
+import { ORDER_FLOW, ORDER_STATUS_LABEL } from "@/lib/orderStatus";
+import { HeroPromo } from "@/components/HeroPromo";
 
 async function getProducts(): Promise<Product[]> {
   try {
@@ -12,50 +14,27 @@ async function getProducts(): Promise<Product[]> {
 }
 
 const CATEGORIES = [
-  { label: "COFFEE", title: "コーヒー豆", desc: "自家焙煎のスペシャルティ。走る前の一杯を。", href: "/search?category=coffee", cta: "見る →" },
-  { label: "PARTS", title: "パーツ", desc: "タイヤ・オイル・カスタムパーツを厳選。", href: "/search?category=parts", cta: "見る →" },
-  { label: "MAINTENANCE", title: "整備", desc: "点検・消耗品交換・カスタム取付の予約。", href: "/maintenance", cta: "予約する →" },
-  { label: "SYSTEM", title: "システム", desc: "ナビ・電装・インカムの取付や開発を依頼。", href: "/system", cta: "依頼する →" },
+  { label: "3D PRINTS", title: "3Dプリント品", desc: "受注後に出力・仕上げてお届けする完成品。", href: "/3d", cta: "見る →" },
+  { label: "3D MODELS", title: "3Dモデルデータ", desc: "自宅のプリンタで出力できるSTLデータ。", href: "/search?category=3d-models", cta: "見る →" },
+  { label: "HANDMADE", title: "ハンドメイド雑貨", desc: "手縫いのレザー小物や無垢材の木工品。", href: "/search?category=handmade", cta: "見る →" },
+  { label: "MATERIALS", title: "素材・キット", desc: "フィラメントやクラフトキット。定期便も。", href: "/search?category=materials", cta: "見る →" },
+  { label: "CUSTOM", title: "オーダーメイド", desc: "名入れ・サイズ変更・一点ものの制作を依頼。", href: "/custom", cta: "相談する →" },
 ] as const;
 
 export default async function Home() {
   const products = await getProducts();
   return (
     <div className="space-y-16">
-      {/* ヒーロー — モダン・ミニマル: 余白とタイポで見せる */}
-      <section className="relative overflow-hidden rounded-2xl bg-espresso text-coffee-50 px-8 py-16 sm:px-14 sm:py-24">
-        <div
-          aria-hidden
-          className="pointer-events-none absolute right-0 top-0 h-full w-1.5 bg-caramel"
-        />
-        <div className="relative max-w-2xl">
-          <span className="eyebrow text-caramel">Riders Cafe · Since 2026</span>
-          <h1 className="mt-5 text-4xl sm:text-6xl font-bold leading-[1.05] tracking-tight">
-            コーヒーと、<br />走るための全部。
-          </h1>
-          <p className="mt-6 text-sm sm:text-base text-coffee-300 leading-relaxed max-w-lg">
-            自家焙煎のコーヒー豆から、パーツ・整備・ナビシステムまで。
-            ライダーの「走る」を一か所で支えるカフェ＆ガレージ。
-          </p>
-          <div className="mt-8 flex flex-wrap gap-3">
-            <Link href="/search" className="btn btn-accent">商品を探す</Link>
-            <Link
-              href="/subscriptions"
-              className="btn btn-outline !text-coffee-50 !border-white/25 hover:!bg-white/10 hover:!border-white/40"
-            >
-              サブスクを見る
-            </Link>
-          </div>
-        </div>
-      </section>
+      {/* ヒーロー — doc/hero.html の15秒ループ */}
+      <HeroPromo />
 
-      {/* カテゴリ — 4つの取り扱い領域 */}
+      {/* カテゴリ — 取り扱い領域 */}
       <section>
         <div className="flex items-baseline justify-between mb-5">
           <h2 className="text-xl font-bold">取り扱い</h2>
-          <span className="text-xs uppercase tracking-[0.18em] text-coffee-400">4 Categories</span>
+          <span className="text-xs uppercase tracking-[0.18em] text-coffee-400">{CATEGORIES.length} Categories</span>
         </div>
-        <ul className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <ul className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
           {CATEGORIES.map((c) => (
             <li key={c.label}>
               <Link
@@ -74,6 +53,30 @@ export default async function Home() {
             </li>
           ))}
         </ul>
+      </section>
+
+      {/* 制作状況の見える化 */}
+      <section className="card p-6 sm:p-8">
+        <span className="eyebrow">Made to order</span>
+        <h2 className="mt-2 text-xl font-bold">いま、どの工程？が見える</h2>
+        <p className="mt-1.5 text-sm text-coffee-500 max-w-2xl leading-relaxed">
+          プリント品やハンドメイド作品はご注文を受けてからつくります。
+          注文詳細ページで、受付から完了までの進み具合を確認できます。
+        </p>
+        <ol className="mt-6 flex flex-wrap items-center gap-y-3 text-xs sm:text-sm">
+          {ORDER_FLOW.map((s, i) => (
+            <li key={s} className="flex items-center">
+              <span className={`rounded-full border px-3 py-1.5 font-medium ${
+                ["awaiting_production", "in_production", "inspection"].includes(s)
+                  ? "border-caramel/40 bg-caramel/10 text-coffee-800"
+                  : "border-coffee-200 bg-coffee-50 text-coffee-600"
+              }`}>
+                {ORDER_STATUS_LABEL[s]}
+              </span>
+              {i < ORDER_FLOW.length - 1 && <span aria-hidden className="mx-1.5 text-coffee-300">→</span>}
+            </li>
+          ))}
+        </ol>
       </section>
 
       {/* 新着商品 */}
@@ -114,7 +117,11 @@ export default async function Home() {
                   {p.is_subscribable && <span className="badge badge-success">サブスク対応</span>}
                 </div>
                 <div className="mt-1.5 text-xs">
-                  {p.in_stock ? (
+                  {SERVICE_SLUGS.includes(p.category_slug as (typeof SERVICE_SLUGS)[number]) ? (
+                    <span className="text-coffee-500">オーダーメイド (依頼制)</span>
+                  ) : p.is_digital ? (
+                    <span className="text-coffee-500">⬇ ダウンロード販売</span>
+                  ) : p.in_stock ? (
                     <span className="text-emerald-600">● 在庫あり</span>
                   ) : (
                     <span className="text-coffee-400">● 在庫切れ</span>

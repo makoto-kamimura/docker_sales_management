@@ -5,11 +5,12 @@ import useSWR from "swr";
 import { api, jsonBody } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { yen } from "@/lib/format";
+import { LoadError } from "@/components/LoadError";
 import type { Cart } from "@/lib/types";
 
 export default function CartPage() {
   const { token } = useAuth();
-  const { data: cart, mutate } = useSWR<Cart>(token ? "cart" : null, () => api<Cart>("/cart", { auth: token }));
+  const { data: cart, error, mutate } = useSWR<Cart>(token ? "cart" : null, () => api<Cart>("/cart", { auth: token }));
 
   async function setQty(id: number, quantity: number) {
     await api(`/cart/items/${id}`, { method: "PATCH", body: jsonBody({ quantity }), auth: token });
@@ -21,6 +22,7 @@ export default function CartPage() {
   }
 
   if (!token) return <p className="card p-6 text-sm text-coffee-500">ログインが必要です。</p>;
+  if (error && !cart) return <LoadError error={error} onRetry={() => mutate()} />;
   if (!cart) return <p className="text-coffee-500 animate-pulse-soft">読み込み中…</p>;
 
   return (
@@ -40,12 +42,19 @@ export default function CartPage() {
             <tbody className="text-sm">
               {cart.items.map((i) => (
                 <tr key={i.id} className="border-t border-coffee-100">
-                  <td className="p-3 font-medium">{i.name}</td>
+                  <td className="p-3 font-medium">
+                    {i.name}
+                    {i.is_digital && <span className="badge badge-accent ml-2">データ</span>}
+                  </td>
                   <td className="p-3 text-right tabular-nums">{yen(i.unit_price_cents)}</td>
                   <td className="p-3 text-center">
-                    <input type="number" min={1} max={99} value={i.quantity}
-                           onChange={(e) => setQty(i.id, Number(e.target.value))}
-                           className="input !w-16 text-center" />
+                    {i.is_digital ? (
+                      <span className="text-coffee-500" title="データは1ライセンス単位">1</span>
+                    ) : (
+                      <input type="number" min={1} max={99} value={i.quantity}
+                             onChange={(e) => setQty(i.id, Number(e.target.value))}
+                             className="input !w-16 text-center" />
+                    )}
                   </td>
                   <td className="p-3 text-right font-semibold tabular-nums">{yen(i.line_total_cents)}</td>
                   <td className="p-3 text-right"><button onClick={() => remove(i.id)} className="text-xs text-rose-500 hover:text-rose-600 hover:underline">削除</button></td>
