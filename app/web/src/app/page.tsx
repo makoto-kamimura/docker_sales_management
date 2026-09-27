@@ -25,7 +25,7 @@ export default async function Home() {
   const products = await getProducts();
   return (
     <div className="space-y-16">
-      {/* ヒーロー — doc/hero.html の15秒ループ */}
+      {/* ヒーロー — docs/design/hero.html の15秒ループ */}
       <HeroPromo />
 
       {/* カテゴリ — 取り扱い領域 */}

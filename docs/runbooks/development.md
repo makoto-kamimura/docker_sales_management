@@ -1,6 +1,7 @@
-# 運用 / 起動手順
+# 開発環境の運用手順
 
-`docker_ruby` の開発環境の起動・停止・再構築手順をまとめたドキュメント。
+`docker_sales_management` の開発環境の起動・停止・再構築の手順と、よくあるトラブルの対処をまとめる。
+仕様とクイックスタートは [README.md](../../README.md)（[18.5節 クイックスタート](../../README.md#185-クイックスタート)）を参照。
 
 ## 前提
 
@@ -14,7 +15,7 @@
 ### 1.1 環境変数
 
 ```bash
-cd docker_ruby/platform
+cd docker_sales_management/platform
 cp .env.example .env
 ```
 
@@ -24,7 +25,7 @@ cp .env.example .env
 スクラッチから再生成する場合のみ次を実行:
 
 ```bash
-cd docker_ruby/platform
+cd docker_sales_management/platform
 docker compose run --rm api bash -lc \
   "rails new . --api --database=postgresql --skip-bundle --skip-git --skip-test --force"
 docker compose run --rm web sh -lc \
@@ -36,22 +37,23 @@ docker compose run --rm mobile sh -lc \
 ### 1.3 DB の初期化 (マイグレーション + シード)
 
 ```bash
-cd docker_ruby/platform
+cd docker_sales_management/platform
 docker compose up -d postgres
 docker compose run --rm api bash -c "bundle exec rails db:prepare && bundle exec rails db:seed"
 ```
 
-シード完了で以下が投入されます:
-- 管理者 `admin@example.com / password`
-- 会員 `member@example.com / password` (住所1件)
-- カテゴリ: コーヒー豆 / 紅茶 / お菓子
+シード完了で以下が投入されます (冪等。既存の在庫数は上書きせず、デモ注文は注文が0件のときだけ投入):
+- ユーザー (パスワードはすべて `password`): 管理者 `admin@example.com` / スタッフ `staff1@example.com`・`staff2@example.com` (制作)・`shop@example.com` (販売・注文) / 会員 `member@example.com`・`hanako@example.com`
+- カテゴリ: 3Dプリント品 / 3Dモデルデータ / ハンドメイド雑貨 / 素材・キット / オーダーメイド
 - サブスクプラン: 毎週 / 隔週 / 月1
-- 商品4件 (mock embedding 含む)
+- サンプル商品・材料・レシピ (mock embedding 含む)
+
+> 公開環境では `db:seed` を実行しない (デモユーザーが作り直されるため)。
 
 ## 2. 通常起動
 
 ```bash
-cd docker_ruby/platform
+cd docker_sales_management/platform
 docker compose up
 ```
 
@@ -126,7 +128,7 @@ cd ~/dify/docker && docker compose ps
    - `cart_items` (JSON 文字列)
    - `recent_orders` (JSON 文字列)
 4. LLM ノードのモデルプロバイダを設定 (OpenAI/Anthropic 等の API キーを Dify 側で登録)
-5. プロンプトに [../app/ai/prompts/concierge_system.md](../app/ai/prompts/concierge_system.md) を貼り付け
+5. プロンプトに [../app/ai/prompts/concierge_system.md](../../app/ai/prompts/concierge_system.md) を貼り付け
 6. **Publish** → アプリ画面の「API Access」から **API Key** を発行 (`app-xxxxxxxx`)
 
 ### 3.4 Rails 側の接続設定
@@ -141,7 +143,7 @@ DIFY_API_KEY=app-xxxxxxxxxxxxxxxxxx
 反映：
 
 ```bash
-cd docker_ruby/platform
+cd docker_sales_management/platform
 docker compose restart api
 ```
 
@@ -150,7 +152,7 @@ docker compose restart api
 
 ### 3.5 Dify 未起動 / 未設定でも他機能は動く
 
-`DIFY_API_KEY` 未設定や Dify 未起動でも、AIコンシェルジュ以外の機能 (商品閲覧・カート・注文等) は動作する。AIコンシェルジュ API のみ `bad_gateway` (`code: ai_unavailable`) を返す ([../app/api/app/controllers/api/v1/ai_concierge/messages_controller.rb](../app/api/app/controllers/api/v1/ai_concierge/messages_controller.rb))。
+`DIFY_API_KEY` 未設定や Dify 未起動でも、AIコンシェルジュ以外の機能 (商品閲覧・カート・注文等) は動作する。AIコンシェルジュ API のみ `bad_gateway` (`code: ai_unavailable`) を返す ([../app/api/app/controllers/api/v1/ai_concierge/messages_controller.rb](../../app/api/app/controllers/api/v1/ai_concierge/messages_controller.rb))。
 
 ## 4. モバイル (Expo) の接続方法
 
@@ -207,7 +209,7 @@ Expo は Docker と相性が悪い (USB接続・Bluetooth ペアリング・iOS 
 
 ```bash
 # ホストに Node 20+ をインストール後
-cd docker_ruby/app/mobile
+cd docker_sales_management/app/mobile
 npm install
 EXPO_PUBLIC_API_BASE=http://<開発PC LAN IP>/api npx expo start
 ```
@@ -248,14 +250,14 @@ docker compose up postgres api web nginx
 docker compose run --rm api bundle install
 # それでも改善しなければ
 docker compose build --no-cache api
-docker volume rm docker_ruby_bundle_cache
+docker volume rm docker_sales_management_bundle_cache
 ```
 
 ### 「node_modules がコンテナ内で壊れた / OS 不一致 (host から `npm install` 走らせた等)」
 
 ```bash
 docker compose down
-docker volume rm docker_ruby_web_node_modules docker_ruby_mobile_node_modules
+docker volume rm docker_sales_management_web_node_modules docker_sales_management_mobile_node_modules
 docker compose up
 ```
 
@@ -281,19 +283,19 @@ docker compose up
   - `data-new-gr-c-s-check-loaded` — Grammarly
   - `cz-shortcut-listen` — ColorZilla
   - `data-lt-installed` — LanguageTool
-- 対処: 本リポジトリの [src/app/layout.tsx](../app/web/src/app/layout.tsx) は `<html>` `<body>` に `suppressHydrationWarning` を付与済み。新規 layout を追加する際は同様にしておく。
+- 対処: 本リポジトリの [src/app/layout.tsx](../../app/web/src/app/layout.tsx) は `<html>` `<body>` に `suppressHydrationWarning` を付与済み。新規 layout を追加する際は同様にしておく。
 - 切り分け: シークレットウィンドウで開いてエラーが消えるなら、拡張機能が原因で確定。
 
 ### 「Next.js SSR で `fetch failed` / API へ繋がらない」
 
 - 原因: サーバーコンポーネント (Next.js コンテナ内 Node.js) から `http://localhost/api` を叩くと、それは「dr_web コンテナ自身の localhost」を指してしまうため
-- 対処: 本リポジトリの [src/lib/api.ts](../app/web/src/lib/api.ts) は `typeof window === "undefined"` で分岐済み (SSR時は `API_BASE_INTERNAL=http://api:3000/api`、CSR時は `NEXT_PUBLIC_API_BASE=http://localhost/api`)。
+- 対処: 本リポジトリの [src/lib/api.ts](../../app/web/src/lib/api.ts) は `typeof window === "undefined"` で分岐済み (SSR時は `API_BASE_INTERNAL=http://api:3000/api`、CSR時は `NEXT_PUBLIC_API_BASE=http://localhost/api`)。
 - 新規のサーバーコンポーネントから API を叩く際は `fetch` 直書きではなく `api()` ヘルパー経由にする。
 
 ### 「Rails: API へ Docker network 内ホスト名 (`api` / `nginx`) からアクセスすると 403 Forbidden」
 
 - 原因: Rails 7 の Host Authorization が許可リストに無いホスト名からのアクセスを拒否する
-- 対処: 本リポジトリの [config/environments/development.rb](../app/api/config/environments/development.rb) に `config.hosts << "api"` 等を追加済み。新しい Docker サービス名を追加した場合はここに足す。
+- 対処: 本リポジトリの [config/environments/development.rb](../../app/api/config/environments/development.rb) に `config.hosts << "api"` 等を追加済み。新しい Docker サービス名を追加した場合はここに足す。
 
 ### 「create-next-app / create-expo-app が既存ファイルを上書きしてしまった」
 

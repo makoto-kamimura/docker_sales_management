@@ -43,3 +43,6 @@ dist/
 build/
 out/
 coverage/
+
+# ---- 非公開のローカル資料 (本番サーバーの IP を含む Expo Go の QR) ----
+docs/qr.*
