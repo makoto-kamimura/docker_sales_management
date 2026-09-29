@@ -34,7 +34,7 @@ cd ~/dify/docker && docker compose stop          # 停止
 - Dify Console / Web:  http://localhost:8080
 - Dify Service API:     http://localhost:8080/v1   (Rails からはこちら経由)
 
-> 詳細手順・ポート設計の意図は [../../doc/operation.md §3](../../doc/operation.md) を参照。
+> 詳細手順・ポート設計の意図は [../../docs/runbooks/development.md §3](../../docs/runbooks/development.md#3-dify-aiコンシェルジュ-を起動) を参照。
 
 ## Workflow の登録 (初回)
 

@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>つくる、売る、届ける。｜15秒ループ</title>
+<style>
+/* ============================================================
+   編集する場所は2つだけ
+   1) :root の --dur（尺）と色
+   2) HTML内の <!-- 差し替え --> が付いた文字
+   ============================================================ */
+:root{
+  --dur:   15s;        /* 尺。ここを変えると全体が同じ比率で伸縮します */
+  --field: #D5D0C4;    /* 背景（クラフト紙のような中間色） */
+  --line:  #33382F;    /* 主線・本文 */
+  --sub:   #8A8477;    /* 補助線・補足文 */
+  --live:  #1F6F5C;    /* 進行中を示す緑 */
+  --part:  #4A5A8C;    /* 造形物（積層）の色 */
+  --spark: #E0A81E;    /* ノズル先端 */
+  --ghost: .18;        /* 背景の家具の濃さ */
+}
+
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#1E211D;display:grid;place-items:center;min-height:100vh;padding:2rem}
+
+.promo{
+  width:100%;max-width:1200px;aspect-ratio:16/9;
+  position:relative;overflow:hidden;background:var(--field);
+  container-type:inline-size;
+  font-family:"Hiragino Kaku Gothic ProN","Hiragino Sans","Yu Gothic Medium","Noto Sans JP",system-ui,sans-serif;
+}
+.stage{position:absolute;inset:0;font-size:1.3333cqi;color:var(--line)}
+
+/* 3Dプリントの積層を思わせる、ごく薄い横縞 */
+.stage::before{
+  content:"";position:absolute;inset:0;pointer-events:none;
+  background:repeating-linear-gradient(to bottom,rgba(51,56,47,.055) 0 1px,transparent 1px 5px);
+}
+.stage::after{
+  content:"";position:absolute;inset:0;pointer-events:none;
+  background:radial-gradient(130% 110% at 40% 45%,transparent 58%,rgba(45,40,25,.14) 100%);
+}
+
+/* --- 見出し ------------------------------------------------ */
+.head{
+  position:absolute;left:5em;top:2.2em;z-index:3;
+  font-size:3em;font-weight:700;line-height:1.3;letter-spacing:.03em;
+  opacity:0;animation:head var(--dur) linear infinite;
+}
+.head span{display:block;color:var(--sub);font-weight:600}
+
+/* ============================================================
+   背景：線 → テーブル → 椅子 → 棚（制作フェーズ以降・薄く）
+   位置は .ghost の left / top / font-size で調整できます
+   ============================================================ */
+.ghost{
+  position:absolute;left:78%;top:18%;width:0;height:0;z-index:1;
+  font-size:.75em;perspective:64em;perspective-origin:50% 50%;
+  opacity:0;animation:ghostIn var(--dur) linear infinite;
+}
+.gplan{
+  position:absolute;left:0;top:0;width:28em;overflow:visible;
+  transform:translate(-50%,calc(-50% - 2.14em));
+  animation:gplanOut var(--dur) linear infinite;
+}
+.gplan path{
+  fill:none;stroke:var(--line);stroke-width:1.5;vector-effect:non-scaling-stroke;
+  stroke-linecap:square;stroke-dasharray:100;stroke-dashoffset:100;
+  animation:gdraw var(--dur) linear infinite;
+}
+.gplan .g2{animation-name:gdraw2}
+
+.gbuild,.grig,.gspin,.obj,.box{position:absolute;width:0;height:0;transform-style:preserve-3d}
+.gbuild{left:0;top:0}
+.grig{transform:rotateX(-16deg)}
+.gspin{animation:gspin var(--dur) linear infinite}
+
+/* 立体は「箱」を組み合わせて作ります。--w 幅 / --h 高さ / --d 奥行 */
+.box>i{display:block;position:absolute;left:50%;top:50%;border:1px solid var(--line)}
+.box>i::after{content:"";position:absolute;inset:0;background:var(--sub);opacity:0;
+  animation:gfill var(--dur) linear infinite}
+.box>.u {width:var(--w);height:var(--d);margin:calc(var(--d)/-2) 0 0 calc(var(--w)/-2);
+         transform:rotateX(90deg) translateZ(calc(var(--h)/2))}
+.box>.fr{width:var(--w);height:var(--h);margin:calc(var(--h)/-2) 0 0 calc(var(--w)/-2);
+         transform:translateZ(calc(var(--d)/2))}
+.box>.bk{width:var(--w);height:var(--h);margin:calc(var(--h)/-2) 0 0 calc(var(--w)/-2);
+         transform:rotateY(180deg) translateZ(calc(var(--d)/2))}
+.box>.lf{width:var(--d);height:var(--h);margin:calc(var(--h)/-2) 0 0 calc(var(--d)/-2);
+         transform:rotateY(-90deg) translateZ(calc(var(--w)/2))}
+.box>.rt{width:var(--d);height:var(--h);margin:calc(var(--h)/-2) 0 0 calc(var(--d)/-2);
+         transform:rotateY(90deg) translateZ(calc(var(--w)/2))}
+
+/* テーブル */
+.o-table{transform:translateY(-4.45em)}
+.b-top {--w:25.5em;--h:.95em;--d:15.3em}
+.b-tleg{--w:1.2em;--h:8.9em;--d:1.2em}
+.t1{transform:translate3d(-11em,4.925em, 5.95em)}
+.t2{transform:translate3d( 11em,4.925em, 5.95em)}
+.t3{transform:translate3d(-11em,4.925em,-5.95em)}
+.t4{transform:translate3d( 11em,4.925em,-5.95em)}
+
+/* 椅子 */
+.o-chair{transform:translateY(.55em)}
+.b-seat{--w:11em;--h:.66em;--d:11em}
+.b-cleg{--w:.83em;--h:6.6em;--d:.83em}
+.c1{transform:translate3d(-4.78em,3.63em, 4.78em)}
+.c2{transform:translate3d( 4.78em,3.63em, 4.78em)}
+.c3{transform:translate3d(-4.78em,3.63em,-4.78em)}
+.c4{transform:translate3d( 4.78em,3.63em,-4.78em)}
+.b-back{--w:11em;--h:7.7em;--d:.66em;transform:translate3d(0,-4.18em,-5.17em)}
+
+/* 棚 */
+.o-shelf{transform:none}
+.b-side {--w:.9em;--h:13.5em;--d:7.5em}
+.b-board{--w:15em;--h:.75em;--d:7.5em}
+.s1{transform:translateX(-7.8em)}
+.s2{transform:translateX( 7.8em)}
+.s3{transform:translateY(-6.4em)}
+.s5{transform:translateY( 6.4em)}
+
+/* 入れ替えのフェードは「面」にかけます。
+   親要素に opacity を置くと preserve-3d が解除されて平面になるためです */
+.o-table>.box>i{opacity:0;animation:oTable var(--dur) linear infinite}
+.o-chair>.box>i{opacity:0;animation:oChair var(--dur) linear infinite}
+.o-shelf>.box>i{opacity:0;animation:oShelf var(--dur) linear infinite}
+
+/* --- 工程ダイアグラム -------------------------------------- */
+.diagram{
+  position:absolute;left:50%;top:50%;width:86%;z-index:2;
+  transform:translate(-50%,-50%);overflow:visible;
+  font-family:inherit;opacity:0;
+  animation:band var(--dur) linear infinite;
+}
+.diagram .st{fill:none;stroke:var(--line);stroke-width:3;stroke-linecap:round;stroke-linejoin:round}
+.diagram .tick{stroke:var(--sub);stroke-width:1.5;opacity:.55}
+.diagram text{fill:var(--line);font-size:21px;font-weight:600;letter-spacing:.09em}
+
+.track{fill:none;stroke:var(--sub);stroke-width:2;opacity:.55;
+  stroke-dasharray:100;stroke-dashoffset:100;animation:track var(--dur) linear infinite}
+.prog{fill:none;stroke:var(--live);stroke-width:4;stroke-linecap:round;
+  stroke-dasharray:100;stroke-dashoffset:100;animation:prog var(--dur) linear infinite}
+.dot{fill:var(--field);stroke:var(--line);stroke-width:2.5}
+.on{fill:var(--live);opacity:0}
+.on1{animation:on1 var(--dur) linear infinite}
+.on2{animation:on2 var(--dur) linear infinite}
+.on3{animation:on3 var(--dur) linear infinite}
+.on4{animation:on4 var(--dur) linear infinite}
+.ico{opacity:.22}
+.ico1{animation:ico1 var(--dur) linear infinite}
+.ico2{animation:ico2 var(--dur) linear infinite}
+.ico3{animation:ico3 var(--dur) linear infinite}
+.ico4{animation:ico4 var(--dur) linear infinite}
+.pass{stroke:var(--live)}
+
+.lay{fill:var(--part);opacity:0}
+.lay1{animation:lay1 var(--dur) linear infinite}
+.lay2{animation:lay2 var(--dur) linear infinite}
+.lay3{animation:lay3 var(--dur) linear infinite}
+.lay4{animation:lay4 var(--dur) linear infinite}
+.nozzle{animation:nozzle var(--dur) linear infinite}
+.shipout{opacity:0;animation:shipout var(--dur) linear infinite}
+
+/* --- 補足コピー -------------------------------------------- */
+.sub{
+  position:absolute;left:5em;bottom:4.5em;z-index:3;width:30em;
+  font-size:1.2em;line-height:1.75;color:var(--line);
+  opacity:0;animation:subc var(--dur) linear infinite;
+}
+.sub b{font-weight:700;color:var(--live)}
+
+/* --- ブランド＋CTA ----------------------------------------- */
+.brand{position:absolute;right:5em;bottom:4.5em;z-index:3;text-align:right;
+  opacity:0;animation:brand var(--dur) linear infinite}
+.shop{font-size:2.2em;font-weight:700;letter-spacing:.2em;line-height:1}
+.tag{font-size:.95em;color:var(--sub);margin:.8em 0 1.4em;letter-spacing:.05em}
+.cta{display:inline-block;background:var(--line);color:var(--field);
+  font-size:1.1em;font-weight:600;padding:.75em 1.7em;border-radius:2px;letter-spacing:.08em}
+
+/* ============================================================
+   タイムライン（すべて同じ var(--dur) の1周期に並べています）
+   ============================================================ */
+@keyframes head    {0%,3%{opacity:0} 7%,72%{opacity:1} 76%,100%{opacity:0}}
+@keyframes band    {0%{opacity:0} 3%,95%{opacity:1} 99%,100%{opacity:0}}
+@keyframes track   {0%,5%{stroke-dashoffset:100} 14%,100%{stroke-dashoffset:0}}
+@keyframes prog    {0%,18%{stroke-dashoffset:100} 70%,100%{stroke-dashoffset:0}}
+@keyframes on1     {0%,21%{opacity:0} 24%,100%{opacity:1}}
+@keyframes on2     {0%,34%{opacity:0} 37%,100%{opacity:1}}
+@keyframes on3     {0%,49%{opacity:0} 52%,100%{opacity:1}}
+@keyframes on4     {0%,65%{opacity:0} 68%,100%{opacity:1}}
+@keyframes ico1    {0%,20%{opacity:.22} 25%,100%{opacity:1}}
+@keyframes ico2    {0%,33%{opacity:.22} 38%,100%{opacity:1}}
+@keyframes ico3    {0%,48%{opacity:.22} 53%,100%{opacity:1}}
+@keyframes ico4    {0%,64%{opacity:.22} 69%,100%{opacity:1}}
+@keyframes lay1    {0%,34%{opacity:0;transform:translateY(5px)} 37%,100%{opacity:1;transform:translateY(0)}}
+@keyframes lay2    {0%,36%{opacity:0;transform:translateY(5px)} 39%,100%{opacity:1;transform:translateY(0)}}
+@keyframes lay3    {0%,38%{opacity:0;transform:translateY(5px)} 41%,100%{opacity:1;transform:translateY(0)}}
+@keyframes lay4    {0%,40%{opacity:0;transform:translateY(5px)} 43%,100%{opacity:1;transform:translateY(0)}}
+@keyframes nozzle  {0%,33%{transform:translateX(-16px)} 36%{transform:translateX(16px)}
+                    39%{transform:translateX(-16px)} 42%{transform:translateX(16px)}
+                    45%,100%{transform:translateX(0)}}
+@keyframes shipout {0%,70%{opacity:0;transform:translateX(0)} 72%{opacity:1}
+                    79%,100%{opacity:0;transform:translateX(140px)}}
+@keyframes subc    {0%,42%{opacity:0} 46%,76%{opacity:1} 80%,100%{opacity:0}}
+@keyframes brand   {0%,76%{opacity:0} 80%,97%{opacity:1} 100%{opacity:0}}
+
+/* 背景：制作フェーズ（33%≒5秒）から、家具が入れ替わりながら回り続けます */
+@keyframes ghostIn  {0%,31%{opacity:0} 35%,95%{opacity:var(--ghost)} 99%,100%{opacity:0}}
+@keyframes gdraw    {0%,33%{stroke-dashoffset:100} 43%,100%{stroke-dashoffset:0}}
+@keyframes gdraw2   {0%,38%{stroke-dashoffset:100} 47%,100%{stroke-dashoffset:0}}
+@keyframes gplanOut {0%,46%{opacity:1} 50%,99.5%{opacity:0} 100%{opacity:1}}
+@keyframes gspin    {0%,48%{transform:rotateY(0deg)} 97%,100%{transform:rotateY(540deg)}}
+@keyframes gfill    {0%,56%{opacity:0} 64%,100%{opacity:.5}}
+@keyframes oTable   {0%,46%{opacity:0} 50%,64%{opacity:1} 70%,100%{opacity:0}}
+@keyframes oChair   {0%,64%{opacity:0} 70%,80%{opacity:1} 86%,100%{opacity:0}}
+@keyframes oShelf   {0%,80%{opacity:0} 86%,95%{opacity:1} 99%,100%{opacity:0}}
+
+/* 動きを抑える設定の人には、流れ終わった1枚絵として見せます */
+@media (prefers-reduced-motion: reduce){
+  *{animation:none !important}
+  .diagram,.head,.sub,.brand,.lay{opacity:1}
+  .o-table>.box>i{opacity:1}
+  .ghost{opacity:var(--ghost)}
+  .track,.prog{stroke-dashoffset:0}
+  .on,.ico{opacity:1}
+  .gplan,.shipout{display:none}
+  .box>i::after{opacity:.5}
+  .gspin{transform:rotateY(-24deg)}
+}
+</style>
+</head>
+<body>
+
+<div class="promo" role="img" aria-label="注文が受付・制作・検品・発送と進んでいく様子と、背景で線画から立体になり入れ替わる家具を重ねたプロモーション映像">
+ <div class="stage">
+
+  <!-- 差し替え：キャッチコピー -->
+  <h1 class="head">つくる、売る、届ける。<span>ひとつの流れで。</span></h1>
+
+  <!-- 背景：線 → テーブル → 椅子 → 棚 -->
+  <div class="ghost">
+    <svg class="gplan" viewBox="0 0 400 280" xmlns="http://www.w3.org/2000/svg">
+      <path d="M18 100 H382 V114 H18 Z"/>
+      <path class="g2" d="M35 114 V241 H52 V114"/>
+      <path class="g2" d="M349 114 V241 H366 V114"/>
+    </svg>
+
+    <div class="gbuild"><div class="grig"><div class="gspin">
+
+      <div class="obj o-table">
+        <div class="box b-top"><i class="u"></i><i class="fr"></i><i class="bk"></i><i class="lf"></i><i class="rt"></i></div>
+        <div class="box b-tleg t1"><i class="u"></i><i class="fr"></i><i class="bk"></i><i class="lf"></i><i class="rt"></i></div>
+        <div class="box b-tleg t2"><i class="u"></i><i class="fr"></i><i class="bk"></i><i class="lf"></i><i class="rt"></i></div>
+        <div class="box b-tleg t3"><i class="u"></i><i class="fr"></i><i class="bk"></i><i class="lf"></i><i class="rt"></i></div>
+        <div class="box b-tleg t4"><i class="u"></i><i class="fr"></i><i class="bk"></i><i class="lf"></i><i class="rt"></i></div>
+      </div>
+
+      <div class="obj o-chair">
+        <div class="box b-seat"><i class="u"></i><i class="fr"></i><i class="bk"></i><i class="lf"></i><i class="rt"></i></div>
+        <div class="box b-cleg c1"><i class="u"></i><i class="fr"></i><i class="bk"></i><i class="lf"></i><i class="rt"></i></div>
+        <div class="box b-cleg c2"><i class="u"></i><i class="fr"></i><i class="bk"></i><i class="lf"></i><i class="rt"></i></div>
+        <div class="box b-cleg c3"><i class="u"></i><i class="fr"></i><i class="bk"></i><i class="lf"></i><i class="rt"></i></div>
+        <div class="box b-cleg c4"><i class="u"></i><i class="fr"></i><i class="bk"></i><i class="lf"></i><i class="rt"></i></div>
+        <div class="box b-back"><i class="u"></i><i class="fr"></i><i class="bk"></i><i class="lf"></i><i class="rt"></i></div>
+      </div>
+
+      <div class="obj o-shelf">
+        <div class="box b-side s1"><i class="u"></i><i class="fr"></i><i class="bk"></i><i class="lf"></i><i class="rt"></i></div>
+        <div class="box b-side s2"><i class="u"></i><i class="fr"></i><i class="bk"></i><i class="lf"></i><i class="rt"></i></div>
+        <div class="box b-board s3"><i class="u"></i><i class="fr"></i><i class="bk"></i><i class="lf"></i><i class="rt"></i></div>
+        <div class="box b-board s4"><i class="u"></i><i class="fr"></i><i class="bk"></i><i class="lf"></i><i class="rt"></i></div>
+        <div class="box b-board s5"><i class="u"></i><i class="fr"></i><i class="bk"></i><i class="lf"></i><i class="rt"></i></div>
+      </div>
+
+    </div></div></div>
+  </div>
+
+  <svg class="diagram" viewBox="0 0 1200 300" xmlns="http://www.w3.org/2000/svg">
+
+    <!-- 工程ライン -->
+    <path class="track" pathLength="100" d="M150 180 H1050"/>
+    <path class="prog"  pathLength="100" d="M150 180 H1050"/>
+
+    <!-- 1 受付 -->
+    <g class="ico ico1">
+      <rect class="st" x="128" y="66" width="44" height="58" rx="3"/>
+      <path class="st" d="M139 86 H161 M139 98 H161 M139 110 H153"/>
+    </g>
+    <path class="tick" d="M150 140 V168"/>
+    <circle class="dot" cx="150" cy="180" r="8.5"/>
+    <circle class="on on1" cx="150" cy="180" r="8.5"/>
+    <text x="150" y="218" text-anchor="middle">受付</text>
+
+    <!-- 2 制作 -->
+    <g class="ico ico2">
+      <path class="st" d="M420 60 H480"/>
+      <g class="nozzle">
+        <path d="M443 62 H457 L453 76 H447 Z" fill="var(--line)"/>
+        <circle cx="450" cy="79" r="2.6" fill="var(--spark)"/>
+      </g>
+      <rect class="lay lay4" x="432" y="85"  width="36" height="10"/>
+      <rect class="lay lay3" x="432" y="96"  width="36" height="10"/>
+      <rect class="lay lay2" x="432" y="107" width="36" height="10"/>
+      <rect class="lay lay1" x="432" y="118" width="36" height="10"/>
+      <path class="st" d="M424 132 H476"/>
+    </g>
+    <path class="tick" d="M450 140 V168"/>
+    <circle class="dot" cx="450" cy="180" r="8.5"/>
+    <circle class="on on2" cx="450" cy="180" r="8.5"/>
+    <text x="450" y="218" text-anchor="middle">制作</text>
+
+    <!-- 3 検品 -->
+    <g class="ico ico3">
+      <circle class="st" cx="744" cy="92" r="21"/>
+      <path class="st" d="M759 107 L773 121"/>
+      <path class="st pass" d="M735 92 L742 100 L755 83"/>
+    </g>
+    <path class="tick" d="M750 140 V168"/>
+    <circle class="dot" cx="750" cy="180" r="8.5"/>
+    <circle class="on on3" cx="750" cy="180" r="8.5"/>
+    <text x="750" y="218" text-anchor="middle">検品</text>
+
+    <!-- 4 発送 -->
+    <g class="ico ico4">
+      <rect class="st" x="1022" y="74" width="56" height="48" rx="2"/>
+      <path class="st" d="M1022 91 H1078 M1050 74 V122"/>
+    </g>
+    <path class="tick" d="M1050 140 V168"/>
+    <circle class="dot" cx="1050" cy="180" r="8.5"/>
+    <circle class="on on4" cx="1050" cy="180" r="8.5"/>
+    <text x="1050" y="218" text-anchor="middle">発送</text>
+
+    <!-- 最後にひと箱、線の先へ出ていく -->
+    <g class="shipout">
+      <rect class="st" x="1022" y="74" width="56" height="48" rx="2"/>
+      <path class="st" d="M1022 91 H1078 M1050 74 V122"/>
+    </g>
+
+  </svg>
+
+  <!-- 差し替え：補足コピー -->
+  <p class="sub">3Dプリント品・モデルデータ・ハンドメイド作品を、つくり手から直接。<br>
+  ご注文は<b>いまどの工程にあるか</b>を、いつでも確認できます。</p>
+
+  <div class="brand">
+    <!-- 差し替え：ショップ名・取扱・ボタン文言 -->
+    <p class="shop">CraftFlow</p>
+    <p class="tag">つくり手から直接とどく、ものづくりのお店</p>
+    <p class="cta">作品を探す</p>
+  </div>
+
+ </div>
+</div>
+
+</body>
+</html>
