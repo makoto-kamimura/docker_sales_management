@@ -48,7 +48,7 @@ export default function HomeScreen() {
               <Text style={styles.cardSub}>{item.sku}</Text>
               <Text style={styles.price}>{yen(item.price_cents)}</Text>
               {item.is_subscribable && <Text style={styles.tag}>サブスク対応</Text>}
-              {item.is_digital && <Text style={styles.tag}>⬇ 3Dデータ</Text>}
+              {item.is_digital && <Text style={styles.tag}>⬇ デジタルデータ</Text>}
             </Pressable>
           </Link>
         )}

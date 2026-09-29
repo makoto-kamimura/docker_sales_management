@@ -1,7 +1,7 @@
 module Api
   module V1
     module Admin
-      # 3Dモデル管理: モデルファイルの保存・3Dプレビュー画像・販売フラグ・組み立て説明書 PDF。
+      # 3Dモデル・DIY設計図の管理 (kind で区別): ファイルの保存・プレビュー画像・販売フラグ・組み立て説明書 PDF。
       # 版は ModelVersionsController、組み立て手順は AssemblyStepsController
       class ModelAssetsController < BaseController
         requires_permission :production
@@ -11,8 +11,10 @@ module Api
 
         IMPORT_MODES = %w[replace append].freeze
 
+        # params: kind (model / blueprint。省略時は model)
         def index
-          models = ModelAsset.includes(*MODEL_PRELOAD).order(updated_at: :desc)
+          kind = ModelAsset::KINDS.key?(params[:kind]) ? params[:kind] : "model"
+          models = ModelAsset.of_kind(kind).includes(*MODEL_PRELOAD).order(updated_at: :desc)
           render json: models.map { |m| model_asset_summary(m) }
         end
 
@@ -20,11 +22,11 @@ module Api
           render json: model_asset_detail(@model_asset)
         end
 
-        # multipart: name, description, license, files[] (初版のモデルファイル。複数可), note
+        # multipart: kind (model / blueprint。省略時は model), name, description, license, files[] (初版のファイル。複数可), note
         def create
           files = uploaded_files
           model = ActiveRecord::Base.transaction do
-            m = ModelAsset.create!(params.permit(:name, :description, :license).merge(created_by: current_user))
+            m = ModelAsset.create!(params.permit(:kind, :name, :description, :license).merge(created_by: current_user))
             m.versions.create!(files: files, note: params[:note].presence || "初版", created_by: current_user)
             m
           end
@@ -52,7 +54,7 @@ module Api
           head :no_content
         end
 
-        # ブラウザの3Dプレビューから保存した画像 (multipart: image)。販売中なら商品画像にも使う
+        # ブラウザのプレビュー (3D表示・図面) から保存した画像 (multipart: image)。販売中なら商品画像にも使う
         def preview
           ActiveRecord::Base.transaction do
             @model_asset.preview_image = params.require(:image)

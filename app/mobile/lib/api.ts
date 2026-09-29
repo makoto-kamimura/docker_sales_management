@@ -35,13 +35,13 @@ export function apiOriginUrl(path: string) {
   return `${origin}${path}`;
 }
 
-/** 購入済み3Dモデルデータの期限付きダウンロードURLを取得する */
+/** 購入済みデジタルデータ (3Dモデルデータ・DIY設計図) の期限付きダウンロードURLを取得する */
 export async function fetchDownloadUrl(productId: number, token: string | null) {
   const { url } = await api<{ url: string }>(`/downloads/${productId}`, { auth: token });
   return apiOriginUrl(url);
 }
 
-/** 購入した3Dモデルの組み立て説明書 (PDF) の期限付きURLを取得する */
+/** 購入した3Dモデル・DIY設計図の組み立て説明書 (PDF) の期限付きURLを取得する */
 export async function fetchAssemblyGuideUrl(productId: number, token: string | null) {
   const { url } = await api<{ url: string }>(`/downloads/${productId}/assembly`, { auth: token });
   return apiOriginUrl(url);

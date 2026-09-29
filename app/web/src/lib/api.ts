@@ -82,13 +82,13 @@ export function apiOriginUrl(path: string) {
   return new URL(path, base).toString();
 }
 
-/** 購入済み3Dモデルデータを期限付きURL経由でダウンロードする */
+/** 購入済みデジタルデータ (3Dモデルデータ・DIY設計図) を期限付きURL経由でダウンロードする */
 export async function downloadModel(productId: number, token: string | null) {
   const { url } = await api<{ url: string }>(`/downloads/${productId}`, { auth: token });
   window.location.assign(apiOriginUrl(url));
 }
 
-/** 購入した3Dモデルの組み立て説明書 (PDF) を期限付きURL経由でダウンロードする */
+/** 購入した3Dモデル・DIY設計図の組み立て説明書 (PDF) を期限付きURL経由でダウンロードする */
 export async function downloadAssemblyGuide(productId: number, token: string | null) {
   const { url } = await api<{ url: string }>(`/downloads/${productId}/assembly`, { auth: token });
   window.location.assign(apiOriginUrl(url));

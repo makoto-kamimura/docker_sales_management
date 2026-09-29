@@ -5,6 +5,7 @@ import useSWR from "swr";
 import { api, jsonBody } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { yen } from "@/lib/format";
+import { DIGITAL_FILE_ACCEPT, MODEL_KINDS } from "@/lib/modelKinds";
 import { can } from "@/lib/permissions";
 import type { Category, Product } from "@/lib/types";
 
@@ -42,7 +43,7 @@ export default function AdminProductsPage() {
     mutate();
   }
 
-  // 3Dモデルデータ (STL/3MF/OBJ/STEP/ZIP) の配布ファイルを登録・差し替え
+  // デジタル商品 (3Dモデルデータ・DIY設計図) の配布ファイルを登録・差し替え
   async function uploadModelFile(productId: number, file: File) {
     setErr(null);
     const fd = new FormData();
@@ -127,7 +128,7 @@ export default function AdminProductsPage() {
                       </span>
                       <label className="text-xs text-caramel hover:underline cursor-pointer">
                         {p.file_name ? "差し替え" : "データを登録"}
-                        <input type="file" accept=".stl,.3mf,.obj,.step,.stp,.zip" className="hidden"
+                        <input type="file" accept={DIGITAL_FILE_ACCEPT} className="hidden"
                                onChange={(e) => { const f = e.target.files?.[0]; if (f) uploadModelFile(p.id, f); e.target.value = ""; }} />
                       </label>
                     </div>
@@ -157,12 +158,12 @@ export default function AdminProductsPage() {
           <textarea placeholder="説明" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} className="input col-span-2 h-20" />
           <label className="flex items-center gap-2 px-1 col-span-2">
             <input type="checkbox" checked={form.is_digital} onChange={(e) => setForm({ ...form, is_digital: e.target.checked })} className="accent-caramel" />
-            デジタル商品 (3Dモデルデータのダウンロード販売 / 在庫・配送なし)
+            デジタル商品 (3Dモデルデータ・DIY設計図のダウンロード販売 / 在庫・配送なし)
           </label>
           {form.is_digital ? (
             <>
               <input placeholder="ライセンス (例: 個人利用のみ・再配布不可)" value={form.license} onChange={(e) => setForm({ ...form, license: e.target.value })} className="input col-span-2" />
-              <p className="text-xs text-coffee-500 col-span-2">※ 追加後、一覧の「データを登録」から STL / 3MF / OBJ / STEP / ZIP (100MB まで) をアップロードすると販売可能になります。</p>
+              <p className="text-xs text-coffee-500 col-span-2">※ 追加後、一覧の「データを登録」から {MODEL_KINDS.model.formats} や {MODEL_KINDS.blueprint.formats} (100MB まで) をアップロードすると販売可能になります。</p>
             </>
           ) : (
             <>

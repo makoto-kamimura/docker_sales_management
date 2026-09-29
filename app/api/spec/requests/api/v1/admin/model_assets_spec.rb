@@ -31,7 +31,8 @@ RSpec.describe "Admin 3D models (制作権限)", type: :request do
       model = create_model(files: [stl_upload("本体.stl"), stl_upload("cover.3mf")])
       expect(response).to have_http_status(:created)
       expect(model).to include("name" => "ギアボックス",
-                               "current_version" => { "number" => 1, "files_count" => 2, "formats" => %w[STL 3MF] })
+                               "current_version" => { "number" => 1, "minor" => 0, "label" => "1", "files_count" => 2,
+                                                                     "formats" => %w[STL 3MF] })
       id = model["id"]
 
       post "/api/v1/admin/model_assets/#{id}/versions", params: { files: [stl_upload("gear_v2.obj")], note: "歯数を変更" },
@@ -65,6 +66,66 @@ RSpec.describe "Admin 3D models (制作権限)", type: :request do
                                                                  headers: auth_headers(producer)
       version = ModelVersion.find(body["versions"].first["id"])
       expect(zip_entries(version.distribution_blob)).to eq(%w[part.stl part_2.stl])
+    end
+
+    describe "最新版へのファイル追加 (append)" do
+      def append_files(id, files, **params)
+        post "/api/v1/admin/model_assets/#{id}/versions", params: { files: files, append: true }.merge(params),
+                                                          headers: auth_headers(producer)
+        body
+      end
+
+      it "最新版のファイルを引き継いだ枝番の版 (v1.1, v1.2) を作り、通常の新しい版は次の整数になる" do
+        id = create_model(files: [stl_upload("base.stl"), stl_upload("lid.stl")])["id"]
+        v1 = ModelAsset.find(id).current_version
+
+        detail = append_files(id, [stl_upload("handle.stl")])
+        expect(response).to have_http_status(:created)
+        expect(detail["current_version"]).to include("number" => 1, "minor" => 1, "label" => "1.1", "files_count" => 3)
+        latest = detail["versions"].first
+        expect(latest).to include("label" => "1.1", "current" => true, "note" => "ファイルを追加")
+        expect(latest["files"].map { |f| f["filename"] }).to eq(%w[base.stl lid.stl handle.stl])
+        # 引き継いだファイルは再アップロードせず、同じ blob を使う
+        v11 = ModelVersion.find(latest["id"])
+        expect(v11.files.blobs.first(2).map(&:id)).to eq(v1.files.blobs.map(&:id))
+
+        append_files(id, [stl_upload("stand.stl")], note: "スタンドを追加")
+        expect(body["versions"].map { |v| [v["label"], v["current"]] }).to eq([["1.2", true], ["1.1", false], ["1", false]])
+        expect(body["versions"].first["note"]).to eq("スタンドを追加")
+
+        post "/api/v1/admin/model_assets/#{id}/versions", params: { files: [stl_upload("v2.stl")] }, headers: auth_headers(producer)
+        expect(body["current_version"]).to include("number" => 2, "minor" => 0, "label" => "2", "files_count" => 1)
+        expect(body["versions"].map { |v| v["label"] }).to eq(%w[2 1.2 1.1 1])
+      end
+
+      it "販売中なら配布ファイルを枝番の版の ZIP に差し替える" do
+        id = create_model["id"]
+        patch "/api/v1/admin/model_assets/#{id}", params: { for_sale: true, price_cents: 800 }, headers: auth_headers(producer), as: :json
+        product = Product.find(body["product"]["id"])
+        expect(product.model_file.filename.to_s).to eq("gear.stl")
+
+        append_files(id, [stl_upload("cover.stl")])
+        product.reload
+        expect(product.model_file.filename.to_s).to eq("ギアボックス_v1.1.zip")
+        expect(zip_entries(product.model_file.blob)).to eq(%w[gear.stl cover.stl])
+      end
+
+      it "引き継いだファイルと合わせて上限を超えると 422 で、版は作られない" do
+        id = create_model(files: Array.new(ModelVersion::MAX_FILES) { |i| stl_upload("part#{i}.stl") })["id"]
+        append_files(id, [stl_upload("extra.stl")])
+        expect(response).to have_http_status(:unprocessable_entity)
+        expect(ModelAsset.find(id).versions.size).to eq(1)
+      end
+
+      it "枝番の版に戻すと次の整数の版になる" do
+        id = create_model["id"]
+        v11_id = append_files(id, [stl_upload("cover.stl")])["versions"].first["id"]
+        post "/api/v1/admin/model_assets/#{id}/versions", params: { files: [stl_upload("v2.stl")] }, headers: auth_headers(producer)
+
+        post "/api/v1/admin/model_assets/#{id}/versions/#{v11_id}/restore", headers: auth_headers(producer)
+        expect(body["versions"].first).to include("label" => "3", "note" => "v1.1 に戻す", "current" => true)
+        expect(body["current_version"]).to include("files_count" => 2)
+      end
     end
 
     it "モデルデータ以外が混ざると 422 で、モデルも作られない" do

@@ -38,7 +38,8 @@ cats = [
   ["3d-models", "3Dモデルデータ"],
   ["handmade",  "ハンドメイド雑貨"],
   ["materials", "素材・キット"],
-  ["custom",    "オーダーメイド"] # 依頼制 (カートには入らない)
+  ["custom",    "オーダーメイド"], # 依頼制 (カートには入らない)
+  ["diy-plans", "DIY設計図"]
 ].each_with_index.to_h do |(slug, name), i|
   cat = Category.find_or_create_by!(slug: slug) { |c| c.name = name }
   cat.update!(name: name, position: i + 1)

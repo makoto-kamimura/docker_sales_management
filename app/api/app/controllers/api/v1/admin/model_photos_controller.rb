@@ -1,7 +1,7 @@
 module Api
   module V1
     module Admin
-      # 3Dモデルの写真 (実モデル画像 / 実利用画像): 追加・説明・プレビュー表示 (最大3枚)・並び替え・削除
+      # 3Dモデル・DIY設計図の写真 (実モデル画像 / 実利用画像): 追加・説明・プレビュー表示 (最大3枚)・並び替え・削除
       class ModelPhotosController < BaseController
         requires_permission :production
         include ModelAssetJson

@@ -57,7 +57,7 @@ export default function AccountPage() {
 
       {downloads && downloads.length > 0 && (
         <section className="card p-6 space-y-3">
-          <h2 className="font-semibold">購入済み3Dデータ</h2>
+          <h2 className="font-semibold">購入済みデジタルデータ</h2>
           <ul className="divide-y divide-coffee-100">
             {downloads.map((d) => (
               <li key={d.product_id} className="flex items-center gap-3 py-2.5 text-sm">

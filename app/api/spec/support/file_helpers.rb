@@ -6,6 +6,18 @@ module FileHelpers
     Rack::Test::UploadedFile.new(StringIO.new(body), "model/stl", original_filename: filename)
   end
 
+  # DIY設計図 (図面 PDF)。中身は検証しないので最小限の PDF
+  def pdf_upload(filename = "plan.pdf")
+    body = "%PDF-1.4\n1 0 obj << /Type /Catalog >> endobj\ntrailer << /Root 1 0 R >>\n%%EOF\n"
+    Rack::Test::UploadedFile.new(StringIO.new(body), "application/pdf", true, original_filename: filename)
+  end
+
+  # DIY設計図 (CAD の DXF。テキスト形式)
+  def dxf_upload(filename = "plan.dxf")
+    body = "0\nSECTION\n2\nENTITIES\n0\nLINE\n8\n0\n10\n0\n20\n0\n11\n100\n21\n0\n0\nENDSEC\n0\nEOF\n"
+    Rack::Test::UploadedFile.new(StringIO.new(body), "image/vnd.dxf", original_filename: filename)
+  end
+
   def png_upload(filename = "shot.png")
     Rack::Test::UploadedFile.new(StringIO.new(png_bytes), "image/png", true, original_filename: filename)
   end
