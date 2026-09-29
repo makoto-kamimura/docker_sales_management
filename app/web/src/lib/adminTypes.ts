@@ -1,5 +1,6 @@
 // 管理画面 (販売・制作・注文・権限設定) の API 型
 import type { OrderStatus } from "./orderStatus";
+import type { ModelKind } from "./modelKinds";
 import type { Permission, Role } from "./permissions";
 import type { Tip } from "./types";
 
@@ -16,20 +17,24 @@ export type AdminTipList = {
 
 export type StaffUser = { id: number; name: string; role: "staff" | "admin" };
 
-/** 版に含まれる3Dモデルファイル */
+/** 版に含まれるファイル (3Dモデル・DIY設計図) */
 export type ModelFile = {
   id: number;
   filename: string;
   format: string;
   byte_size: number;
-  /** ブラウザの3Dプレビューに対応 (STL / OBJ / 3MF) */
+  /** ブラウザでプレビューできる (3Dモデル: STL / OBJ / 3MF、DIY設計図: PDF / 画像 / DXF) */
   previewable: boolean;
 };
 
-/** 3Dモデルの版 (current: 最新版)。1つの版に複数のファイルを持てる */
+/** 3Dモデル・DIY設計図の版 (current: 最新版)。1つの版に複数のファイルを持てる */
 export type ModelVersion = {
   id: number;
   number: number;
+  /** 枝番。最新版にファイルを追加した版は 1 以上 (v3.1) */
+  minor: number;
+  /** 表示用の版番号 ("3" / "3.1") */
+  label: string;
   note: string;
   current: boolean;
   files: ModelFile[];
@@ -39,7 +44,7 @@ export type ModelVersion = {
   created_by: { id: number; name: string } | null;
 };
 
-/** 3Dモデルの写真。featured (最大3枚) をプレビュー表示する */
+/** 3Dモデル・DIY設計図の写真。featured (最大3枚) をプレビュー表示する */
 export type ModelPhoto = {
   id: number;
   kind: "real_model" | "in_use";
@@ -54,6 +59,9 @@ export type AssemblyStep = { id: number; position: number; title: string; body: 
 
 export type ModelAssetSummary = {
   id: number;
+  /** 種別 (3Dモデル / DIY設計図)。作成後は変わらない */
+  kind: ModelKind;
+  kind_label: string;
   name: string;
   /** 販売フラグ (ショップの商品と連動) */
   for_sale: boolean;
@@ -63,7 +71,7 @@ export type ModelAssetSummary = {
   /** プレビュー表示の写真 (最大3枚) */
   preview_photos: ModelPhoto[];
   photos_count: number;
-  current_version: { number: number; files_count: number; formats: string[] } | null;
+  current_version: { number: number; minor: number; label: string; files_count: number; formats: string[] } | null;
   versions_count: number;
   assembly_steps_count: number;
   product: { id: number; sku: string; published: boolean } | null;

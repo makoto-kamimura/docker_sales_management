@@ -11,6 +11,7 @@
 KIND_HEADING = {
   "3d-prints" => "## 3D PRINTS（3Dプリント品 / 受注後に制作する物販）",
   "3d-models" => "## 3D MODELS（3Dプリンタ用モデルデータ / ダウンロード販売）",
+  "diy-plans" => "## DIY PLANS（DIY設計図 / 図面データのダウンロード販売）",
   "handmade"  => "## HANDMADE（ハンドメイド雑貨 / 物販）",
   "materials" => "## MATERIALS（素材・キット / 物販・一部サブスク対象）",
   "custom"    => "## CUSTOM（オーダーメイド / 依頼制）"

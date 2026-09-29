@@ -64,7 +64,7 @@ class AssemblyGuidePdf
     pdf.text wrappable(@model.name), size: 22, leading: 2
     version = @model.current_version
     printed = "出力日 #{Time.current.in_time_zone('Asia/Tokyo').strftime('%Y/%m/%d')}"
-    pdf.text [version && "v#{version.number}", printed].compact.join("  ·  "), size: 9, color: MUTED
+    pdf.text [version && "v#{version.label}", printed].compact.join("  ·  "), size: 9, color: MUTED
     pdf.move_down 10
     pdf.stroke_color "D9CFC5"
     pdf.stroke_horizontal_rule

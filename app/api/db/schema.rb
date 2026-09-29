@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_09_14_000004) do
+ActiveRecord::Schema[7.2].define(version: 2026_09_29_000002) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "citext"
   enable_extension "pg_trgm"
@@ -153,7 +153,9 @@ ActiveRecord::Schema[7.2].define(version: 2026_09_14_000004) do
     t.bigint "created_by_id"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.string "kind", default: "model", null: false
     t.index ["created_by_id"], name: "index_model_assets_on_created_by_id"
+    t.index ["kind"], name: "index_model_assets_on_kind"
     t.index ["product_id"], name: "index_model_assets_on_product_id", unique: true
   end
 
@@ -176,8 +178,9 @@ ActiveRecord::Schema[7.2].define(version: 2026_09_14_000004) do
     t.bigint "created_by_id"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.integer "minor", default: 0, null: false
     t.index ["created_by_id"], name: "index_model_versions_on_created_by_id"
-    t.index ["model_asset_id", "number"], name: "index_model_versions_on_model_asset_id_and_number", unique: true
+    t.index ["model_asset_id", "number", "minor"], name: "index_model_versions_on_model_asset_id_and_number_and_minor", unique: true
     t.index ["model_asset_id"], name: "index_model_versions_on_model_asset_id"
   end
 

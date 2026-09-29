@@ -1,7 +1,7 @@
 module Api
   module V1
     module Admin
-      # 3Dモデル (ModelAsset) の JSON。3Dモデル・版・組み立て手順のコントローラで共通に使う
+      # 3Dモデル・DIY設計図 (ModelAsset) の JSON。3Dモデル・版・組み立て手順のコントローラで共通に使う
       module ModelAssetJson
         MODEL_PRELOAD = [
           :product, :created_by, { preview_image_attachment: :blob },
@@ -19,11 +19,11 @@ module Api
         def model_asset_summary(m)
           current = m.current_version
           {
-            id: m.id, name: m.name, for_sale: m.for_sale, price_cents: m.price_cents, updated_at: m.updated_at,
+            id: m.id, kind: m.kind, kind_label: m.kind_config.label, name: m.name, for_sale: m.for_sale, price_cents: m.price_cents, updated_at: m.updated_at,
             preview_image_url: blob_path(m.preview_image),
             preview_photos: m.preview_photos.map { |ph| photo_json(ph) }, photos_count: m.photos.size,
             current_version: current && {
-              number: current.number, files_count: current.files.size,
+              number: current.number, minor: current.minor, label: current.label, files_count: current.files.size,
               formats: current.files.map { |f| ModelVersion.format_of(f) }.uniq
             },
             versions_count: m.versions.size, assembly_steps_count: m.assembly_steps.size,
@@ -49,10 +49,10 @@ module Api
 
         def version_json(v, current:)
           {
-            id: v.id, number: v.number, note: v.note, current: current, byte_size: v.total_byte_size,
+            id: v.id, number: v.number, minor: v.minor, label: v.label, note: v.note, current: current, byte_size: v.total_byte_size,
             files: v.files.map { |f|
               { id: f.id, filename: f.filename.to_s, format: ModelVersion.format_of(f), byte_size: f.blob.byte_size,
-                previewable: ModelVersion.previewable?(f) }
+                previewable: v.previewable?(f) }
             },
             created_at: v.created_at, created_by: user_ref(v.created_by)
           }

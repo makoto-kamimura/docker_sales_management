@@ -1,6 +1,6 @@
 module Api
   module V1
-    # 購入済みデジタル商品 (3Dプリンタ用モデルデータ) のライブラリとダウンロード。
+    # 購入済みデジタル商品 (3Dプリンタ用モデルデータ・DIY設計図) のライブラリとダウンロード。
     # 支払い済み (入金確認以降・キャンセル除く) の注文に含まれる商品のみ対象。
     class DownloadsController < BaseController
       before_action :authenticate!

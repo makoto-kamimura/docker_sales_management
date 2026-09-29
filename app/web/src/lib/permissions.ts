@@ -8,7 +8,7 @@ export const ROLE_LABEL: Record<Role, string> = { member: "会員", staff: "ス�
 
 export const PERMISSIONS: { key: Permission; label: string; description: string }[] = [
   { key: "sales", label: "販売", description: "商品管理・在庫・売上分析" },
-  { key: "production", label: "制作", description: "制作ボード・材料管理・3Dモデル (製作担当に指定できる)" },
+  { key: "production", label: "制作", description: "制作ボード・材料管理・3Dモデル・DIY設計図 (製作担当に指定できる)" },
   { key: "orders", label: "注文", description: "注文管理・発送・顧客管理・問い合わせ・投げ銭" },
 ];
 
@@ -16,7 +16,7 @@ type AdminGroup = { label: string; permission: Permission | "admin"; links: { hr
 
 export const ADMIN_GROUPS: AdminGroup[] = [
   { label: "販売", permission: "sales", links: [{ href: "/admin/products", label: "商品管理" }, { href: "/admin/dashboard", label: "売上・分析" }] },
-  { label: "制作", permission: "production", links: [{ href: "/admin/production", label: "制作ボード" }, { href: "/admin/materials", label: "材料管理" }, { href: "/admin/models", label: "3Dモデル" }] },
+  { label: "制作", permission: "production", links: [{ href: "/admin/production", label: "制作ボード" }, { href: "/admin/materials", label: "材料管理" }, { href: "/admin/models", label: "3Dモデル" }, { href: "/admin/blueprints", label: "DIY設計図" }] },
   {
     label: "注文", permission: "orders",
     links: [
