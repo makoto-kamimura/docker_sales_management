@@ -18,6 +18,7 @@ const CATEGORIES = [
   { label: "3D MODELS", title: "3Dモデルデータ", desc: "自宅のプリンタで出力できるSTLデータ。", href: "/search?category=3d-models", cta: "見る →" },
   { label: "HANDMADE", title: "ハンドメイド雑貨", desc: "手縫いのレザー小物や無垢材の木工品。", href: "/search?category=handmade", cta: "見る →" },
   { label: "MATERIALS", title: "素材・キット", desc: "フィラメントやクラフトキット。定期便も。", href: "/search?category=materials", cta: "見る →" },
+  { label: "DIY PLANS", title: "DIY設計図", desc: "家具や棚を自分で作れる図面データ (PDF / DXF)。", href: "/search?category=diy-plans", cta: "見る →" },
   { label: "CUSTOM", title: "オーダーメイド", desc: "名入れ・サイズ変更・一点ものの制作を依頼。", href: "/custom", cta: "相談する →" },
 ] as const;
 
@@ -34,7 +35,7 @@ export default async function Home() {
           <h2 className="text-xl font-bold">取り扱い</h2>
           <span className="text-xs uppercase tracking-[0.18em] text-coffee-400">{CATEGORIES.length} Categories</span>
         </div>
-        <ul className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+        <ul className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {CATEGORIES.map((c) => (
             <li key={c.label}>
               <Link

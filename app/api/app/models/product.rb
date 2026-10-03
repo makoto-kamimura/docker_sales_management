@@ -3,6 +3,10 @@ class Product < ApplicationRecord
 
   # 3Dプリンタ用モデルデータとして受け付けるファイル形式 (content_type は当てにならないので拡張子で判定)
   MODEL_FILE_EXTENSIONS = %w[stl 3mf obj step stp zip].freeze
+  # DIY設計図として受け付けるファイル形式 (図面 PDF・画像・CAD と、完成品の3Dデータ。zip は複数ファイルの版をまとめた配布ファイル)
+  BLUEPRINT_FILE_EXTENSIONS = %w[pdf png jpg jpeg svg dxf dwg jww stl obj 3mf zip].freeze
+  # デジタル商品の配布ファイル (3Dモデルデータ・DIY設計図)
+  DIGITAL_FILE_EXTENSIONS = (MODEL_FILE_EXTENSIONS + BLUEPRINT_FILE_EXTENSIONS).uniq.freeze
   MODEL_FILE_MAX_BYTES  = 100.megabytes
 
   belongs_to :category
@@ -14,7 +18,7 @@ class Product < ApplicationRecord
   has_many :order_items, dependent: :restrict_with_error
   has_many :product_materials, dependent: :destroy # 制作に使う材料 (レシピ)
   has_many :materials, through: :product_materials
-  has_one  :model_asset, dependent: :nullify # 3Dモデル管理から販売している場合の元モデル (版・組み立て説明書)
+  has_one  :model_asset, dependent: :nullify # 3Dモデル管理 (3Dモデル・DIY設計図) から販売している場合の元データ (版・組み立て説明書)
 
   validates :sku, :name, :price_cents, presence: true
   validates :sku, uniqueness: true
@@ -76,8 +80,8 @@ class Product < ApplicationRecord
 
   def validate_model_file
     ext = File.extname(model_file.filename.to_s).delete_prefix(".").downcase
-    unless MODEL_FILE_EXTENSIONS.include?(ext)
-      errors.add(:model_file, "は #{MODEL_FILE_EXTENSIONS.join('/')} のいずれかにしてください")
+    unless DIGITAL_FILE_EXTENSIONS.include?(ext)
+      errors.add(:model_file, "は #{DIGITAL_FILE_EXTENSIONS.join('/')} のいずれかにしてください")
     end
     if model_file.blob.byte_size > MODEL_FILE_MAX_BYTES
       errors.add(:model_file, "は #{MODEL_FILE_MAX_BYTES / 1.megabyte}MB 以下にしてください")

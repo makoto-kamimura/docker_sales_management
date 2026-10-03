@@ -1,7 +1,7 @@
 module Api
   module V1
     module Admin
-      # 3Dモデルの組み立て手順 (見出し・説明・画像・並び順)。組み立て説明書 PDF に出力される
+      # 3Dモデル・DIY設計図の組み立て手順 (見出し・説明・画像・並び順)。組み立て説明書 PDF に出力される
       class AssemblyStepsController < BaseController
         requires_permission :production
         include ModelAssetJson

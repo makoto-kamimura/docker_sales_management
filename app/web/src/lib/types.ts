@@ -12,7 +12,7 @@ export type Product = {
   category_slug: string;
   image_url: string;
   is_subscribable: boolean;
-  /** 3Dモデルデータ等のダウンロード販売品 (在庫・配送なし) */
+  /** 3Dモデルデータ・DIY設計図等のダウンロード販売品 (在庫・配送なし) */
   is_digital: boolean;
   in_stock: boolean;
   stock?: number;
@@ -20,7 +20,7 @@ export type Product = {
   file_format?: string | null;
   file_size?: number | null;
   file_name?: string | null; // admin API のみ
-  /** 3Dモデル管理から販売している商品のプレビュー写真 (最大3枚。商品詳細のみ) */
+  /** 3Dモデル管理 (3Dモデル・DIY設計図) から販売している商品のプレビュー写真 (最大3枚。商品詳細のみ) */
   photos?: { id: number; url: string; kind: string; kind_label: string; caption: string }[];
 };
 

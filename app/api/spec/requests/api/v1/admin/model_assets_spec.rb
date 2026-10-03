@@ -31,7 +31,8 @@ RSpec.describe "Admin 3D models (制作権限)", type: :request do
       model = create_model(files: [stl_upload("本体.stl"), stl_upload("cover.3mf")])
       expect(response).to have_http_status(:created)
       expect(model).to include("name" => "ギアボックス",
-                               "current_version" => { "number" => 1, "files_count" => 2, "formats" => %w[STL 3MF] })
+                               "current_version" => { "number" => 1, "minor" => 0, "label" => "1", "files_count" => 2,
+                                                                     "formats" => %w[STL 3MF], "categories" => [] })
       id = model["id"]
 
       post "/api/v1/admin/model_assets/#{id}/versions", params: { files: [stl_upload("gear_v2.obj")], note: "歯数を変更" },
@@ -67,11 +68,149 @@ RSpec.describe "Admin 3D models (制作権限)", type: :request do
       expect(zip_entries(version.distribution_blob)).to eq(%w[part.stl part_2.stl])
     end
 
+    describe "最新版へのファイル追加 (append)" do
+      def append_files(id, files, **params)
+        post "/api/v1/admin/model_assets/#{id}/versions", params: { files: files, append: true }.merge(params),
+                                                          headers: auth_headers(producer)
+        body
+      end
+
+      it "最新版のファイルを引き継いだ枝番の版 (v1.1, v1.2) を作り、通常の新しい版は次の整数になる" do
+        id = create_model(files: [stl_upload("base.stl"), stl_upload("lid.stl")])["id"]
+        v1 = ModelAsset.find(id).current_version
+
+        detail = append_files(id, [stl_upload("handle.stl")])
+        expect(response).to have_http_status(:created)
+        expect(detail["current_version"]).to include("number" => 1, "minor" => 1, "label" => "1.1", "files_count" => 3)
+        latest = detail["versions"].first
+        expect(latest).to include("label" => "1.1", "current" => true, "note" => "ファイルを追加")
+        expect(latest["files"].map { |f| f["filename"] }).to eq(%w[base.stl lid.stl handle.stl])
+        # 引き継いだファイルは再アップロードせず、同じ blob を使う
+        v11 = ModelVersion.find(latest["id"])
+        expect(v11.files.blobs.first(2).map(&:id)).to eq(v1.files.blobs.map(&:id))
+
+        append_files(id, [stl_upload("stand.stl")], note: "スタンドを追加")
+        expect(body["versions"].map { |v| [v["label"], v["current"]] }).to eq([["1.2", true], ["1.1", false], ["1", false]])
+        expect(body["versions"].first["note"]).to eq("スタンドを追加")
+
+        post "/api/v1/admin/model_assets/#{id}/versions", params: { files: [stl_upload("v2.stl")] }, headers: auth_headers(producer)
+        expect(body["current_version"]).to include("number" => 2, "minor" => 0, "label" => "2", "files_count" => 1)
+        expect(body["versions"].map { |v| v["label"] }).to eq(%w[2 1.2 1.1 1])
+      end
+
+      it "販売中なら配布ファイルを枝番の版の ZIP に差し替える" do
+        id = create_model["id"]
+        patch "/api/v1/admin/model_assets/#{id}", params: { for_sale: true, price_cents: 800 }, headers: auth_headers(producer), as: :json
+        product = Product.find(body["product"]["id"])
+        expect(product.model_file.filename.to_s).to eq("gear.stl")
+
+        append_files(id, [stl_upload("cover.stl")])
+        product.reload
+        expect(product.model_file.filename.to_s).to eq("ギアボックス_v1.1.zip")
+        expect(zip_entries(product.model_file.blob)).to eq(%w[gear.stl cover.stl])
+      end
+
+      it "引き継いだファイルと合わせて上限を超えると 422 で、版は作られない" do
+        id = create_model(files: Array.new(ModelVersion::MAX_FILES) { |i| stl_upload("part#{i}.stl") })["id"]
+        append_files(id, [stl_upload("extra.stl")])
+        expect(response).to have_http_status(:unprocessable_entity)
+        expect(ModelAsset.find(id).versions.size).to eq(1)
+      end
+
+      it "枝番の版に戻すと次の整数の版になる" do
+        id = create_model["id"]
+        v11_id = append_files(id, [stl_upload("cover.stl")])["versions"].first["id"]
+        post "/api/v1/admin/model_assets/#{id}/versions", params: { files: [stl_upload("v2.stl")] }, headers: auth_headers(producer)
+
+        post "/api/v1/admin/model_assets/#{id}/versions/#{v11_id}/restore", headers: auth_headers(producer)
+        expect(body["versions"].first).to include("label" => "3", "note" => "v1.1 に戻す", "current" => true)
+        expect(body["current_version"]).to include("files_count" => 2)
+      end
+    end
+
     it "モデルデータ以外が混ざると 422 で、モデルも作られない" do
       create_model(files: [stl_upload("ok.stl"), Rack::Test::UploadedFile.new(StringIO.new("x"), "text/plain", original_filename: "memo.txt")])
       expect(response).to have_http_status(:unprocessable_entity)
       expect(body.dig("error", "message")).to include("memo.txt")
       expect(ModelAsset.count).to eq(0)
+    end
+
+    describe "ファイルのカテゴリ (オールインワン / 分割 / その他)" do
+      def categorized_model
+        create_model(files: [stl_upload("readme.stl")], all_in_one_files: [stl_upload("all.3mf")],
+                     parts_files: [stl_upload("base.stl"), stl_upload("lid.stl")])
+      end
+
+      def file_categories(version_json)
+        version_json["files"].to_h { |f| [f["filename"], f["category"]] }
+      end
+
+      it "カテゴリごとのファイル欄で登録でき、ZIP はカテゴリのフォルダに分かれ、ファイル追加・戻すでもカテゴリを引き継ぐ" do
+        model = categorized_model
+        expect(response).to have_http_status(:created)
+        expect(model["current_version"]).to include("files_count" => 4, "categories" => %w[all_in_one parts])
+        v1 = model["versions"].first
+        expect(file_categories(v1)).to eq("all.3mf" => "all_in_one", "base.stl" => "parts", "lid.stl" => "parts", "readme.stl" => "other")
+        expect(zip_entries(ModelVersion.find(v1["id"]).distribution_blob))
+          .to eq(%w[オールインワン/all.3mf 分割/base.stl 分割/lid.stl readme.stl])
+
+        id = model["id"]
+        post "/api/v1/admin/model_assets/#{id}/versions", params: { parts_files: [stl_upload("handle.stl")], append: true },
+                                                          headers: auth_headers(producer)
+        expect(file_categories(body["versions"].first))
+          .to eq("all.3mf" => "all_in_one", "base.stl" => "parts", "lid.stl" => "parts", "readme.stl" => "other", "handle.stl" => "parts")
+
+        post "/api/v1/admin/model_assets/#{id}/versions", params: { files: [stl_upload("v2.stl")] }, headers: auth_headers(producer)
+        expect(body["current_version"]["categories"]).to eq([])
+        expect(file_categories(body["versions"].first)).to eq("v2.stl" => "other")
+
+        post "/api/v1/admin/model_assets/#{id}/versions/#{v1['id']}/restore", headers: auth_headers(producer)
+        expect(body["versions"].first["label"]).to eq("3")
+        expect(file_categories(body["versions"].first)).to eq(file_categories(v1))
+      end
+
+      it "登録済みの版のカテゴリを変えられ、ZIP を作り直し、販売中なら配布ファイルも差し替える" do
+        model = create_model(files: [stl_upload("all.3mf"), stl_upload("base.stl"), stl_upload("lid.stl")])
+        id = model["id"]
+        version = model["versions"].first
+        expect(file_categories(version).values.uniq).to eq(%w[other])
+        patch "/api/v1/admin/model_assets/#{id}", params: { for_sale: true, price_cents: 500 }, headers: auth_headers(producer), as: :json
+        product = Product.find(body["product"]["id"])
+        expect(zip_entries(product.model_file.blob)).to eq(%w[all.3mf base.stl lid.stl])
+
+        ids = version["files"].to_h { |f| [f["filename"], f["id"]] }
+        patch "/api/v1/admin/model_assets/#{id}/versions/#{version['id']}",
+              params: { categories: { ids["all.3mf"] => "all_in_one", ids["base.stl"] => "parts", ids["lid.stl"] => "parts" } },
+              headers: auth_headers(producer), as: :json
+        expect(response).to have_http_status(:ok)
+        expect(file_categories(body["versions"].first)).to eq("all.3mf" => "all_in_one", "base.stl" => "parts", "lid.stl" => "parts")
+        expect(body["current_version"]["categories"]).to eq(%w[all_in_one parts])
+        expect(zip_entries(product.reload.model_file.blob)).to eq(%w[オールインワン/all.3mf 分割/base.stl 分割/lid.stl])
+        expect(product.model_file.blob_id).to eq(ModelVersion.find(version["id"]).bundle.blob.id)
+
+        # その他に戻すとフォルダもなくなる
+        patch "/api/v1/admin/model_assets/#{id}/versions/#{version['id']}",
+              params: { categories: { ids["all.3mf"] => "other", ids["base.stl"] => "other", ids["lid.stl"] => "other" } },
+              headers: auth_headers(producer), as: :json
+        expect(ModelVersion.find(version["id"]).file_categories).to eq({})
+        expect(zip_entries(product.reload.model_file.blob)).to eq(%w[all.3mf base.stl lid.stl])
+      end
+
+      it "不正なカテゴリは 422、他の版のファイルは 404" do
+        model = create_model(files: [stl_upload("a.stl"), stl_upload("b.stl")])
+        id = model["id"]
+        v1 = model["versions"].first
+        patch "/api/v1/admin/model_assets/#{id}/versions/#{v1['id']}", params: { categories: { v1["files"].first["id"] => "bogus" } },
+                                                                       headers: auth_headers(producer), as: :json
+        expect(response).to have_http_status(:unprocessable_entity)
+        expect(ModelVersion.find(v1["id"]).file_categories).to eq({})
+
+        post "/api/v1/admin/model_assets/#{id}/versions", params: { files: [stl_upload("c.stl")] }, headers: auth_headers(producer)
+        other_file = body["versions"].first["files"].first
+        patch "/api/v1/admin/model_assets/#{id}/versions/#{v1['id']}", params: { categories: { other_file["id"] => "parts" } },
+                                                                       headers: auth_headers(producer), as: :json
+        expect(response).to have_http_status(:not_found)
+      end
     end
   end
 
