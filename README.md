@@ -330,7 +330,8 @@ received   paid       awaiting_   in_        inspection ready_to_  shipped    co
 | 3Dプレビュー | STL / OBJ / 3MF をブラウザで回転・拡大・移動して確認する（three.js）。向きの切り替え（Z 軸が上 / Y 軸が上）・視点のリセットができる。いまの表示をプレビュー画像（PNG）として保存し、一覧・組み立て説明書の表紙・ショップの商品画像に使う。STEP / ZIP はダウンロードのみ |
 | 写真 | 「実モデル画像」（出力・組み立てた実物）と「実利用画像」（使っている様子）を種類ごとに複数枚（各20枚まで・JPEG / PNG / WebP・10MBまで）登録する。保存前にブラウザで長辺1920pxの JPEG に縮小し、位置情報などの EXIF を取り除く。説明の入力・並び替え・種類の変更・削除ができる。★ を付けた写真（**最大3枚**）を3Dモデル一覧のカード・詳細・ショップの商品ページでプレビュー表示する（追加時に3枚に満たなければ自動で ★）。販売中は ★ の1枚目を商品画像にする |
 | 版管理 | 新しいファイル（複数可）を登録するたびに v1, v2… と版を重ね、最新版を「最新」とする。変更内容のメモ・登録者・日時を記録する。過去の版もファイルごとにプレビュー・ダウンロードでき、複数ファイルの版は ZIP でまとめてダウンロードできる。「この版に戻す」はその版のファイル一式で新しい版を作る（履歴は消さない）。**ファイルを追加**すると、最新版のファイル（再アップロードなし）に選んだファイルを足した枝番の版を作る（v3 → v3.1 → v3.2。上限は引き継いだファイルも含めて数える）。版のファイルは後から変えない。通常の新しい版と「この版に戻す」は次の整数の版（v4）になる |
-| 販売フラグ | オンにするとショップの「3Dモデルデータ」に商品（SKU `MDL-<モデルID>`）を作成・公開し、最新版のファイルを購入者への配布ファイルにする（複数ファイルの版は `<モデル名>_v<版>.zip` にまとめる）。名前・説明・価格・利用許諾・画像（★ の写真の1枚目、なければ3Dプレビュー画像）を商品に反映し、版の追加にも追従する。オンにするにはファイルが必要。価格を0円にすると無料配布になり、購入者は[投げ銭](#12-投げ銭0円販売)で応援できる。オフで非公開にする（購入済みの人は引き続きダウンロードできる） |
+| ファイルのカテゴリ | 版のファイルを「**オールインワン**」（1ファイルにまとめたデータ）・「**分割**」（パーツ・部材ごとのファイル）・「**その他**」（図面・説明書など）に分けて登録できる（登録フォームのカテゴリごとのファイル欄。どれか1つ以上）。オールインワン・分割のファイルがある版は、プレビューをカテゴリのタブで切り替え（最初はオールインワン → 分割 → その他の順でファイルのあるもの。分割のタブは3Dのファイルを並べて表示）、版の一覧もカテゴリごとに分けて表示する。カテゴリはファイルへのラベルなので、登録済みの版でも「カテゴリを変更」で変えられる（ファイルは変わらない）。ファイル追加・「この版に戻す」はカテゴリも引き継ぐ。未分類の既存ファイルは「その他」 |
+| 販売フラグ | オンにするとショップの「3Dモデルデータ」に商品（SKU `MDL-<モデルID>`）を作成・公開し、最新版のファイルを購入者への配布ファイルにする（複数ファイルの版は `<モデル名>_v<版>.zip` にまとめる。カテゴリのある版は ZIP 内を `オールインワン/`・`分割/` のフォルダに分け、その他はルートに置く。カテゴリを変えると ZIP を作り直して差し替える）。名前・説明・価格・利用許諾・画像（★ の写真の1枚目、なければ3Dプレビュー画像）を商品に反映し、版の追加にも追従する。オンにするにはファイルが必要。価格を0円にすると無料配布になり、購入者は[投げ銭](#12-投げ銭0円販売)で応援できる。オフで非公開にする（購入済みの人は引き続きダウンロードできる） |
 | 組み立て方法 | 必要な部品・工具と、手順（見出し・説明・画像）を登録する。手順は並び替え・編集・削除でき、画像は PNG / JPEG（5MBまで）。部品・工具と手順の説明は **Markdown**（GFM：見出し・太字・箇条書き・番号リスト・引用・コード・表・リンク・取り消し線。改行はそのまま反映）で書け、入力欄の横（狭い画面はタブ切り替え）のプレビューで確認できる。登録済みの手順も整形して表示する（生の HTML と画像は表示しない）。**Markdown ファイル1つから部品・工具と手順をまとめて取り込める**（[11.2節](#112-markdown-ファイルからの取り込み)） |
 | 組み立て説明書 PDF | A4 の PDF（モデル名・版・出力日、プレビュー画像、説明、部品・工具、STEP ごとの見出し・説明・画像、ページ番号）を出力する。Markdown は PDF でも見出し・リスト・引用・コード・表として整形する（日本語フォントに太字・斜体がないため、太字は濃い茶色・斜体は薄い色で表す）。管理画面から出力でき、販売中のモデルを購入した人は注文詳細・アカウント画面（モバイルは注文詳細）から期限付きリンク（5分）でダウンロードできる |
 
@@ -369,7 +370,7 @@ received   paid       awaiting_   in_        inspection ready_to_  shipped    co
 | プレビュー画像の保存 | 3D 表示から保存 | 画像・DXF・3D の表示から保存。PDF は保存できないので、写真に ★ を付けて商品画像にする |
 | 販売先カテゴリ・SKU | `3d-models`（3Dモデルデータ）、`MDL-<id>` | `diy-plans`（DIY設計図）、`DIY-<id>` |
 
-- 1つの版に複数の図面（全体図の PDF と部材ごとの DXF など）をまとめられ、販売時は ZIP にまとめて配布する。
+- 1つの版に複数の図面（全体図の PDF と部材ごとの DXF など）をまとめられ、販売時は ZIP にまとめて配布する。ファイルのカテゴリも3Dモデルと同じで、部材ごとの DXF を「分割」、全体図を「オールインワン」などに分けられる。
 - SketchUp や Fusion などから書き出した**完成品の3Dデータ**を図面と同じ版に登録すると、DIY品そのものを3Dで確認できる。詳細画面は3Dのファイルがあればそれを最初に表示する。3Dデータも ZIP に含めて購入者に配布する（GLB / glTF は非対応）。
 - DXF の文字コードは、UTF-8 として読めなければ Shift_JIS（JW-CAD などが出力する古い形式）とみなす。
 - `diy-plans` カテゴリはマイグレーションで作成する（本番で `db:seed` を実行しなくても販売できる）。
@@ -666,7 +667,7 @@ LAN / tunnel / localhost の各モードと接続できないときの対処は 
 
 - アップロードしたファイル（3Dモデル・DIY設計図・画像）は ActiveStorage のディスク（`/app/storage`）に保存する。本番は名前付きボリュームに置き、コンテナを作り直しても消えないようにする。
 - 配布ファイルは非公開の添付にし、`GET /downloads/:product_id` で本人確認のうえ、有効期限5分の署名付き URL（`/rails/active_storage/...`）を払い出す。
-- 複数ファイルの版の ZIP（`bundle`）は、配布・一括ダウンロードで初めて作り、以後使い回す。販売中は最新版の配布ファイルを商品の `model_file` と共有する（`ModelListing`）。
+- 複数ファイルの版の ZIP（`bundle`）は、配布・一括ダウンロードで初めて作り、以後使い回す。販売中は最新版の配布ファイルを商品の `model_file` と共有する（`ModelListing`）。ファイルのカテゴリを変えたときだけ、フォルダ分けが変わるので作り直す（商品が共有している古い ZIP は、商品の配布ファイルが差し替わるまで消えない）。
 
 ### 20.4 商品検索
 
@@ -861,12 +862,14 @@ model_asset_id
 number                モデルごとに1から。最大（同じなら minor が最大）が最新版
 minor                 既定 0（枝番。最新版にファイルを追加した版は 1 から。表示は v<number>.<minor>）。unique [model_asset_id, number, minor]
 note                  既定 ''（変更内容）
+file_categories       jsonb・既定 {}（ファイルのカテゴリ。キー = blob_id、値 = all_in_one / parts。その他は持たない）
 created_by_id         users・nullable
 created_at / updated_at
 ```
 
 - ファイルは ActiveStorage の `files` 添付（複数。3Dモデルは STL / 3MF / OBJ / STEP / ZIP、DIY設計図は PDF / PNG / JPG / SVG / DXF / DWG / JWW と完成品の3Dデータ STL / OBJ / 3MF。20個・合計100MBまで）。
 - `bundle` 添付：複数ファイルの版をまとめた ZIP（[20.3節](#203-ファイルの保存と配布)）。
+- `file_categories` は blob_id で持つので、ファイル追加・「この版に戻す」で引き継いだ blob のカテゴリをそのまま写せる。
 
 ### 21.12 model_photos（3Dモデルの写真）
 
@@ -1114,14 +1117,15 @@ ai_messages
 | Method | Path | 説明 |
 |---|---|---|
 | GET | `/admin/model_assets` | 3Dモデル・DIY設計図の一覧（params：`kind` = `model`（省略時） / `blueprint`。`kind`、`kind_label`、`current_version`、`for_sale`、`price_cents`、`preview_image_url`、`versions_count`、`assembly_steps_count`、連動する商品 `product: { id, sku, published }`） |
-| POST | `/admin/model_assets` | 登録（multipart：`kind` = `model`（省略時） / `blueprint`、`name`、`description`、`license`、`files[]` = 初版のファイル（種別ごとの形式。複数可、1つなら `file` でも可）、`note`）→ 詳細 |
+| POST | `/admin/model_assets` | 登録（multipart：`kind` = `model`（省略時） / `blueprint`、`name`、`description`、`license`、初版のファイル = `all_in_one_files[]`（オールインワン）/ `parts_files[]`（分割）/ `files[]`（その他。1つなら `file` でも可）（種別ごとの形式。それぞれ複数可・どれか1つ以上）、`note`）→ 詳細 |
 | GET | `/admin/model_assets/:id` | 詳細（一覧の項目 ＋ `description`、`license`、`assembly_notes`、`versions`、`assembly_steps`） |
 | PATCH | `/admin/model_assets/:id` | 更新（body：`name`、`description`、`license`、`assembly_notes` = Markdown、`for_sale`、`price_cents`）。販売フラグはショップの商品に反映する。ファイルなしで販売しようとすると `422 listing_failed` |
 | DELETE | `/admin/model_assets/:id` | 削除（版・手順も削除。連動する商品は非公開にして残す） |
 | POST | `/admin/model_assets/:id/preview` | プレビュー画像の保存（multipart：`image`、PNG/JPEG 5MBまで） |
 | GET | `/admin/model_assets/:id/assembly_pdf` | 組み立て説明書 PDF |
-| POST | `/admin/model_assets/:id/versions` | 新しい版（multipart：`files[]`（複数可・20個・合計100MBまで）、`note`、`append`）。`append=true` は最新版のファイルを引き継いで `files[]` を足した枝番の版（v3 → v3.1。`note` の省略時は「ファイルを追加」）を作る。販売中なら配布ファイルを差し替える（複数ファイルは ZIP） |
-| POST | `/admin/model_assets/:id/versions/:version_id/restore` | 過去の版のファイルで新しい版を作る |
+| POST | `/admin/model_assets/:id/versions` | 新しい版（multipart：`all_in_one_files[]` / `parts_files[]` / `files[]`（カテゴリごと。複数可・合わせて20個・合計100MBまで）、`note`、`append`）。`append=true` は最新版のファイル（カテゴリも）を引き継いで選んだファイルを足した枝番の版（v3 → v3.1。`note` の省略時は「ファイルを追加」）を作る。販売中なら配布ファイルを差し替える（複数ファイルは ZIP） |
+| PATCH | `/admin/model_assets/:id/versions/:version_id` | ファイルのカテゴリの変更（JSON：`categories` = `{ "<file_id>": "all_in_one" / "parts" / "other" }`）。ファイルは変えない。ZIP を作り直し、販売中の最新版なら配布ファイルを差し替える。不正なカテゴリは `422`、他の版のファイルは `404` |
+| POST | `/admin/model_assets/:id/versions/:version_id/restore` | 過去の版のファイル（カテゴリも）で新しい版を作る |
 | GET | `/admin/model_assets/:id/versions/:version_id/file` | 版の中の1ファイルのプレビュー・ダウンロード用の期限付き（10分）URL（params：`file_id`（省略時は最初のファイル）、`disposition` = `inline` / `attachment`）→ `{ url, filename, byte_size, expires_in }` |
 | GET | `/admin/model_assets/:id/versions/:version_id/bundle` | 版のファイルをまとめてダウンロードする期限付き URL（複数なら `<モデル名>_v<版>.zip`、1つならそのファイル） |
 | POST | `/admin/model_assets/:id/assembly_steps` | 手順の追加（multipart：`title`、`body` = Markdown、`image`）。末尾に追加する |
@@ -1132,7 +1136,7 @@ ai_messages
 | DELETE | `/admin/model_assets/:id/photos/:photo_id` | 写真の削除（並び順を詰める） |
 | POST | `/admin/model_assets/:id/assembly_import` | Markdown ファイル（1MB・UTF-8）から部品・工具と手順を取り込む（multipart：`file`、`dry_run`、`mode` = `append` / `replace`）。`dry_run=true` は登録せず `{ assembly_notes（無ければ null）, steps: [{ title, body }], warnings }` を返す。取り込めるものがなければ `422 import_failed` |
 
-- 版の JSON：`{ id, number, minor, label（表示用。"3" / "3.1"）, note, current, byte_size（合計）, files: [{ id, filename, format, byte_size, previewable（3Dモデルは STL/OBJ/3MF、DIY設計図は PDF/PNG/JPG/JPEG/SVG/DXF/STL/OBJ/3MF） }], created_at, created_by }`。一覧の `current_version` は `{ number, minor, label, files_count, formats }`。ZIP 名・組み立て説明書 PDF の版も `label` で表す。
+- 版の JSON：`{ id, number, minor, label（表示用。"3" / "3.1"）, note, current, byte_size（合計）, files: [{ id, filename, format, byte_size, previewable（3Dモデルは STL/OBJ/3MF、DIY設計図は PDF/PNG/JPG/JPEG/SVG/DXF/STL/OBJ/3MF）, category（`all_in_one` / `parts` / `other`） }], created_at, created_by }`。一覧の `current_version` は `{ number, minor, label, files_count, formats, categories（その他以外で含まれるカテゴリ） }`。ZIP 名・組み立て説明書 PDF の版も `label` で表す。
 - 写真の JSON：`{ id, kind, kind_label, caption, featured, position, url }`。一覧・詳細は `preview_photos`（featured の最大3枚）と `photos_count`、詳細は全件の `photos` を返す。
 - 更新系はすべて最新の詳細を返す。
 
@@ -1179,6 +1183,7 @@ ai_messages
 | D12 | 3Dモデルの写真は、保存前にブラウザで長辺1920pxの JPEG に縮小し、位置情報などの EXIF を取り除く |
 | D13 | DIY設計図は別機能にせず、3Dモデル管理の種別（`kind = blueprint`）として扱う。版管理・写真・組み立て方法・販売・配布の仕組みと API を共通にし、形式・プレビュー・販売先カテゴリ（`diy-plans`、SKU `DIY-<id>`）だけを種別で切り替える |
 | D14 | 版のファイルは作成後に変えない。最新版へのファイル追加は、ファイルを引き継いだ枝番の版（v3.1）として作り、いつ追加したかを履歴に残す |
+| D15 | 版の中のファイルのカテゴリ（オールインワン / 分割 / その他）は固定の3種類にする。カテゴリはファイルへのラベルで中身ではないので、D14 と違い登録済みの版でも変えられる（配布 ZIP のフォルダ分けは作り直す） |
 
 ## 25. 未決事項
 

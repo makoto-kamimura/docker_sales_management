@@ -1,3 +1,5 @@
+import type { ModelFileCategory } from "./adminTypes";
+
 /** 3Dモデル管理で扱う種別 (API の ModelAsset::KINDS と揃える)。版・写真・組み立て手順・販売の仕組みは共通 */
 export type ModelKind = "model" | "blueprint";
 
@@ -53,3 +55,12 @@ export const MODEL_KINDS: Record<ModelKind, ModelKindConfig> = {
 
 /** デジタル商品の配布ファイルとして登録できる形式 (API の Product::DIGITAL_FILE_EXTENSIONS と揃える) */
 export const DIGITAL_FILE_ACCEPT = [...new Set([MODEL_KINDS.model.accept, MODEL_KINDS.blueprint.accept].join(",").split(","))].join(",");
+
+/** 版の中のファイルのカテゴリ (表示順)。param は登録フォームのファイル欄の名前 (API の UPLOAD_PARAMS と揃える) */
+export const FILE_CATEGORIES: { key: ModelFileCategory; label: string; hint: string; param: string }[] = [
+  { key: "all_in_one", label: "オールインワン", hint: "1ファイルにまとめたデータ", param: "all_in_one_files[]" },
+  { key: "parts", label: "分割", hint: "パーツ・部材ごとのファイル", param: "parts_files[]" },
+  { key: "other", label: "その他", hint: "図面・説明書など", param: "files[]" },
+];
+
+export const fileCategoryLabel = (key: ModelFileCategory) => FILE_CATEGORIES.find((c) => c.key === key)?.label ?? key;

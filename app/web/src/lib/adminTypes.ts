@@ -18,6 +18,9 @@ export type AdminTipList = {
 export type StaffUser = { id: number; name: string; role: "staff" | "admin" };
 
 /** 版に含まれるファイル (3Dモデル・DIY設計図) */
+/** 版の中のファイルのカテゴリ (API の ModelVersion::FILE_CATEGORIES と揃える)。未分類は other */
+export type ModelFileCategory = "all_in_one" | "parts" | "other";
+
 export type ModelFile = {
   id: number;
   filename: string;
@@ -25,6 +28,7 @@ export type ModelFile = {
   byte_size: number;
   /** ブラウザでプレビューできる (3Dモデル: STL / OBJ / 3MF、DIY設計図: PDF / 画像 / DXF) */
   previewable: boolean;
+  category: ModelFileCategory;
 };
 
 /** 3Dモデル・DIY設計図の版 (current: 最新版)。1つの版に複数のファイルを持てる */
@@ -71,7 +75,11 @@ export type ModelAssetSummary = {
   /** プレビュー表示の写真 (最大3枚) */
   preview_photos: ModelPhoto[];
   photos_count: number;
-  current_version: { number: number; minor: number; label: string; files_count: number; formats: string[] } | null;
+  current_version: {
+    number: number; minor: number; label: string; files_count: number; formats: string[];
+    /** その他以外で最新版に含まれるカテゴリ */
+    categories: ModelFileCategory[];
+  } | null;
   versions_count: number;
   assembly_steps_count: number;
   product: { id: number; sku: string; published: boolean } | null;

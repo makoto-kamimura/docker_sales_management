@@ -25,7 +25,7 @@ RSpec.describe "Admin DIY blueprints (制作権限)", type: :request do
     expect(response).to have_http_status(:created)
     expect(blueprint).to include("kind" => "blueprint", "kind_label" => "DIY設計図",
                                  "current_version" => { "number" => 1, "minor" => 0, "label" => "1", "files_count" => 4,
-                                                        "formats" => %w[PDF DXF DWG PNG] })
+                                                        "formats" => %w[PDF DXF DWG PNG], "categories" => [] })
     files = blueprint["versions"].first["files"]
     expect(files.to_h { |f| [f["format"], f["previewable"]] }).to eq("PDF" => true, "DXF" => true, "DWG" => false, "PNG" => true)
 

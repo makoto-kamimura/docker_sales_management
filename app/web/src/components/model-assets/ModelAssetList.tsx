@@ -10,8 +10,9 @@ import { fmtDate } from "@/lib/format";
 import { LoadError } from "@/components/LoadError";
 import { PhotoStrip } from "@/components/PhotoStrip";
 import { ModelSaleBadge, versionLabel } from "@/components/ModelSaleBadge";
+import { CategorizedFileInputs, takeCategorizedFiles } from "@/components/model-assets/CategorizedFileInputs";
 import type { ModelAssetDetail, ModelAssetSummary } from "@/lib/adminTypes";
-import { MODEL_KINDS, type ModelKind } from "@/lib/modelKinds";
+import { fileCategoryLabel, MODEL_KINDS, type ModelKind } from "@/lib/modelKinds";
 
 // 3Dモデル・DIY設計図の一覧 (制作権限): ファイルを版ごとに保存し、プレビュー・組み立て方法・販売をまとめて管理する
 export function ModelAssetList({ kind }: { kind: ModelKind }) {
@@ -31,6 +32,10 @@ export function ModelAssetList({ kind }: { kind: ModelKind }) {
     e.preventDefault();
     const body = new FormData(e.currentTarget);
     body.set("kind", kind);
+    if (!takeCategorizedFiles(body)) {
+      setErr("ファイルを1つ以上選択してください");
+      return;
+    }
     setErr(null);
     setBusy(true);
     try {
@@ -73,20 +78,20 @@ export function ModelAssetList({ kind }: { kind: ModelKind }) {
             <input name="name" required className="input" />
           </label>
           <label className="block">
-            <span className="field-label">ファイル * (複数選択可。{config.formats}、合計 100MB まで)</span>
-            <input type="file" name="files[]" multiple required accept={config.accept} className="input text-xs" />
+            <span className="field-label">版のメモ</span>
+            <input name="note" placeholder="初版" className="input" />
           </label>
+          <fieldset className="sm:col-span-2">
+            <legend className="field-label">ファイル * (どれか1つ以上。複数選択可。{config.formats}、合計 100MB まで)</legend>
+            <CategorizedFileInputs accept={config.accept} />
+          </fieldset>
           <label className="block sm:col-span-2">
             <span className="field-label">説明</span>
             <textarea name="description" rows={2} className="input" />
           </label>
-          <label className="block">
+          <label className="block sm:col-span-2">
             <span className="field-label">利用許諾</span>
             <input name="license" placeholder="例: 個人利用のみ・再配布不可" className="input" />
-          </label>
-          <label className="block">
-            <span className="field-label">版のメモ</span>
-            <input name="note" placeholder="初版" className="input" />
           </label>
           {err && <p role="alert" className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700 sm:col-span-2">{err}</p>}
           <div className="sm:col-span-2">
@@ -127,6 +132,13 @@ export function ModelAssetList({ kind }: { kind: ModelKind }) {
                     {m.current_version ? versionLabel(m.current_version) : "ファイルなし"}
                     {` · 手順 ${m.assembly_steps_count} · 更新 ${fmtDate(m.updated_at)}`}
                   </div>
+                  {m.current_version && m.current_version.categories.length > 0 && (
+                    <div className="flex flex-wrap gap-1">
+                      {m.current_version.categories.map((c) => (
+                        <span key={c} className="badge badge-muted">{fileCategoryLabel(c)}</span>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </Link>
             </li>

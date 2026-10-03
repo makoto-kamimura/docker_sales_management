@@ -24,7 +24,8 @@ module Api
             preview_photos: m.preview_photos.map { |ph| photo_json(ph) }, photos_count: m.photos.size,
             current_version: current && {
               number: current.number, minor: current.minor, label: current.label, files_count: current.files.size,
-              formats: current.files.map { |f| ModelVersion.format_of(f) }.uniq
+              formats: current.files.map { |f| ModelVersion.format_of(f) }.uniq,
+              categories: ModelVersion::FILE_CATEGORIES.keys & current.file_categories.values
             },
             versions_count: m.versions.size, assembly_steps_count: m.assembly_steps.size,
             product: m.product && {
@@ -52,7 +53,7 @@ module Api
             id: v.id, number: v.number, minor: v.minor, label: v.label, note: v.note, current: current, byte_size: v.total_byte_size,
             files: v.files.map { |f|
               { id: f.id, filename: f.filename.to_s, format: ModelVersion.format_of(f), byte_size: f.blob.byte_size,
-                previewable: v.previewable?(f) }
+                previewable: v.previewable?(f), category: v.category_of(f) }
             },
             created_at: v.created_at, created_by: user_ref(v.created_by)
           }
@@ -63,15 +64,31 @@ module Api
             position: ph.position, url: blob_path(ph.image) }
         end
 
+        # カテゴリごとのファイル欄 (multipart)。files[] (または file) はその他
+        UPLOAD_PARAMS = { all_in_one_files: "all_in_one", parts_files: "parts", files: ModelVersion::OTHER_CATEGORY }.freeze
+
+        # アップロードされたファイルとカテゴリ: [[ファイル, カテゴリ], ...] (オールインワン → 分割 → その他 の順)
+        def uploaded_entries
+          entries = UPLOAD_PARAMS.flat_map { |name, category| uploaded_list(name).map { |f| [f, category] } }
+          entries = uploaded_list(:file).map { |f| [f, ModelVersion::OTHER_CATEGORY] } if entries.empty?
+          raise ActionController::ParameterMissing, :files if entries.empty?
+
+          entries
+        end
+
         # multipart の files[] (複数) または file (1つ)
         def uploaded_files
-          list = params[:files]
-          list = list.values if list.is_a?(ActionController::Parameters)
-          files = Array(list).select { |f| f.respond_to?(:original_filename) }
-          files = [params[:file]].select { |f| f.respond_to?(:original_filename) } if files.empty?
+          files = uploaded_list(:files)
+          files = uploaded_list(:file) if files.empty?
           raise ActionController::ParameterMissing, :files if files.empty?
 
           files
+        end
+
+        def uploaded_list(name)
+          list = params[name]
+          list = list.values if list.is_a?(ActionController::Parameters)
+          Array(list).select { |f| f.respond_to?(:original_filename) }
         end
 
         def user_ref(user)

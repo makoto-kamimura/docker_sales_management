@@ -22,12 +22,13 @@ module Api
           render json: model_asset_detail(@model_asset)
         end
 
-        # multipart: kind (model / blueprint。省略時は model), name, description, license, files[] (初版のファイル。複数可), note
+        # multipart: kind (model / blueprint。省略時は model), name, description, license, note,
+        # 初版のファイル: all_in_one_files[] / parts_files[] / files[] (その他) (それぞれ複数可)
         def create
-          files = uploaded_files
+          entries = uploaded_entries
           model = ActiveRecord::Base.transaction do
             m = ModelAsset.create!(params.permit(:kind, :name, :description, :license).merge(created_by: current_user))
-            m.versions.create!(files: files, note: params[:note].presence || "初版", created_by: current_user)
+            m.versions.create_with_categories!(entries: entries, note: params[:note].presence || "初版", created_by: current_user)
             m
           end
           render json: model_asset_detail(find_model_asset(model.id)), status: :created

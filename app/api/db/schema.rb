@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_09_29_000002) do
+ActiveRecord::Schema[7.2].define(version: 2026_10_03_000001) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "citext"
   enable_extension "pg_trgm"
@@ -179,6 +179,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_09_29_000002) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.integer "minor", default: 0, null: false
+    t.jsonb "file_categories", default: {}, null: false
     t.index ["created_by_id"], name: "index_model_versions_on_created_by_id"
     t.index ["model_asset_id", "number", "minor"], name: "index_model_versions_on_model_asset_id_and_number_and_minor", unique: true
     t.index ["model_asset_id"], name: "index_model_versions_on_model_asset_id"

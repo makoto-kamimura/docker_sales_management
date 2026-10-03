@@ -83,7 +83,7 @@ Rails.application.routes.draw do
             get :assembly_pdf
             post :assembly_import # Markdown ファイルから部品・工具と手順を取り込む
           end
-          resources :versions, only: %i[create], controller: "model_versions" do # 版管理
+          resources :versions, only: %i[create update], controller: "model_versions" do # 版管理 (update: ファイルのカテゴリ)
             member do
               post :restore
               get :file   # 版の中の1ファイル (file_id)

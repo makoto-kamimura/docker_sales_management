@@ -16,8 +16,9 @@ import { ModelPhotos } from "@/components/ModelPhotos";
 import { ModelViewer, type ModelViewerHandle } from "@/components/ModelViewer";
 import { MODEL_GRID_MAX, ModelViewerGrid } from "@/components/ModelViewerGrid";
 import { ModelSaleBadge, versionLabel } from "@/components/ModelSaleBadge";
-import type { AssemblyStep, ModelAssetDetail, ModelFile, ModelVersion } from "@/lib/adminTypes";
-import { MODEL_KINDS, type ModelKind } from "@/lib/modelKinds";
+import { CategorizedFileInputs, takeCategorizedFiles } from "@/components/model-assets/CategorizedFileInputs";
+import type { AssemblyStep, ModelAssetDetail, ModelFile, ModelFileCategory, ModelVersion } from "@/lib/adminTypes";
+import { FILE_CATEGORIES, MODEL_KINDS, type ModelKind } from "@/lib/modelKinds";
 
 const IMAGE_ACCEPT = "image/png,image/jpeg";
 
@@ -49,8 +50,11 @@ export function ModelAssetDetailPage({ id, kind }: { id: string; kind: ModelKind
   );
   const [err, setErr] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null); // 実行中の操作
-  const [preview, setPreview] = useState<{ versionId: number; fileId: number } | null>(null); // null: 最新版
-  const [showAll, setShowAll] = useState(false); // 版の全ファイルを分割表示
+  const [preview, setPreview] = useState<{ versionId: number; fileId?: number } | null>(null); // null: 最新版
+  const [category, setCategory] = useState<ModelFileCategory | null>(null); // 表示するカテゴリ (null: 自動)
+  const [showAllSetting, setShowAll] = useState<boolean | null>(null); // カテゴリの3Dファイルを並べて表示 (null: 自動)
+  const [uploadMode, setUploadMode] = useState<"new" | "append">("new"); // 新しい版 / 最新版にファイルを追加
+  const [editingVersion, setEditingVersion] = useState<number | null>(null); // カテゴリを変更中の版
   const [addStepKey, setAddStepKey] = useState(0); // 追加後にフォーム (Markdown 入力) を空に戻す
   const viewer = useRef<ModelViewerHandle>(null);
   const blueprintViewer = useRef<BlueprintViewerHandle>(null);
@@ -65,12 +69,19 @@ export function ModelAssetDetailPage({ id, kind }: { id: string; kind: ModelKind
 
   const currentVersion = m?.versions.find((v) => v.current) ?? null;
   const previewVersion = m?.versions.find((v) => v.id === preview?.versionId) ?? currentVersion;
+  // カテゴリ (オールインワン / 分割) のファイルがある版はカテゴリのタブで切り替える。
+  // 最初はオールインワン → 分割 → その他 の順で、ファイルのあるカテゴリを表示する
+  const versionCategories = categoriesOf(previewVersion);
+  const activeCategory = versionCategories
+    ? (versionCategories.find((c) => c.key === category) ?? versionCategories[0]).key
+    : null;
+  const categoryFiles = previewVersion?.files.filter((f) => !activeCategory || f.category === activeCategory) ?? [];
   // 最初は3Dのファイルを表示する (設計図に完成品の3Dデータがあれば、図面より先に全体像を見せる)
   const previewFile =
-    previewVersion?.files.find((f) => f.id === preview?.fileId) ??
-    previewVersion?.files.find((f) => f.previewable && is3d(f.format)) ??
-    previewVersion?.files.find((f) => f.previewable) ??
-    previewVersion?.files[0] ??
+    categoryFiles.find((f) => f.id === preview?.fileId) ??
+    categoryFiles.find((f) => f.previewable && is3d(f.format)) ??
+    categoryFiles.find((f) => f.previewable) ??
+    categoryFiles[0] ??
     null;
   // 期限付き URL (10分)。フォーカスのたびに取り直すとモデルを再読み込みしてしまうので自動更新しない
   const { data: fileUrl, error: fileError } = useSWR<{ url: string }>(
@@ -80,9 +91,10 @@ export function ModelAssetDetailPage({ id, kind }: { id: string; kind: ModelKind
   );
   // 表示中のファイルが3Dなら three.js、それ以外 (設計図の図面) は BlueprintViewer で表示する
   const show3d = !!previewFile?.previewable && is3d(previewFile.format);
-  // 全データプレビューは3Dのファイルだけを並べる
-  const previewable3dFiles = previewVersion?.files.filter((f) => f.previewable && is3d(f.format)) ?? [];
+  // 全データプレビューは表示中のカテゴリの3Dのファイルだけを並べる。分割のカテゴリは最初から並べる
+  const previewable3dFiles = categoryFiles.filter((f) => f.previewable && is3d(f.format));
   const gridFiles = previewable3dFiles.slice(0, MODEL_GRID_MAX);
+  const showAll = showAllSetting ?? activeCategory === "parts";
   const gridMode = showAll && gridFiles.length > 1;
   // 全データプレビュー用: 各ファイルの期限付き URL をまとめて発行する
   const { data: gridUrls, error: gridError } = useSWR<string[]>(
@@ -132,8 +144,22 @@ export function ModelAssetDetailPage({ id, kind }: { id: string; kind: ModelKind
 
   function showPreview(v: ModelVersion, f: ModelFile) {
     setPreview({ versionId: v.id, fileId: f.id });
+    setCategory(f.category);
     setShowAll(false);
     viewerSection.current?.scrollIntoView({ behavior: "smooth" });
+  }
+
+  function selectCategory(key: ModelFileCategory) {
+    if (previewVersion) setPreview({ versionId: previewVersion.id });
+    setCategory(key);
+    setShowAll(null);
+  }
+
+  /** 版を登録・変更した後は最新版を自動の表示に戻す */
+  function resetPreview() {
+    setPreview(null);
+    setCategory(null);
+    setShowAll(null);
   }
 
   /** 期限付き URL を発行してダウンロードする (ファイル単体 / まとめて ZIP) */
@@ -191,28 +217,39 @@ export function ModelAssetDetailPage({ id, kind }: { id: string; kind: ModelKind
               <div className="flex flex-wrap gap-1.5 text-xs">
                 <button type="button" onClick={() => viewer.current?.rotate()} className="btn btn-outline !px-3 !py-1">向きを変える</button>
                 {previewable3dFiles.length > 1 && (
-                  <button type="button" onClick={() => setShowAll((on) => !on)} aria-pressed={gridMode}
+                  <button type="button" onClick={() => setShowAll(!gridMode)} aria-pressed={gridMode}
                           className={`btn !px-3 !py-1 ${gridMode ? "btn-primary" : "btn-outline"}`}>
-                    {gridMode ? "1つずつ表示" : `全データプレビュー (${previewable3dFiles.length})`}
+                    {gridMode ? "1つずつ表示" : `${activeCategory === "parts" ? "全パーツを並べる" : "全データプレビュー"} (${previewable3dFiles.length})`}
                   </button>
                 )}
                 <button type="button" onClick={() => viewer.current?.resetView()} className="btn btn-outline !px-3 !py-1">視点を戻す</button>
               </div>
             )}
           </div>
+          {previewVersion && versionCategories && (
+            <div role="tablist" aria-label="ファイルのカテゴリ" className="flex flex-wrap gap-1.5">
+              {versionCategories.map((c) => (
+                <button key={c.key} type="button" role="tab" aria-selected={c.key === activeCategory}
+                        onClick={() => selectCategory(c.key)}
+                        className={`btn !px-3 !py-1 text-xs ${c.key === activeCategory ? "btn-primary" : "btn-outline"}`}>
+                  {c.label} ({previewVersion.files.filter((f) => f.category === c.key).length})
+                </button>
+              ))}
+            </div>
+          )}
           {gridMode && previewable3dFiles.length > MODEL_GRID_MAX && (
             <p className="text-xs text-coffee-500">
               3Dでプレビューできるファイルが {previewable3dFiles.length} 件あります。先頭の {MODEL_GRID_MAX} 件を表示しています。
             </p>
           )}
-          {previewVersion && previewVersion.files.length > 1 && !gridMode && (
+          {previewVersion && categoryFiles.length > 1 && !gridMode && (
             <select
               value={previewFile?.id ?? ""}
               onChange={(e) => setPreview({ versionId: previewVersion.id, fileId: Number(e.target.value) })}
               aria-label="プレビューするファイル"
               className="input !py-1.5 text-sm"
             >
-              {previewVersion.files.map((f) => (
+              {categoryFiles.map((f) => (
                 <option key={f.id} value={f.id} disabled={!f.previewable}>
                   {f.filename}{f.previewable ? "" : " (プレビュー不可)"}
                 </option>
@@ -224,7 +261,7 @@ export function ModelAssetDetailPage({ id, kind }: { id: string; kind: ModelKind
               <p role="alert" className="grid aspect-[4/3] place-items-center rounded-xl bg-coffee-50 p-6 text-sm text-red-700">{gridError.message}</p>
             ) : (
               <ModelViewerGrid
-                key={`${previewVersion.id}-all`}
+                key={`${previewVersion.id}-${activeCategory ?? "all"}-grid`}
                 ref={viewer}
                 items={gridFiles.map((f, i) => ({ key: f.id, url: gridUrls?.[i] ?? null, format: f.format, label: f.filename }))}
                 onSelect={(i) => showPreview(previewVersion, gridFiles[i])}
@@ -349,58 +386,61 @@ export function ModelAssetDetailPage({ id, kind }: { id: string; kind: ModelKind
 
       {/* 版管理 */}
       <section className="card space-y-4 p-5">
-        <div className="flex flex-wrap items-end justify-between gap-3">
-          <div>
-            <h2 className="font-semibold">版管理</h2>
-            <p className="text-xs text-coffee-500">
-              ファイルを登録すると最新版になります。複数のファイル ({config.filesExample}) をまとめて1つの版にできます (20個・合計 100MB まで)。
-              過去の版もファイルごと残ります。「ファイルを追加」は最新版のファイルを引き継いで、選んだファイルを足した版 (v3 → v3.1) を作ります。
-            </p>
-          </div>
-          <div className="space-y-2">
-            <form
-              onSubmit={async (e) => {
-                e.preventDefault();
-                const form = e.currentTarget;
-                const data = new FormData(form);
-                if (await run("version", () => send(`${base}/versions`, "POST", data))) {
-                  form.reset();
-                  setPreview(null);
-                }
-              }}
-              className="flex flex-wrap items-end gap-2 text-sm"
-            >
-              <input type="file" name="files[]" multiple required accept={config.accept}
-                     aria-label="新しい版のファイル (複数選択可)" className="input !w-60 text-xs" />
-              <input name="note" placeholder={config.notePlaceholder} aria-label="変更内容" className="input !w-60" />
-              <button disabled={busy === "version"} className="btn btn-primary">
-                {busy === "version" ? "アップロード中…" : "新しい版を登録"}
-              </button>
-            </form>
-            {currentVersion && (
-              <form
-                onSubmit={async (e) => {
-                  e.preventDefault();
-                  const form = e.currentTarget;
-                  const data = new FormData(form);
-                  data.set("append", "true");
-                  if (await run("append", () => send(`${base}/versions`, "POST", data))) {
-                    form.reset();
-                    setPreview(null);
-                  }
-                }}
-                className="flex flex-wrap items-end gap-2 text-sm"
-              >
-                <input type="file" name="files[]" multiple required accept={config.accept}
-                       aria-label={`v${currentVersion.label} に追加するファイル (複数選択可)`} className="input !w-60 text-xs" />
-                <input name="note" placeholder="追加内容 (例: 完成品の3Dデータ)" aria-label="追加内容" className="input !w-60" />
-                <button disabled={busy === "append"} className="btn btn-outline">
-                  {busy === "append" ? "アップロード中…" : `v${currentVersion.label} にファイルを追加 → v${currentVersion.number}.${currentVersion.minor + 1}`}
-                </button>
-              </form>
-            )}
-          </div>
+        <div>
+          <h2 className="font-semibold">版管理</h2>
+          <p className="text-xs text-coffee-500">
+            ファイルを登録すると最新版になります。複数のファイル ({config.filesExample}) をまとめて1つの版にできます (20個・合計 100MB まで)。
+            過去の版もファイルごと残ります。「ファイルを追加」は最新版のファイルを引き継いで、選んだファイルを足した版 (v3 → v3.1) を作ります。
+            ファイルは「オールインワン」「分割」「その他」に分けて登録でき、プレビューをカテゴリで切り替えられます。
+            カテゴリはあとから「カテゴリを変更」で変えられます (ファイルは変わりません)。
+          </p>
         </div>
+        <form
+          onSubmit={async (e) => {
+            e.preventDefault();
+            const form = e.currentTarget;
+            const data = new FormData(form);
+            data.delete("mode");
+            if (!takeCategorizedFiles(data)) {
+              setErr("ファイルを1つ以上選択してください");
+              return;
+            }
+            const append = uploadMode === "append" && !!currentVersion;
+            if (append) data.set("append", "true");
+            if (await run("version", () => send(`${base}/versions`, "POST", data))) {
+              form.reset();
+              setUploadMode("new");
+              resetPreview();
+            }
+          }}
+          className="space-y-3 rounded-xl border border-dashed border-coffee-200 p-4"
+        >
+          {currentVersion ? (
+            <div role="radiogroup" aria-label="登録のしかた" className="flex flex-wrap gap-x-5 gap-y-1 text-sm">
+              <label className="flex items-center gap-1.5">
+                <input type="radio" name="mode" value="new" checked={uploadMode === "new"} onChange={() => setUploadMode("new")}
+                       className="accent-caramel" />
+                新しい版を登録 (v{currentVersion.number + 1})
+              </label>
+              <label className="flex items-center gap-1.5">
+                <input type="radio" name="mode" value="append" checked={uploadMode === "append"} onChange={() => setUploadMode("append")}
+                       className="accent-caramel" />
+                v{currentVersion.label} にファイルを追加 (→ v{currentVersion.number}.{currentVersion.minor + 1})
+              </label>
+            </div>
+          ) : (
+            <div className="text-sm font-semibold">新しい版を登録</div>
+          )}
+          <CategorizedFileInputs accept={config.accept} />
+          <div className="flex flex-wrap items-end gap-2 text-sm">
+            <input name="note" aria-label={uploadMode === "append" ? "追加内容" : "変更内容"}
+                   placeholder={uploadMode === "append" ? "追加内容 (例: 完成品の3Dデータ)" : config.notePlaceholder}
+                   className="input !w-72" />
+            <button disabled={busy === "version"} className="btn btn-primary">
+              {busy === "version" ? "アップロード中…" : uploadMode === "append" && currentVersion ? "ファイルを追加" : "新しい版を登録"}
+            </button>
+          </div>
+        </form>
         <div className="overflow-x-auto">
           <table className="w-full min-w-[48rem] text-sm">
             <thead className="bg-coffee-50 text-xs uppercase tracking-wide text-coffee-500">
@@ -421,20 +461,42 @@ export function ModelAssetDetailPage({ id, kind }: { id: string; kind: ModelKind
                   </td>
                   <td className="p-3 text-coffee-700">{v.note || "—"}</td>
                   <td className="p-3">
-                    <ul className="space-y-1">
-                      {v.files.map((f) => (
-                        <li key={f.id} className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs">
-                          <span className={`max-w-[15rem] truncate ${previewFile?.id === f.id && previewVersion?.id === v.id ? "font-semibold text-caramel" : "text-coffee-700"}`}
-                                title={f.filename}>{f.filename}</span>
-                          <span className="text-coffee-400">{f.format} · {fileSize(f.byte_size)}</span>
-                          {f.previewable && (
-                            <button type="button" onClick={() => showPreview(v, f)} className="text-caramel hover:underline">プレビュー</button>
-                          )}
-                          <button type="button" onClick={() => openSigned(`${base}/versions/${v.id}/file?file_id=${f.id}`)}
-                                  className="text-caramel hover:underline">ダウンロード</button>
-                        </li>
-                      ))}
-                    </ul>
+                    {editingVersion === v.id ? (
+                      <CategoryEditor
+                        version={v}
+                        busy={busy === `categories-${v.id}`}
+                        onCancel={() => setEditingVersion(null)}
+                        onSave={async (categories) => {
+                          if (await run(`categories-${v.id}`, () => send(`${base}/versions/${v.id}`, "PATCH", { categories }))) {
+                            setEditingVersion(null);
+                          }
+                        }}
+                      />
+                    ) : (
+                      // カテゴリのある版はカテゴリごとに見出しを付けて並べる
+                      (categoriesOf(v) ?? [null]).map((c) => {
+                        const files = c ? v.files.filter((f) => f.category === c.key) : v.files;
+                        return (
+                          <div key={c?.key ?? "all"} className={c ? "mt-2 first:mt-0" : ""}>
+                            {c && <div className="mb-0.5 text-[11px] font-semibold text-coffee-500">{c.label} ({files.length})</div>}
+                            <ul className="space-y-1">
+                              {files.map((f) => (
+                                <li key={f.id} className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs">
+                                  <span className={`max-w-[15rem] truncate ${previewFile?.id === f.id && previewVersion?.id === v.id ? "font-semibold text-caramel" : "text-coffee-700"}`}
+                                        title={f.filename}>{f.filename}</span>
+                                  <span className="text-coffee-400">{f.format} · {fileSize(f.byte_size)}</span>
+                                  {f.previewable && (
+                                    <button type="button" onClick={() => showPreview(v, f)} className="text-caramel hover:underline">プレビュー</button>
+                                  )}
+                                  <button type="button" onClick={() => openSigned(`${base}/versions/${v.id}/file?file_id=${f.id}`)}
+                                          className="text-caramel hover:underline">ダウンロード</button>
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        );
+                      })
+                    )}
                     {v.files.length > 1 && (
                       <div className="mt-1 text-[11px] text-coffee-400">{v.files.length} ファイル · 合計 {fileSize(v.byte_size)}</div>
                     )}
@@ -449,13 +511,18 @@ export function ModelAssetDetailPage({ id, kind }: { id: string; kind: ModelKind
                         <button type="button" onClick={() => openSigned(`${base}/versions/${v.id}/bundle`)}
                                 className="btn btn-outline !px-2.5 !py-1">まとめてダウンロード (ZIP)</button>
                       )}
+                      {editingVersion !== v.id && (
+                        <button type="button" onClick={() => setEditingVersion(v.id)} className="btn btn-outline !px-2.5 !py-1">
+                          カテゴリを変更
+                        </button>
+                      )}
                       {!v.current && (
                         <button
                           type="button"
                           disabled={busy === `restore-${v.id}`}
                           onClick={async () => {
                             if (!window.confirm(`v${v.label} のファイルで新しい版を作ります。よろしいですか？`)) return;
-                            if (await run(`restore-${v.id}`, () => send(`${base}/versions/${v.id}/restore`, "POST"))) setPreview(null);
+                            if (await run(`restore-${v.id}`, () => send(`${base}/versions/${v.id}/restore`, "POST"))) resetPreview();
                           }}
                           className="btn btn-outline !px-2.5 !py-1"
                         >
@@ -549,6 +616,42 @@ export function ModelAssetDetailPage({ id, kind }: { id: string; kind: ModelKind
   );
 }
 
+/** 版のファイルのカテゴリを変える (ファイル自体は変えない) */
+function CategoryEditor({ version, busy, onSave, onCancel }: {
+  version: ModelVersion;
+  busy: boolean;
+  onSave: (categories: Record<number, ModelFileCategory>) => void;
+  onCancel: () => void;
+}) {
+  return (
+    <form
+      onSubmit={(e) => {
+        e.preventDefault();
+        const data = new FormData(e.currentTarget);
+        onSave(Object.fromEntries(version.files.map((f) => [f.id, data.get(`category-${f.id}`) as ModelFileCategory])));
+      }}
+      className="space-y-2"
+    >
+      <ul className="space-y-1">
+        {version.files.map((f) => (
+          <li key={f.id} className="flex flex-wrap items-center gap-2 text-xs">
+            <select name={`category-${f.id}`} defaultValue={f.category} aria-label={`${f.filename} のカテゴリ`}
+                    className="input !w-auto !py-1 text-xs">
+              {FILE_CATEGORIES.map((c) => <option key={c.key} value={c.key}>{c.label}</option>)}
+            </select>
+            <span className="max-w-[15rem] truncate text-coffee-700" title={f.filename}>{f.filename}</span>
+            <span className="text-coffee-400">{f.format}</span>
+          </li>
+        ))}
+      </ul>
+      <div className="flex gap-1.5 text-xs">
+        <button disabled={busy} className="btn btn-primary !px-2.5 !py-1">{busy ? "保存中…" : "カテゴリを保存"}</button>
+        <button type="button" onClick={onCancel} className="btn btn-outline !px-2.5 !py-1">キャンセル</button>
+      </div>
+    </form>
+  );
+}
+
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <label className="block">
@@ -631,4 +734,10 @@ function StepItem({ step, index, total, path, busy, run, send }: {
       </div>
     </li>
   );
+}
+
+/** 版にあるカテゴリ (表示順)。オールインワン・分割のファイルがない (未分類だけの) 版は null */
+function categoriesOf(v: ModelVersion | null | undefined) {
+  if (!v || !v.files.some((f) => f.category !== "other")) return null;
+  return FILE_CATEGORIES.filter((c) => v.files.some((f) => f.category === c.key));
 }
