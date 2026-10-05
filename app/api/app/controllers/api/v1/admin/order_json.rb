@@ -10,6 +10,8 @@ module Api
           {
             id: o.id, status: o.status, status_label: o.status_label,
             total_cents: o.total_cents, placed_at: o.placed_at, paid_at: o.paid_at,
+            payment_kind: o.payment_kind, payment_kind_label: o.payment_kind_label,
+            subscription_id: o.subscription_id, # 定期便の請求ごとの注文
             due_on: o.due_on, overdue: o.overdue?,
             digital_only: !o.physical?,
             user: { id: o.user_id, name: o.user.name, email: o.user.email },

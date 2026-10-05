@@ -24,7 +24,7 @@ export const ADMIN_GROUPS: AdminGroup[] = [
       { href: "/admin/requests", label: "問い合わせ" }, { href: "/admin/tips", label: "投げ銭" },
     ],
   },
-  { label: "設定", permission: "admin", links: [{ href: "/admin/users", label: "スタッフ権限" }] },
+  { label: "設定", permission: "admin", links: [{ href: "/admin/users", label: "スタッフ権限" }, { href: "/admin/settings", label: "ショップ情報" }] },
 ];
 
 /** 権限を持つか ("admin" は管理者のみ)。管理者はすべての権限を持つ */

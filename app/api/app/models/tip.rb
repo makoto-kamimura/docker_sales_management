@@ -1,17 +1,19 @@
 # 投げ銭。0円で販売した商品を含む注文に、購入者が任意の金額 (100〜100,000円) で応援できる。
-# カード決済はせず、入金 (振込など) を店舗が管理画面で確認する
+# カード (Stripe Checkout) なら Webhook で入金済みになり、振込などは店舗が管理画面で入金を確認する
 class Tip < ApplicationRecord
   STATUSES = %w[pending paid cancelled].freeze
   STATUS_LABELS = { "pending" => "入金待ち", "paid" => "入金確認済み", "cancelled" => "取り消し" }.freeze
   MIN_AMOUNT_CENTS = 100
   MAX_AMOUNT_CENTS = 100_000
   MESSAGE_MAX_LENGTH = 500
+  PAYMENT_KINDS = %w[card transfer].freeze
 
   belongs_to :order
   belongs_to :user
   belongs_to :confirmed_by, class_name: "User", optional: true
 
   validates :status, inclusion: { in: STATUSES }
+  validates :payment_kind, inclusion: { in: PAYMENT_KINDS }
   validates :amount_cents, numericality: { only_integer: true, greater_than_or_equal_to: MIN_AMOUNT_CENTS,
                                            less_than_or_equal_to: MAX_AMOUNT_CENTS }
   validates :message, length: { maximum: MESSAGE_MAX_LENGTH }
@@ -25,9 +27,14 @@ class Tip < ApplicationRecord
     STATUS_LABELS.fetch(status, status)
   end
 
+  def card_payable?
+    payment_kind == "card" && status == "pending"
+  end
+
   def api_attributes
     { id: id, order_id: order_id, amount_cents: amount_cents, message: message, status: status,
-      status_label: status_label, created_at: created_at, paid_at: paid_at }
+      status_label: status_label, payment_kind: payment_kind, card_payable: card_payable? && StripeService.enabled?,
+      created_at: created_at, paid_at: paid_at }
   end
 
   private

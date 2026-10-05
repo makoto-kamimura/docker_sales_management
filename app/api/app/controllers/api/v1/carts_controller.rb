@@ -12,10 +12,15 @@ module Api
 
       def serialize(cart)
         items = cart.items.includes(:product).to_a
+        # 注文と同じ計算 (Pricing) で、注文確認画面に税・送料込みの合計を出す
+        totals = Pricing.calc(items.map { |i| { product: i.product, unit_price_cents: i.product.price_cents, quantity: i.quantity } })
         {
           id: cart.id,
           total_items: cart.total_items,
           subtotal_cents: cart.subtotal_cents,
+          tax_cents: totals[:tax_cents],
+          shipping_cents: totals[:shipping_cents],
+          total_cents: totals[:total_cents],
           currency: items.first&.product&.currency || "JPY",
           # デジタル商品のみなら配送先は不要
           requires_shipping: items.any? { |i| i.product.physical? },

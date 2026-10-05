@@ -5,7 +5,7 @@
 | フォルダ | 置くもの | 書く人 |
 |---|---|---|
 | [design/](design/) | 設計・計画・デザインの資料（[トップのヒーローアニメーションの原案](design/hero.html)） | 人 |
-| [runbooks/](runbooks/) | 運用手順書（作業ごと。[開発環境の起動・トラブルシュート](runbooks/development.md)） | 人 |
+| [runbooks/](runbooks/) | 運用手順書（作業ごと。[開発環境の起動・トラブルシュート](runbooks/development.md)、[カード決済（Stripe）の設定](runbooks/stripe.md)） | 人 |
 | [incidents/](incidents/) | 障害のふりかえり（`YYYY-MM-DD-<概要>.md`） | 人 |
 | [automation/](automation/) | 定期的に回す作業やエージェントに任せる作業の手順 | 人（エージェントに変えさせない） |
 | [tasks/](tasks/) | 不具合・要望・残作業のタスク（[残タスクの一覧](tasks/task.md)） | 人・エージェント |

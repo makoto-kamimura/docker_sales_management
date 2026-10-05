@@ -15,10 +15,13 @@ class Order < ApplicationRecord
   PAID_STATUSES = (STATUSES - %w[received cancelled]).freeze
   DOWNLOADABLE_STATUSES = PAID_STATUSES
   OPEN_STATUSES = (STATUSES - %w[completed cancelled]).freeze
+  # 支払い方法。card は Stripe Checkout (入金確認は Webhook で自動)、transfer は振込など (店舗が入金を確認)、free は0円の注文
+  PAYMENT_KINDS = %w[card transfer free].freeze
+  PAYMENT_KIND_LABELS = { "card" => "クレジットカード", "transfer" => "銀行振込", "free" => "支払いなし" }.freeze
 
   belongs_to :user
   belongs_to :address, optional: true # デジタル商品のみの注文は配送先なし (OrderCreator で検証)
-  belongs_to :payment_method, optional: true
+  belongs_to :subscription, optional: true # 定期便の請求ごとに作る注文
   belongs_to :assignee, class_name: "User", optional: true # 製作担当
   has_many :items, class_name: "OrderItem", dependent: :destroy
   has_many :events, -> { order(:created_at, :id) }, class_name: "OrderEvent", dependent: :destroy
@@ -26,6 +29,7 @@ class Order < ApplicationRecord
   has_many :tips, dependent: :destroy # 投げ銭 (0円の商品を含む注文)
 
   validates :status, inclusion: { in: STATUSES }
+  validates :payment_kind, inclusion: { in: PAYMENT_KINDS }
   # 担当を変えるときだけ検証する (後から制作権限を外されたスタッフが担当の注文も工程は進められる)
   validate  :assignee_must_be_staff, if: :will_save_change_to_assignee_id?
 
@@ -41,6 +45,29 @@ class Order < ApplicationRecord
 
   def status_label
     STATUS_LABELS.fetch(status, status)
+  end
+
+  def payment_kind_label
+    PAYMENT_KIND_LABELS.fetch(payment_kind, payment_kind)
+  end
+
+  # 購入者がカードで支払える (払い直せる) か。定期便の注文は Stripe が請求する
+  def card_payable?
+    payment_kind == "card" && status == "received" && paid_at.nil? && subscription_id.nil? &&
+      total_cents >= StripeService::MIN_AMOUNT_CENTS
+  end
+
+  # Stripe Checkout の明細。合計が total_cents と一致するよう、送料・消費税も行にする (0円の行は除く)
+  def checkout_line_items
+    lines = items.map { |i| { name: i.product.name, amount: i.unit_price_cents, quantity: i.quantity } }
+    lines << { name: "送料", amount: shipping_cents, quantity: 1 }
+    lines << { name: "消費税", amount: tax_cents, quantity: 1 }
+    lines.select { |l| l[:amount].positive? }
+  end
+
+  # 店舗向けの履歴のメモ (ステータスは変えない)
+  def note!(note, actor: nil)
+    events.create!(from_status: status, status: status, actor: actor, note: note)
   end
 
   def downloadable?

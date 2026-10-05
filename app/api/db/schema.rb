@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_10_03_000001) do
+ActiveRecord::Schema[7.2].define(version: 2026_10_05_000002) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "citext"
   enable_extension "pg_trgm"
@@ -212,7 +212,6 @@ ActiveRecord::Schema[7.2].define(version: 2026_10_03_000001) do
   create_table "orders", force: :cascade do |t|
     t.bigint "user_id", null: false
     t.bigint "address_id"
-    t.bigint "payment_method_id"
     t.string "status", default: "received", null: false
     t.integer "subtotal_cents", default: 0, null: false
     t.integer "tax_cents", default: 0, null: false
@@ -227,26 +226,18 @@ ActiveRecord::Schema[7.2].define(version: 2026_10_03_000001) do
     t.datetime "materials_consumed_at"
     t.date "due_on"
     t.bigint "assignee_id"
+    t.string "payment_kind", default: "transfer", null: false
+    t.string "stripe_checkout_session_id"
+    t.string "stripe_invoice_id"
+    t.bigint "subscription_id"
     t.index ["address_id"], name: "index_orders_on_address_id"
     t.index ["assignee_id"], name: "index_orders_on_assignee_id"
-    t.index ["payment_method_id"], name: "index_orders_on_payment_method_id"
     t.index ["placed_at"], name: "index_orders_on_placed_at"
     t.index ["status"], name: "index_orders_on_status"
+    t.index ["stripe_checkout_session_id"], name: "index_orders_on_stripe_checkout_session_id"
+    t.index ["stripe_invoice_id"], name: "index_orders_on_stripe_invoice_id", unique: true
+    t.index ["subscription_id"], name: "index_orders_on_subscription_id"
     t.index ["user_id"], name: "index_orders_on_user_id"
-  end
-
-  create_table "payment_methods", force: :cascade do |t|
-    t.bigint "user_id", null: false
-    t.string "stripe_payment_method_id", null: false
-    t.string "brand"
-    t.string "last4"
-    t.integer "exp_month"
-    t.integer "exp_year"
-    t.boolean "is_default", default: false, null: false
-    t.datetime "created_at", null: false
-    t.datetime "updated_at", null: false
-    t.index ["stripe_payment_method_id"], name: "index_payment_methods_on_stripe_payment_method_id", unique: true
-    t.index ["user_id"], name: "index_payment_methods_on_user_id"
   end
 
   create_table "product_embeddings", primary_key: "product_id", force: :cascade do |t|
@@ -325,6 +316,27 @@ ActiveRecord::Schema[7.2].define(version: 2026_10_03_000001) do
     t.index ["order_id"], name: "index_shipments_on_order_id", unique: true
   end
 
+  create_table "shop_settings", force: :cascade do |t|
+    t.string "seller_name", default: "", null: false
+    t.string "representative_name", default: "", null: false
+    t.string "address", default: "", null: false
+    t.string "phone", default: "", null: false
+    t.string "email", default: "", null: false
+    t.boolean "disclose_on_request", default: false, null: false
+    t.string "contact_hours", default: "", null: false
+    t.text "transfer_payment_due", default: "", null: false
+    t.text "shipping_lead_time", default: "", null: false
+    t.text "returns_policy", default: "", null: false
+    t.text "extra_notes", default: "", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+  end
+
+  create_table "stripe_webhook_events", primary_key: "event_id", id: :string, force: :cascade do |t|
+    t.string "event_type", null: false
+    t.datetime "processed_at", null: false
+  end
+
   create_table "subscription_deliveries", force: :cascade do |t|
     t.bigint "subscription_id", null: false
     t.bigint "order_id"
@@ -354,7 +366,6 @@ ActiveRecord::Schema[7.2].define(version: 2026_10_03_000001) do
     t.bigint "subscription_plan_id", null: false
     t.bigint "product_id", null: false
     t.bigint "address_id", null: false
-    t.bigint "payment_method_id"
     t.string "status", default: "active", null: false
     t.integer "quantity", default: 1, null: false
     t.integer "interval_days", null: false
@@ -362,11 +373,13 @@ ActiveRecord::Schema[7.2].define(version: 2026_10_03_000001) do
     t.string "stripe_subscription_id"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.integer "unit_price_cents"
+    t.string "stripe_checkout_session_id"
     t.index ["address_id"], name: "index_subscriptions_on_address_id"
     t.index ["next_delivery_on"], name: "index_subscriptions_on_next_delivery_on"
-    t.index ["payment_method_id"], name: "index_subscriptions_on_payment_method_id"
     t.index ["product_id"], name: "index_subscriptions_on_product_id"
     t.index ["status"], name: "index_subscriptions_on_status"
+    t.index ["stripe_subscription_id"], name: "index_subscriptions_on_stripe_subscription_id", unique: true
     t.index ["subscription_plan_id"], name: "index_subscriptions_on_subscription_plan_id"
     t.index ["user_id"], name: "index_subscriptions_on_user_id"
   end
@@ -381,9 +394,13 @@ ActiveRecord::Schema[7.2].define(version: 2026_10_03_000001) do
     t.bigint "confirmed_by_id"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.string "payment_kind", default: "transfer", null: false
+    t.string "stripe_checkout_session_id"
+    t.string "stripe_payment_intent_id"
     t.index ["confirmed_by_id"], name: "index_tips_on_confirmed_by_id"
     t.index ["order_id"], name: "index_tips_on_order_id"
     t.index ["status", "created_at"], name: "index_tips_on_status_and_created_at"
+    t.index ["stripe_checkout_session_id"], name: "index_tips_on_stripe_checkout_session_id"
     t.index ["user_id"], name: "index_tips_on_user_id"
   end
 
@@ -422,10 +439,9 @@ ActiveRecord::Schema[7.2].define(version: 2026_10_03_000001) do
   add_foreign_key "order_items", "orders"
   add_foreign_key "order_items", "products"
   add_foreign_key "orders", "addresses"
-  add_foreign_key "orders", "payment_methods"
+  add_foreign_key "orders", "subscriptions"
   add_foreign_key "orders", "users"
   add_foreign_key "orders", "users", column: "assignee_id"
-  add_foreign_key "payment_methods", "users"
   add_foreign_key "product_embeddings", "products"
   add_foreign_key "product_materials", "materials"
   add_foreign_key "product_materials", "products"
@@ -437,7 +453,6 @@ ActiveRecord::Schema[7.2].define(version: 2026_10_03_000001) do
   add_foreign_key "subscription_deliveries", "orders"
   add_foreign_key "subscription_deliveries", "subscriptions"
   add_foreign_key "subscriptions", "addresses"
-  add_foreign_key "subscriptions", "payment_methods"
   add_foreign_key "subscriptions", "products"
   add_foreign_key "subscriptions", "subscription_plans"
   add_foreign_key "subscriptions", "users"

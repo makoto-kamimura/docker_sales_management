@@ -9,6 +9,7 @@ import { OrderProgress } from "@/components/OrderProgress";
 import { TipBox } from "@/components/TipBox";
 import { yen, fmtDate } from "@/lib/format";
 import { orderStatusBadge } from "@/lib/orderStatus";
+import { goToStripe, useCheckoutReturn } from "@/lib/payments";
 import type { Order } from "@/lib/types";
 
 const SHIPMENT_LABEL: Record<string, string> = { preparing: "準備中", shipped: "発送済み", delivered: "配達完了" };
@@ -18,6 +19,20 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
   const { token } = useAuth();
   const { data: o, mutate } = useSWR<Order>(token ? `order-${id}` : null, () => api<Order>(`/orders/${id}`, { auth: token }));
   const [dlErr, setDlErr] = useState<string | null>(null);
+  const [payErr, setPayErr] = useState<string | null>(null);
+  const [paying, setPaying] = useState(false);
+  const checkout = useCheckoutReturn(() => mutate());
+
+  async function payByCard(path: string) {
+    setPayErr(null);
+    setPaying(true);
+    try {
+      await goToStripe(path, token);
+    } catch (e) {
+      setPayErr(e instanceof Error ? e.message : "決済の画面を開けませんでした");
+      setPaying(false);
+    }
+  }
 
   async function download(get: () => Promise<void>) {
     setDlErr(null);
@@ -40,6 +55,29 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
         </div>
         <span className={`badge ${orderStatusBadge(o.status)}`}>{o.status_label}</span>
       </header>
+
+      {checkout === "success" && (
+        <p role="status" className="rounded-xl bg-[#e7f6ec] px-4 py-3 text-sm text-[#1f7a46]">
+          お支払いありがとうございます。入金の反映まで少し時間がかかることがあります。
+        </p>
+      )}
+      {checkout === "cancel" && (
+        <p role="status" className="rounded-xl bg-coffee-50 border border-coffee-100 px-4 py-3 text-sm text-coffee-700">
+          お支払いを中断しました。下の「カードで支払う」から、もう一度お支払いいただけます。
+        </p>
+      )}
+
+      {o.card_payable && (
+        <section className="rounded-xl border border-caramel/30 bg-caramel/5 p-4 flex flex-wrap items-center gap-3">
+          <p className="text-sm flex-1 min-w-48">
+            お支払いがまだ済んでいません。カードでお支払いいただくと、入金を確認して制作・発送に進みます。
+          </p>
+          <button onClick={() => payByCard(`/orders/${o.id}/checkout_session`)} disabled={paying} className="btn btn-primary">
+            {paying ? "決済の画面を開いています…" : `${yen(o.total_cents)} をカードで支払う`}
+          </button>
+        </section>
+      )}
+      {payErr && <p role="alert" className="text-sm text-rose-600">{payErr}</p>}
 
       <section className="space-y-2">
         <OrderProgress status={o.status} physical={o.physical ?? true} events={o.events} />
@@ -82,12 +120,20 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
           <tr><td className="py-1 text-coffee-500">消費税</td><td className="py-1 text-right tabular-nums">{yen(o.tax_cents ?? 0)}</td></tr>
           <tr><td className="py-1 text-coffee-500">送料</td><td className="py-1 text-right tabular-nums">{yen(o.shipping_cents ?? 0)}</td></tr>
           <tr><td className="py-2 font-bold text-base">合計</td><td className="py-2 text-right font-bold text-base tabular-nums">{yen(o.total_cents)}</td></tr>
+          {o.payment_kind && o.payment_kind !== "free" && (
+            <tr>
+              <td className="py-1 text-coffee-500">お支払い方法</td>
+              <td className="py-1 text-right">{o.payment_kind_label}{o.subscription_id ? " (定期便)" : ""}</td>
+            </tr>
+          )}
         </tfoot>
       </table>
 
       {dlErr && <p className="text-sm text-rose-600">{dlErr}</p>}
 
-      {o.accepts_tips && <TipBox orderId={o.id} tips={o.tips ?? []} token={token} onChange={() => mutate()} />}
+      {o.accepts_tips && (
+        <TipBox orderId={o.id} tips={o.tips ?? []} token={token} onChange={() => mutate()} onPayByCard={payByCard} />
+      )}
 
       <div className="text-right">
         <Link href={`/contact?order_id=${o.id}`} className="text-sm text-coffee-800 hover:text-caramel transition-colors">

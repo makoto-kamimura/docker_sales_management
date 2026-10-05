@@ -71,6 +71,10 @@ export default function AdminOrderDetailPage({ params }: { params: Promise<{ id:
             <tfoot className="border-t-2 border-coffee-100">
               <tr><td className="pt-2 text-coffee-500">小計 / 税 / 送料</td><td className="pt-2 text-right tabular-nums">{yen(o.subtotal_cents)} / {yen(o.tax_cents)} / {yen(o.shipping_cents)}</td></tr>
               <tr><td className="py-1 font-bold">合計</td><td className="py-1 text-right font-bold tabular-nums">{yen(o.total_cents)}</td></tr>
+              <tr>
+                <td className="py-1 text-coffee-500">お支払い方法</td>
+                <td className="py-1 text-right">{o.payment_kind_label}{o.subscription_id ? " (定期便)" : ""}</td>
+              </tr>
             </tfoot>
           </table>
         </section>
@@ -78,7 +82,7 @@ export default function AdminOrderDetailPage({ params }: { params: Promise<{ id:
         {(o.accepts_tips || o.tips.length > 0) && (
           <section className="card p-6">
             <h2 className="font-semibold mb-1">投げ銭</h2>
-            <p className="mb-3 text-xs text-coffee-500">0円の商品を含む注文のため、購入者は注文詳細から投げ銭できます。入金を確認したら「入金確認」にしてください。</p>
+            <p className="mb-3 text-xs text-coffee-500">0円の商品を含む注文のため、購入者は注文詳細から投げ銭できます。カードの投げ銭は自動で入金確認済みになります。振込などは入金を確認したら「入金確認」にしてください。</p>
             {tipErr && <p role="alert" className="mb-2 text-sm text-rose-600">{tipErr}</p>}
             {o.tips.length === 0 ? (
               <p className="text-sm text-coffee-400">まだ投げ銭はありません</p>

@@ -97,10 +97,40 @@ export type Cart = {
   id: number;
   total_items: number;
   subtotal_cents: number;
+  /** 注文と同じ計算の消費税・送料・合計 */
+  tax_cents: number;
+  shipping_cents: number;
+  total_cents: number;
   currency: string;
   /** false ならデジタル商品のみ → 配送先不要 */
   requires_shipping: boolean;
   items: CartItem[];
+};
+
+/** 特定商取引法に基づく表記。料金・支払方法・定期便のプランは、実際の計算に使う値 */
+export type LegalNotice = {
+  /** 表記に必要な項目がそろっているか */
+  complete: boolean;
+  seller: {
+    name: string;
+    representative: string;
+    email: string;
+    contact_hours: string;
+    /** true なら住所・電話番号は載せず、請求があれば開示する (address / phone は null) */
+    disclose_on_request: boolean;
+    address: string | null;
+    phone: string | null;
+  };
+  transfer_payment_due: string;
+  shipping_lead_time: string;
+  returns_policy: string;
+  extra_notes: string;
+  pricing: { tax_rate_percent: number; shipping_flat_cents: number; free_shipping_threshold_cents: number };
+  card_enabled: boolean;
+  card_min_amount_cents: number;
+  subscription_plans: { name: string; interval_days: number; discount_percent: number }[];
+  tip_range_cents: { min: number; max: number };
+  updated_at: string;
 };
 
 export type Order = {
@@ -111,6 +141,13 @@ export type Order = {
   currency: string;
   placed_at: string;
   item_count?: number;
+  /** card: カード (Stripe) / transfer: 振込など (店舗が入金を確認) / free: 0円の注文 */
+  payment_kind?: PaymentKind | "free";
+  payment_kind_label?: string;
+  /** カードで支払える (払い直せる) */
+  card_payable?: boolean;
+  /** 定期便の請求ごとの注文 */
+  subscription_id?: number | null;
   subtotal_cents?: number;
   tax_cents?: number;
   shipping_cents?: number;
@@ -127,7 +164,9 @@ export type Order = {
   shipment?: { status: string; carrier?: string; tracking_number?: string };
 };
 
-/** 投げ銭 (0円で販売した商品を含む注文)。入金は店舗が確認する */
+export type PaymentKind = "card" | "transfer";
+
+/** 投げ銭 (0円で販売した商品を含む注文)。カードは Stripe で支払い、振込などは店舗が入金を確認する */
 export type Tip = {
   id: number;
   order_id: number;
@@ -135,6 +174,8 @@ export type Tip = {
   message: string;
   status: "pending" | "paid" | "cancelled";
   status_label: string;
+  payment_kind: PaymentKind;
+  card_payable: boolean;
   created_at: string;
   paid_at: string | null;
 };
@@ -149,12 +190,21 @@ export type SubscriptionPlan = {
   active: boolean;
 };
 
+/** 定期便。カード (Stripe) でお届けの間隔ごとに請求する */
 export type Subscription = {
   id: number;
-  status: "active" | "paused" | "cancelled";
+  /** incomplete: 申し込み手続き中 / past_due: 支払いの確認待ち */
+  status: "incomplete" | "active" | "paused" | "past_due" | "cancelled";
+  status_label: string;
   quantity: number;
   interval_days: number;
   next_delivery_on: string;
+  /** Stripe が請求する定期便 (false は以前の定期便) */
+  card: boolean;
+  /** 割引後の単価 */
+  unit_price_cents: number;
+  /** 1回のお届けの金額 (税・送料込み) */
+  charge_cents: number;
   plan: { id: number; code: string; name: string };
   product: { id: number; sku: string; name: string; price_cents: number };
 };

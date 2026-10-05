@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Linking, Pressable, ScrollView, StyleSheet, TextInput } from 'react-native';
 import { Link, useLocalSearchParams } from 'expo-router';
 
@@ -7,15 +7,20 @@ import { api, fetchAssemblyGuideUrl, fetchDownloadUrl, jsonBody } from '@/lib/ap
 import { useAuth } from '@/lib/auth';
 import { fmtDate, yen } from '@/lib/format';
 import { DIGITAL_FLOW, ORDER_FLOW, ORDER_STATUS_LABEL, type OrderStatus } from '@/lib/orderStatus';
-import type { Order } from '@/lib/types';
+import { fetchCardEnabled, openStripe } from '@/lib/payments';
+import type { Order, PaymentKind } from '@/lib/types';
 
 const ACCENT = '#ff5722';
 
 export default function OrderDetail() {
-  const { id } = useLocalSearchParams<{ id: string }>();
+  // pay=1: 注文の確定直後に、カードの決済の画面を開く
+  const { id, pay } = useLocalSearchParams<{ id: string; pay?: string }>();
   const { token } = useAuth();
   const [o, setO] = useState<Order | null>(null);
   const [dlErr, setDlErr] = useState<string | null>(null);
+  const [payErr, setPayErr] = useState<string | null>(null);
+  const [paying, setPaying] = useState(false);
+  const autoPaid = useRef(false);
 
   // 期限付きURLをブラウザで開いてダウンロードする
   async function download(getUrl: () => Promise<string>) {
@@ -33,12 +38,43 @@ export default function OrderDetail() {
 
   useEffect(() => { load(); }, [load]);
 
+  // カードの決済の画面 (Stripe) を開き、閉じたら取り直す。Webhook の反映が少し遅れることがあるので数回取り直す
+  const payByCard = useCallback(async (path: string) => {
+    setPayErr(null);
+    setPaying(true);
+    try {
+      await openStripe(path, token);
+    } catch (e) {
+      setPayErr(e instanceof Error ? e.message : '決済の画面を開けませんでした');
+    } finally {
+      setPaying(false);
+    }
+    load();
+    [2000, 5000].forEach((ms) => setTimeout(load, ms));
+  }, [token, load]);
+
+  useEffect(() => {
+    if (pay !== '1' || autoPaid.current || !o?.card_payable) return;
+    autoPaid.current = true;
+    payByCard(`/orders/${o.id}/checkout_session`);
+  }, [pay, o, payByCard]);
+
   if (!o) return <Text style={{ padding: 16 }}>読み込み中…</Text>;
 
   return (
     <ScrollView contentContainerStyle={{ padding: 16 }}>
       <Text style={styles.title}>注文 #{o.id}</Text>
       <Text style={{ opacity: 0.6 }}>{o.status_label} · {new Date(o.placed_at).toLocaleString('ja-JP')}</Text>
+      {o.card_payable && (
+        <View style={styles.tip}>
+          <Text style={{ fontSize: 13 }}>お支払いがまだ済んでいません。カードでお支払いいただくと、入金を確認して制作・発送に進みます。</Text>
+          <Pressable onPress={() => payByCard(`/orders/${o.id}/checkout_session`)} disabled={paying}
+                     style={[styles.download, { marginTop: 8, paddingVertical: 8 }, paying && { opacity: 0.5 }]}>
+            <Text style={{ color: '#fff' }}>{paying ? '決済の画面を開いています…' : `${yen(o.total_cents)} をカードで支払う`}</Text>
+          </Pressable>
+        </View>
+      )}
+      {payErr && <Text style={{ color: '#dc2626', marginTop: 8 }}>{payErr}</Text>}
       <Progress order={o} />
       <View style={{ marginTop: 12 }}>
         {o.items?.map((i) => (
@@ -69,7 +105,10 @@ export default function OrderDetail() {
         <Text style={{ flex: 1, fontWeight: 'bold' }}>合計</Text>
         <Text style={{ fontWeight: 'bold' }}>{yen(o.total_cents)}</Text>
       </View>
-      {o.accepts_tips && <TipSection order={o} token={token} onChange={load} />}
+      {o.payment_kind && o.payment_kind !== 'free' && (
+        <Text style={{ fontSize: 12, opacity: 0.6, textAlign: 'right' }}>お支払い方法: {o.payment_kind_label}</Text>
+      )}
+      {o.accepts_tips && <TipSection order={o} token={token} onChange={load} onPayByCard={payByCard} />}
       <Link href={{ pathname: '/service-request', params: { kind: 'inquiry', order_id: String(o.id) } }} style={styles.inquiry}>
         この注文について問い合わせる →
       </Link>
@@ -79,21 +118,31 @@ export default function OrderDetail() {
 
 const TIP_PRESETS = [100, 300, 500, 1000];
 
-// 投げ銭 (0円で販売した商品を含む注文)。入金は店舗が確認する
-function TipSection({ order: o, token, onChange }: { order: Order; token: string | null; onChange: () => void }) {
+// 投げ銭 (0円で販売した商品を含む注文)。カードは Stripe で支払い、振込などは店舗が入金を確認する
+function TipSection({ order: o, token, onChange, onPayByCard }: {
+  order: Order; token: string | null; onChange: () => void; onPayByCard: (path: string) => Promise<void>;
+}) {
   const [amount, setAmount] = useState(300);
   const [message, setMessage] = useState('');
   const [busy, setBusy] = useState(false);
   const [note, setNote] = useState<string | null>(null);
+  const [cardEnabled, setCardEnabled] = useState(false);
+  const [payment, setPayment] = useState<PaymentKind>('card');
+  const paymentKind: PaymentKind = cardEnabled ? payment : 'transfer';
+
+  useEffect(() => { fetchCardEnabled().then(setCardEnabled); }, []);
 
   async function send() {
     setBusy(true);
     setNote(null);
     try {
-      await api(`/orders/${o.id}/tips`, { method: 'POST', body: jsonBody({ amount_cents: amount, message }), auth: token });
+      const tip = await api<{ id: number; card_payable: boolean }>(`/orders/${o.id}/tips`, {
+        method: 'POST', body: jsonBody({ amount_cents: amount, message, payment_kind: paymentKind }), auth: token,
+      });
       setMessage('');
-      setNote('ありがとうございます！ お支払い方法 (振込先など) はショップからご連絡します。');
       onChange();
+      if (tip.card_payable) await onPayByCard(`/orders/${o.id}/tips/${tip.id}/checkout_session`);
+      else setNote('ありがとうございます！ お支払い方法 (振込先など) はショップからご連絡します。');
     } catch (e) {
       setNote(e instanceof Error ? e.message : '送信に失敗しました');
     } finally {
@@ -116,14 +165,31 @@ function TipSection({ order: o, token, onChange }: { order: Order; token: string
         ))}
       </View>
       <TextInput value={message} onChangeText={setMessage} placeholder="メッセージ (任意)" maxLength={500} multiline style={styles.tipInput} />
+      {cardEnabled && (
+        <View style={[styles.presets, { backgroundColor: 'transparent' }]}>
+          {([['card', 'クレジットカード'], ['transfer', '銀行振込など']] as const).map(([kind, label]) => (
+            <Pressable key={kind} onPress={() => setPayment(kind)} accessibilityRole="radio" accessibilityState={{ checked: payment === kind }}
+                       style={[styles.preset, payment === kind && styles.presetOn]}>
+              <Text style={{ color: payment === kind ? '#fff' : ACCENT, fontSize: 12 }}>{label}</Text>
+            </Pressable>
+          ))}
+        </View>
+      )}
       <Pressable onPress={send} disabled={busy} style={[styles.download, { marginTop: 8, paddingVertical: 8 }]}>
-        <Text style={{ color: '#fff' }}>{busy ? '送信中…' : `${yen(amount)} を投げ銭する`}</Text>
+        <Text style={{ color: '#fff' }}>{busy ? '送信中…' : `${yen(amount)} を${paymentKind === 'card' ? 'カードで' : ''}投げ銭する`}</Text>
       </Pressable>
       {note && <Text style={{ fontSize: 12, marginTop: 6 }}>{note}</Text>}
       {(o.tips ?? []).map((t) => (
-        <Text key={t.id} style={{ fontSize: 12, marginTop: 4, opacity: 0.8 }}>
-          {yen(t.amount_cents)} · {t.status_label} · {fmtDate(t.created_at)}
-        </Text>
+        <View key={t.id} style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 4, backgroundColor: 'transparent' }}>
+          <Text style={{ fontSize: 12, opacity: 0.8 }}>
+            {yen(t.amount_cents)} · {t.status_label}{t.payment_kind === 'card' ? ' · カード' : ''} · {fmtDate(t.created_at)}
+          </Text>
+          {t.card_payable && (
+            <Pressable onPress={() => onPayByCard(`/orders/${o.id}/tips/${t.id}/checkout_session`)}>
+              <Text style={{ fontSize: 12, color: ACCENT }}>カードで支払う</Text>
+            </Pressable>
+          )}
+        </View>
       ))}
     </View>
   );

@@ -1,11 +1,12 @@
 class OrderCreator
   class Error < StandardError; end
 
-  # address はデジタル商品のみの注文なら nil でよい
-  def initialize(user:, address:, payment_method:)
+  # address はデジタル商品のみの注文なら nil でよい。
+  # payment_kind: card (このあと Stripe Checkout で支払う) / transfer (振込など。店舗が入金を確認する)
+  def initialize(user:, address:, payment_kind: "transfer")
     @user = user
     @address = address
-    @payment_method = payment_method
+    @payment_kind = payment_kind
   end
 
   def call(cart)
@@ -26,13 +27,17 @@ class OrderCreator
     raise Error, "配送先を指定してください" if physical && @address.nil?
 
     totals = Pricing.calc(items)
+    free = totals[:total_cents].zero?
+    if @payment_kind == "card" && !free && totals[:total_cents] < StripeService::MIN_AMOUNT_CENTS
+      raise Error, "カード決済は#{StripeService::MIN_AMOUNT_CENTS}円以上のご注文で使えます"
+    end
 
     order = nil
     ActiveRecord::Base.transaction do
       order = Order.create!(
         user: @user,
         address: physical ? @address : nil,
-        payment_method: @payment_method,
+        payment_kind: free ? "free" : @payment_kind,
         status: "received",
         currency: items.first[:product].currency,
         **totals,
@@ -55,26 +60,9 @@ class OrderCreator
       cart.items.destroy_all
     end
 
-    # 0円の注文 (無料配布の商品だけ) は支払いがないので入金確認を省略する (デジタル商品だけなら完了になる)
-    if order.total_cents.zero?
-      OrderWorkflow.new(order).transition!("paid", note: "0円のため入金確認を省略")
-    else
-      pay_and_confirm!(order)
-    end
+    # 0円の注文 (無料配布の商品だけ) は支払いがないので入金確認を省略する (デジタル商品だけなら完了になる)。
+    # それ以外は「注文受付」のまま。カードは Stripe の Webhook、振込などは店舗が入金を確認して進める
+    OrderWorkflow.new(order).transition!("paid", note: "0円のため入金確認を省略") if free
     order
-  end
-
-  private
-
-  def pay_and_confirm!(order)
-    return unless @payment_method && @user.stripe_customer_id
-
-    intent = StripeService.new.create_payment_intent(order, payment_method_id: @payment_method.stripe_payment_method_id)
-    order.update!(stripe_payment_intent_id: intent.id)
-    # 入金確認: 在庫の確定引き当て (デジタル商品のみなら自動で完了) は OrderWorkflow が行う
-    OrderWorkflow.new(order).transition!("paid", note: "Stripe決済") if intent.status == "succeeded"
-  rescue StripeService::Error => e
-    Rails.logger.warn("Stripe payment failed for order #{order.id}: #{e.message}")
-    # 在庫の仮押さえはキャンセル時に OrderWorkflow が解除する
   end
 end

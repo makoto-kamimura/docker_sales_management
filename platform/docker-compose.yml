@@ -32,6 +32,9 @@ services:
       DATABASE_URL: postgres://${POSTGRES_USER:-app}:${POSTGRES_PASSWORD:-app_password}@postgres:5432/${POSTGRES_DB:-app_development}
       DIFY_API_BASE: ${DIFY_API_BASE:-http://dify-api:5001/v1}
       DIFY_API_KEY: ${DIFY_API_KEY:-}
+      STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY:-}
+      STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET:-}
+      APP_BASE_URL: ${APP_BASE_URL:-http://localhost}
       RAILS_LOG_TO_STDOUT: "true"
       BUNDLE_PATH: /usr/local/bundle
     volumes:
