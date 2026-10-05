@@ -13,7 +13,6 @@ Rails.application.routes.draw do
       # マイページ (要件3)
       resource :me, only: %i[show update], controller: "me" do
         resources :addresses, except: %i[new edit]
-        resources :payment_methods, only: %i[index create destroy]
       end
 
       # 商品検索 (要件5)
@@ -27,8 +26,18 @@ Rails.application.routes.draw do
         resources :items, only: %i[create update destroy], controller: "cart_items"
       end
       resources :orders, only: %i[index show create] do
-        resources :tips, only: %i[create destroy] # 投げ銭 (0円の商品を含む注文)
+        member { post :checkout_session } # カード決済の画面 (Stripe Checkout) の URL
+        resources :tips, only: %i[create destroy] do # 投げ銭 (0円の商品を含む注文)
+          member { post :checkout_session }
+        end
       end
+
+      # カード決済 (Stripe)。設定の有無と、Stripe からの通知 (署名で検証。ログイン不要)
+      get "payment_settings", to: "payment_settings#show"
+
+      # 特定商取引法に基づく表記 (ログイン不要)
+      get "legal_notice", to: "legal_notices#show"
+      post "webhooks/stripe", to: "stripe_webhooks#create"
 
       # 購入済み3Dモデルデータのダウンロード (:id = product_id)
       resources :downloads, only: %i[index show] do
@@ -40,6 +49,7 @@ Rails.application.routes.draw do
       resources :subscription_plans, only: %i[index show]
       resources :subscriptions, except: %i[new edit] do
         member { post :skip }
+        collection { post :portal_session } # 支払いカードの変更 (Stripe Customer Portal)
       end
 
       # 問い合わせ / オーダーメイド制作依頼
@@ -98,8 +108,9 @@ Rails.application.routes.draw do
         resources :customers, only: %i[index show update]
         resources :service_requests, only: %i[index show update]  # 問い合わせ・オーダーメイド依頼
 
-        # --- 権限設定 (管理者のみ)
+        # --- 権限設定・ショップ情報 (管理者のみ)
         resources :users, only: %i[index update]
+        resource :shop_setting, only: %i[show update] # 特定商取引法に基づく表記の販売者の情報・店舗の方針
       end
     end
   end

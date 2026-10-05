@@ -6,6 +6,7 @@ import { Text, View } from '@/components/Themed';
 import { api } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { yen } from '@/lib/format';
+import { openLegalNotice } from '@/lib/payments';
 import type { Order } from '@/lib/types';
 
 export default function AccountScreen() {
@@ -36,6 +37,9 @@ export default function AccountScreen() {
         <Text style={styles.title}>{user.name}</Text>
         <Text style={{ opacity: 0.6 }}>{user.email}</Text>
         <Pressable onPress={logout} style={styles.logout}><Text>ログアウト</Text></Pressable>
+        <Pressable onPress={openLegalNotice} accessibilityRole="link" style={{ marginTop: 12 }}>
+          <Text style={{ fontSize: 12, opacity: 0.6 }}>特定商取引法に基づく表記 →</Text>
+        </Pressable>
       </View>
       <Text style={{ paddingHorizontal: 16, fontWeight: 'bold' }}>注文履歴</Text>
       <FlatList

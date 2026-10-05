@@ -81,6 +81,7 @@ export default function AdminTipsPage() {
                 <td className="max-w-[18rem] whitespace-pre-line p-3 text-xs text-coffee-600">{t.message || "—"}</td>
                 <td className="p-3">
                   <TipStatusBadge tip={t} />
+                  {t.payment_kind === "card" && <div className="mt-1 text-[11px] text-coffee-400">カード (Stripe){t.paid_at && ` · ${fmtDate(t.paid_at)}`}</div>}
                   {t.confirmed_by && <div className="mt-1 text-[11px] text-coffee-400">{t.confirmed_by.name}{t.paid_at && ` · ${fmtDate(t.paid_at)}`}</div>}
                 </td>
                 <td className="p-3">

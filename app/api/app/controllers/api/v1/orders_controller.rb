@@ -15,16 +15,35 @@ module Api
         render json: detail(order)
       end
 
-      # 注文確定 (要件1)。address_id はデジタル商品のみの注文なら省略可
+      # 注文確定 (要件1)。address_id はデジタル商品のみの注文なら省略可。
+      # payment_kind: card (続けて checkout_session で決済の画面を開く) / transfer (振込など。既定)
       def create
         address = params[:address_id].present? ? current_user.addresses.find(params[:address_id]) : nil
-        pm = params[:payment_method_id] ? current_user.payment_methods.find(params[:payment_method_id]) : nil
+        payment_kind = params[:payment_kind] == "card" ? "card" : "transfer"
+        StripeService.ensure_enabled! if payment_kind == "card"
 
         cart = current_user.cart || raise(ApplicationController::NotFoundError, "カートが見つかりません")
-        order = OrderCreator.new(user: current_user, address: address, payment_method: pm).call(cart)
+        order = OrderCreator.new(user: current_user, address: address, payment_kind: payment_kind).call(cart)
         render json: detail(order), status: :created
       rescue OrderCreator::Error => e
         render_error(code: "order_failed", message: e.message, status: :unprocessable_entity)
+      end
+
+      # カードで支払う決済の画面 (Stripe Checkout) の URL。開いたままの前の画面は閉じてから作り直す (二重払いを防ぐ)
+      def checkout_session
+        order = current_user.orders.includes(items: :product).find(params[:id])
+        stripe = StripeService.new
+        unless order.card_payable?
+          return render_error(code: "not_card_payable", message: "この注文はカードで支払えません", status: :unprocessable_entity)
+        end
+
+        stripe.expire_checkout_session(order.stripe_checkout_session_id)
+        session = stripe.create_payment_checkout(
+          user: current_user, currency: order.currency, line_items: order.checkout_line_items,
+          metadata: { kind: "order", order_id: order.id.to_s }, **checkout_return_urls("/orders/#{order.id}")
+        )
+        order.update!(stripe_checkout_session_id: session.id)
+        render json: { url: session.url }
       end
 
       private
@@ -40,6 +59,10 @@ module Api
           tax_cents: o.tax_cents,
           shipping_cents: o.shipping_cents,
           stripe_payment_intent_id: o.stripe_payment_intent_id,
+          payment_kind: o.payment_kind,
+          payment_kind_label: o.payment_kind_label,
+          card_payable: o.card_payable? && StripeService.enabled?,
+          subscription_id: o.subscription_id,
           downloadable: o.downloadable?,
           # 0円の商品を含む注文は投げ銭できる
           accepts_tips: o.accepts_tips?,

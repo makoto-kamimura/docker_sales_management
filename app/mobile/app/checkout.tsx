@@ -6,7 +6,8 @@ import { Text, View } from '@/components/Themed';
 import { api, jsonBody } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { yen } from '@/lib/format';
-import type { Address, Cart, Order } from '@/lib/types';
+import { fetchCardEnabled, fetchLegalNotice, openLegalNotice } from '@/lib/payments';
+import type { Address, Cart, LegalNotice, Order, PaymentKind } from '@/lib/types';
 
 export default function CheckoutScreen() {
   const { token } = useAuth();
@@ -15,16 +16,22 @@ export default function CheckoutScreen() {
   const [addressId, setAddressId] = useState<number | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [cardEnabled, setCardEnabled] = useState(false);
+  const [payment, setPayment] = useState<PaymentKind>('card');
+  const [notice, setNotice] = useState<LegalNotice | null>(null);
+
+  useEffect(() => { fetchLegalNotice().then(setNotice); }, []);
 
   useEffect(() => {
     (async () => {
       if (!token) return;
       try {
-        const [c, a] = await Promise.all([
+        const [c, a, card] = await Promise.all([
           api<Cart>('/cart', { auth: token }),
           api<Address[]>('/me/addresses', { auth: token }),
+          fetchCardEnabled(),
         ]);
-        setCart(c); setAddresses(a); setAddressId(a[0]?.id ?? null);
+        setCart(c); setAddresses(a); setAddressId(a[0]?.id ?? null); setCardEnabled(card);
       } catch (e) {
         setErr(e instanceof Error ? e.message : 'エラー');
       }
@@ -32,14 +39,18 @@ export default function CheckoutScreen() {
   }, [token]);
 
   const needsAddress = cart?.requires_shipping ?? true; // デジタル商品のみなら配送先不要
+  // 0円の注文 (無料配布だけ) は支払いがない
+  const free = cart?.subtotal_cents === 0;
+  const paymentKind: PaymentKind = cardEnabled && !free ? payment : 'transfer';
 
   async function place() {
     if (needsAddress && !addressId) { setErr('住所が未登録です'); return; }
     setBusy(true); setErr(null);
     try {
-      const body = needsAddress ? { address_id: addressId } : {};
+      const body = { payment_kind: paymentKind, ...(needsAddress ? { address_id: addressId } : {}) };
       const o = await api<Order>('/orders', { method: 'POST', body: jsonBody(body), auth: token });
-      router.replace({ pathname: '/orders/[id]', params: { id: String(o.id) } });
+      // カードは注文詳細から決済の画面を開く (閉じたら注文詳細で取り直す)
+      router.replace({ pathname: '/orders/[id]', params: { id: String(o.id), ...(o.card_payable ? { pay: '1' } : {}) } });
     } catch (e) {
       setErr(e instanceof Error ? e.message : 'エラー');
     } finally {
@@ -84,14 +95,61 @@ export default function CheckoutScreen() {
         </View>
       ))}
       <View style={[styles.row, { marginTop: 12 }]}>
-        <Text style={{ flex: 1, fontWeight: 'bold' }}>小計</Text>
-        <Text style={{ fontWeight: 'bold' }}>{yen(cart.subtotal_cents)}</Text>
+        <Text style={{ flex: 1, opacity: 0.7 }}>小計</Text><Text>{yen(cart.subtotal_cents)}</Text>
       </View>
-      <Text style={{ fontSize: 12, opacity: 0.5, marginTop: 4 }}>※ 税/送料はサーバー側で計算</Text>
+      <View style={styles.row}><Text style={{ flex: 1, opacity: 0.7 }}>消費税</Text><Text>{yen(cart.tax_cents)}</Text></View>
+      <View style={styles.row}><Text style={{ flex: 1, opacity: 0.7 }}>送料</Text><Text>{yen(cart.shipping_cents)}</Text></View>
+      <View style={styles.row}>
+        <Text style={{ flex: 1, fontWeight: 'bold' }}>お支払い金額（税込）</Text>
+        <Text style={{ fontWeight: 'bold' }}>{yen(cart.total_cents)}</Text>
+      </View>
+
+      {cardEnabled && !free && (
+        <>
+          <Text style={styles.h2}>お支払い方法</Text>
+          {([
+            ['card', 'クレジットカード', '決済サービス (Stripe) の画面でカード情報を入力します。カード情報はアプリに保存しません。'],
+            ['transfer', '銀行振込など', 'ご注文後にショップからお支払い方法をご連絡します。'],
+          ] as const).map(([kind, label, note]) => (
+            <Pressable key={kind} onPress={() => setPayment(kind)} accessibilityRole="radio"
+                       accessibilityState={{ checked: payment === kind }}
+                       style={[styles.address, payment === kind && styles.selected]}>
+              <Text style={{ fontWeight: '600' }}>{label}</Text>
+              <Text style={{ fontSize: 12, opacity: 0.7 }}>{note}</Text>
+            </Pressable>
+          ))}
+        </>
+      )}
+
+      <Text style={styles.h2}>ご注文前にご確認ください</Text>
+      {!free && (
+        <>
+          <Text style={styles.label}>お支払い時期</Text>
+          <Text style={styles.note}>
+            {paymentKind === 'card'
+              ? 'ご注文の確定後に開く決済画面で、クレジットカードでお支払いいただきます。'
+              : notice?.transfer_payment_due || 'ご注文後にショップから振込先をご連絡します。'}
+          </Text>
+        </>
+      )}
+      <Text style={styles.label}>お届け時期</Text>
+      {needsAddress && <Text style={styles.note}>{notice?.shipping_lead_time || '入金確認後に制作・発送します。'}</Text>}
+      {cart.items.some((i) => i.is_digital) && (
+        <Text style={styles.note}>3Dデータ・DIY設計図は、お支払いの確認後すぐに注文詳細からダウンロードできます。</Text>
+      )}
+      {notice?.returns_policy ? (
+        <>
+          <Text style={styles.label}>返品・交換・キャンセル</Text>
+          <Text style={styles.note}>{notice.returns_policy}</Text>
+        </>
+      ) : null}
+      <Pressable onPress={openLegalNotice} accessibilityRole="link">
+        <Text style={{ color: '#ff5722', fontSize: 12, marginTop: 8 }}>特定商取引法に基づく表記 →</Text>
+      </Pressable>
 
       {err && <Text style={{ color: '#dc2626', marginTop: 8 }}>{err}</Text>}
       <Pressable onPress={place} disabled={disabled} style={[styles.cta, disabled && { opacity: 0.5 }]}>
-        <Text style={{ color: '#fff' }}>注文を確定する</Text>
+        <Text style={{ color: '#fff' }}>{paymentKind === 'card' ? '上記の内容で注文を確定し、カードで支払う' : '上記の内容で注文を確定する'}</Text>
       </Pressable>
     </ScrollView>
   );
@@ -103,5 +161,7 @@ const styles = StyleSheet.create({
   address: { padding: 10, borderWidth: 1, borderColor: '#ddd', borderRadius: 6, marginTop: 6 },
   selected: { borderColor: '#111', backgroundColor: '#f5f5f5' },
   row: { flexDirection: 'row', paddingVertical: 4 },
+  label: { marginTop: 8, fontSize: 12, fontWeight: '600', opacity: 0.6 },
+  note: { fontSize: 13, marginTop: 2 },
   cta: { marginTop: 16, backgroundColor: '#111', padding: 14, borderRadius: 8, alignItems: 'center' },
 });

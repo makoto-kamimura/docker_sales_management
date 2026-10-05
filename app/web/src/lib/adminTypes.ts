@@ -108,6 +108,11 @@ export type OrderCard = {
   total_cents: number;
   placed_at: string;
   paid_at: string | null;
+  /** card: カード (Stripe。入金確認は自動) / transfer: 振込など / free: 0円の注文 */
+  payment_kind: "card" | "transfer" | "free";
+  payment_kind_label: string;
+  /** 定期便の請求ごとの注文 */
+  subscription_id: number | null;
   due_on: string | null;
   overdue: boolean;
   digital_only: boolean;

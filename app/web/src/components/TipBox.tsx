@@ -3,19 +3,25 @@
 import { useState } from "react";
 import { api, jsonBody } from "@/lib/api";
 import { fmtDate, yen } from "@/lib/format";
-import type { Tip } from "@/lib/types";
+import { useCardEnabled } from "@/lib/payments";
+import type { PaymentKind, Tip } from "@/lib/types";
 
 const PRESETS = [100, 300, 500, 1_000];
 const MIN = 100;
 const MAX = 100_000;
 
-/** 投げ銭 (0円で販売した商品を含む注文)。カード決済はせず、入金は店舗が確認する */
-export function TipBox({ orderId, tips, token, onChange }: {
+/** 投げ銭 (0円で販売した商品を含む注文)。カード (Stripe の決済画面) か振込などで支払う。振込などの入金は店舗が確認する */
+export function TipBox({ orderId, tips, token, onChange, onPayByCard }: {
   orderId: number;
   tips: Tip[];
   token: string | null;
   onChange: () => void;
+  /** カードの決済の画面へ移る (API のパスを渡す) */
+  onPayByCard: (path: string) => Promise<void>;
 }) {
+  const cardEnabled = useCardEnabled();
+  const [payment, setPayment] = useState<PaymentKind>("card");
+  const paymentKind: PaymentKind = cardEnabled ? payment : "transfer";
   const [preset, setPreset] = useState(300);
   const [custom, setCustom] = useState("");
   const [message, setMessage] = useState("");
@@ -32,11 +38,15 @@ export function TipBox({ orderId, tips, token, onChange }: {
     setErr(null);
     setBusy(true);
     try {
-      await api(`/orders/${orderId}/tips`, { method: "POST", body: jsonBody({ amount_cents: amount, message }), auth: token });
-      setSent(true);
+      const tip = await api<Tip>(`/orders/${orderId}/tips`, {
+        method: "POST", body: jsonBody({ amount_cents: amount, message, payment_kind: paymentKind }), auth: token,
+      });
+      onChange();
       setCustom("");
       setMessage("");
-      onChange();
+      // カードはそのまま決済の画面へ。開けなかったときは一覧の「カードで支払う」から払える
+      if (tip.card_payable) await onPayByCard(`/orders/${orderId}/tips/${tip.id}/checkout_session`);
+      else setSent(true);
     } catch (e2) {
       setErr(e2 instanceof Error ? e2.message : "送信に失敗しました");
     } finally {
@@ -93,6 +103,17 @@ export function TipBox({ orderId, tips, token, onChange }: {
         </div>
         <textarea value={message} onChange={(e) => setMessage(e.target.value)} maxLength={500} rows={2}
                   placeholder="メッセージ (任意)" aria-label="メッセージ" className="input" />
+        {cardEnabled && (
+          <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm" role="radiogroup" aria-label="お支払い方法">
+            {([["card", "クレジットカード"], ["transfer", "銀行振込など"]] as const).map(([kind, label]) => (
+              <label key={kind} className="flex items-center gap-1.5 cursor-pointer">
+                <input type="radio" name="tip-payment" value={kind} checked={payment === kind}
+                       onChange={() => setPayment(kind)} className="accent-caramel" />
+                {label}
+              </label>
+            ))}
+          </div>
+        )}
         {custom && !valid && <p className="text-xs text-rose-600">100〜100,000円の整数で入力してください</p>}
         {err && <p role="alert" className="text-sm text-rose-600">{err}</p>}
         {sent && (
@@ -101,7 +122,7 @@ export function TipBox({ orderId, tips, token, onChange }: {
           </p>
         )}
         <button disabled={!valid || busy} className="btn btn-accent">
-          {busy ? "送信中…" : valid ? `${yen(amount)} を投げ銭する` : "投げ銭する"}
+          {busy ? "送信中…" : valid ? `${yen(amount)} を${paymentKind === "card" ? "カードで" : ""}投げ銭する` : "投げ銭する"}
         </button>
       </form>
 
@@ -115,8 +136,15 @@ export function TipBox({ orderId, tips, token, onChange }: {
                   <span className="font-semibold tabular-nums">{yen(t.amount_cents)}</span>
                   <TipStatusBadge tip={t} />
                   <span className="text-xs text-coffee-400">{fmtDate(t.created_at)}</span>
+                  {t.payment_kind === "card" && <span className="text-xs text-coffee-400">カード</span>}
                   {t.status === "pending" && (
-                    <button type="button" onClick={() => cancel(t)} className="ml-auto text-xs text-coffee-500 hover:text-rose-600">取り消す</button>
+                    <span className="ml-auto flex gap-3">
+                      {t.card_payable && (
+                        <button type="button" onClick={() => onPayByCard(`/orders/${orderId}/tips/${t.id}/checkout_session`)}
+                                className="text-xs font-medium text-caramel hover:underline">カードで支払う</button>
+                      )}
+                      <button type="button" onClick={() => cancel(t)} className="text-xs text-coffee-500 hover:text-rose-600">取り消す</button>
+                    </span>
                   )}
                 </div>
                 {t.message && <p className="mt-0.5 whitespace-pre-line text-xs text-coffee-600">{t.message}</p>}

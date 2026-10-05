@@ -17,7 +17,6 @@ class User < ApplicationRecord
   has_secure_password
 
   has_many :addresses, dependent: :destroy
-  has_many :payment_methods, dependent: :destroy
   has_one  :cart, dependent: :destroy
   has_many :orders, dependent: :destroy
   has_many :subscriptions, dependent: :destroy
@@ -62,10 +61,6 @@ class User < ApplicationRecord
 
   def default_address
     addresses.find_by(is_default: true) || addresses.first
-  end
-
-  def default_payment_method
-    payment_methods.find_by(is_default: true) || payment_methods.first
   end
 
   # 支払い済み注文で購入したデジタル商品 (再ダウンロード可能なライブラリ)

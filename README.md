@@ -150,7 +150,7 @@ flowchart LR
 | 利用者 | ロール | できること |
 |---|---|---|
 | ゲスト | （未ログイン） | 商品の閲覧・検索、AIコンシェルジュ |
-| 会員 | `member` | ＋ 注文・決済、サブスク、プロフィール / 住所 / 支払い方法、問い合わせ・オーダーメイド依頼、購入済み3Dデータのダウンロード、制作状況の確認 |
+| 会員 | `member` | ＋ 注文・決済（カード / 振込など）、サブスク、プロフィール / 住所、問い合わせ・オーダーメイド依頼、購入済み3Dデータのダウンロード、制作状況の確認 |
 | スタッフ | `staff` | 付与された権限（[3.2節](#32-スタッフの権限)）の管理画面のみ。権限が1つもなければ管理画面は使えない |
 | 管理者 | `admin` | すべての権限 ＋ スタッフ権限の設定 |
 
@@ -174,13 +174,13 @@ flowchart LR
 ### 4.1 購入する（会員）
 
 1. 商品を検索し、カートに入れる（オーダーメイドは[4.4節](#44-問い合わせオーダーメイド依頼をする会員)の依頼フォームへ）。
-2. 配送先と支払い方法を選んで注文を確定する。物販品の在庫が仮押さえされる。
+2. 配送先と支払い方法（クレジットカード / 銀行振込など）を選んで注文を確定する。物販品の在庫が仮押さえされる。カードなら続けて決済サービス（Stripe）の画面で支払う。
 3. 注文詳細のステッパーで、制作の進み具合と配送情報を確認する。
 4. 3Dモデルデータは、入金確認以降に注文詳細・アカウント画面からダウンロードする（組み立て説明書 PDF も）。
 
 ### 4.2 注文を制作して発送する（店舗）
 
-1. 入金を確認する。Stripe の決済が成功した注文は自動で「入金確認」になり、振込などは注文権限のスタッフが確認して進める。
+1. 入金を確認する。カードで支払われた注文は Stripe からの通知で自動的に「入金確認」になり、振込などは注文権限のスタッフが確認して進める。
 2. 制作ボードで、注文のカードを「制作待ち」→「制作中」へ移す。レシピに従い材料在庫が減る。
 3. 検品・発送準備を経て、配送業者・追跡番号を入力して「発送済み」にする。
 4. 配達を確認したら「完了」にする。デジタル商品だけの注文は、入金確認と同時に自動で完了する。
@@ -201,8 +201,9 @@ flowchart LR
 
 ### 4.5 サブスクを購読する（会員）
 
-1. サブスク対象の商品とプラン（毎週・隔週・月1回）を選び、配送先・支払い方法を指定する。
-2. 必要に応じて一時停止・再開・次回スキップ・お届け日や配送先の変更・解約をする。
+1. サブスク対象の商品とプラン（毎週・隔週・月1回）と配送先を選び、決済サービス（Stripe）の画面でカードを登録して申し込む。1回目はその場で決済され、注文が作られる。
+2. 以後はお届けの間隔ごとに自動で決済され、そのたびにお届け分の注文が作られる。
+3. 必要に応じて一時停止・再開・次回スキップ・お届け日や配送先の変更・支払いカードの変更・解約をする。
 
 ## 5. 画面一覧
 
@@ -216,10 +217,12 @@ flowchart LR
 | `/products/[id]` | 商品詳細（在庫・利用許諾・ファイル形式、カート投入。3Dモデルの商品は実モデル画像・実利用画像（最大3枚）を切り替えて表示） |
 | `/custom` | オーダーメイド依頼フォーム |
 | `/contact` | 問い合わせフォーム（注文詳細から開くと対象の注文つき） |
-| `/cart` / `/checkout` | カート / 配送先・支払い方法を選んで注文確定 |
-| `/orders` / `/orders/[id]` | 注文履歴 / 注文詳細（工程のステッパー・配送情報・3Dデータと組み立て説明書 PDF のダウンロード・0円の商品を含む注文の投げ銭） |
+| `/cart` / `/checkout` | カート / 配送先・支払い方法（カード / 振込など）を選んで注文確定。カードなら Stripe の決済画面へ移る |
+| `/orders` / `/orders/[id]` | 注文履歴 / 注文詳細（工程のステッパー・配送情報・支払い方法・未払いのカードの注文の「カードで支払う」・3Dデータと組み立て説明書 PDF のダウンロード・0円の商品を含む注文の投げ銭） |
+| `/checkout/return` | アプリから開いた決済画面の戻り先（アプリに戻るよう案内する。ログイン不要） |
+| `/legal/tokushoho` | 特定商取引法に基づく表記（全画面のフッターからリンク。ログイン不要・サーバーで描画。[8.2節](#82-特定商取引法に基づく表記と注文の最終確認)） |
 | `/requests` | 自分の問い合わせ・依頼と店舗の回答 |
-| `/subscriptions` | サブスクの購読・一時停止・再開・スキップ・解約 |
+| `/subscriptions` | サブスクのカードでの申し込み・一時停止・再開・スキップ・解約・支払いカードの変更（Stripe の画面） |
 | `/account` | プロフィール・住所・購入済みデジタルデータ（組み立て説明書つき）・ロール / 権限の表示 |
 | `/login` / `/register` | ログイン / 会員登録 |
 | （全画面右下） | AIコンシェルジュのチャット |
@@ -241,6 +244,7 @@ flowchart LR
 | 注文 | `/admin/requests` | 問い合わせ・オーダーメイド依頼への回答・ステータス変更 |
 | 注文 | `/admin/tips` | 投げ銭（入金待ち・入金確認済みの合計、入金確認・取り消し） |
 | 設定（管理者） | `/admin/users` | スタッフ権限 |
+| 設定（管理者） | `/admin/settings` | ショップ情報（特定商取引法に基づく表記の販売者の情報・店舗の方針） |
 
 ### 5.3 モバイルアプリ
 
@@ -249,13 +253,15 @@ Expo で作る**顧客向け**のアプリ。管理画面は Web のみとする
 | 画面 | 内容 |
 |---|---|
 | タブ | ホーム / 検索 / カート / サブスク / AIコンシェルジュ / アカウント |
-| その他 | ログイン・会員登録・商品詳細・注文確定・注文詳細（3Dデータ・組み立て説明書のダウンロード、投げ銭を含む）・問い合わせ / 依頼の作成と一覧 |
+| その他 | ログイン・会員登録・商品詳細・注文確定（カード / 振込など）・注文詳細（カードでの支払い、3Dデータ・組み立て説明書のダウンロード、投げ銭を含む）・問い合わせ / 依頼の作成と一覧 |
+
+サブスクタブでは、購読中のサブスクの操作と支払いカードの変更ができる（新しい申し込みは Web で行う）。決済画面はアプリ内ブラウザで開く。アカウントタブと注文確定の画面から、特定商取引法に基づく表記（Web のページ）を開ける。
 
 ## 6. 会員・認証
 
 - メールアドレス・パスワード・名前で会員登録し、ログインで JWT を受け取る（アクセストークン1時間 / リフレッシュトークン7日。[第19章](#19-認証の実装)）。
 - メールアドレスは大文字小文字を区別せず一意。パスワードは bcrypt で保存する。
-- プロフィール（名前・メール）の変更、住所の登録（既定の住所を1つ指定）、支払い方法（Stripe）の登録・削除ができる。
+- プロフィール（名前・メール）の変更、住所の登録（既定の住所を1つ指定）ができる。カード情報はこのサービスに保存しない（[8.1節](#81-カード決済)）。
 - 会員登録時にカートが1つ作られる。
 
 ## 7. 商品・カテゴリ・検索
@@ -283,8 +289,32 @@ Expo で作る**顧客向け**のアプリ。管理画面は Web のみとする
 | 送料 | 500円。小計5,000円以上、またはデジタル商品のみの注文は0円 |
 | 合計 | 小計 ＋ 消費税 ＋ 送料 |
 
-- 決済：支払い方法を選び Stripe の顧客が紐づいていれば PaymentIntent を作成し、成功すると自動で「入金確認」へ進む。それ以外（振込など）は「注文受付」のまま、店舗が入金を確認して進める。決済に失敗しても注文は残り、キャンセルで在庫の仮押さえを解除する。
+- 支払い方法：クレジットカード（[8.1節](#81-カード決済)）か銀行振込など。振込などは「注文受付」のまま、店舗が入金を確認して進める。
 - 合計0円の注文（無料配布の商品だけ）は支払いがないため、入金確認を省略する（デジタル商品だけならそのまま完了し、すぐダウンロードできる）。
+
+### 8.1 カード決済
+
+カード情報の入力は決済サービス Stripe の画面（Stripe Checkout）で行い、このサービスにはカード情報を保存しない。支払いの結果は Stripe からの通知（Webhook）で反映する。
+
+- 注文を確定すると、そのまま Stripe の決済画面へ移る。支払いが済むと、自動で「入金確認」へ進む（デジタル商品だけなら完了）。3D セキュアなどの本人認証も Stripe の画面で行う。
+- 決済の画面を閉じた・期限が切れた・決済に失敗した場合も注文は「注文受付」のまま残り、注文詳細の「カードで支払う」から払い直せる。払い直すときは、開いたままの前の決済画面を閉じてから新しく作る（二重払いを防ぐ）。
+- 払わないままの注文は、店舗がキャンセルすると在庫の仮押さえを解除する。キャンセル後や入金確認済みの注文にカードの支払いが届いた場合は、注文を変えずに履歴へ「返金・確認が必要」のメモを残す。
+- カードで支払える金額は50円から（Stripe の最低額）。
+- Stripe の設定（`STRIPE_SECRET_KEY` と `STRIPE_WEBHOOK_SECRET`）がなければ、カードの選択肢を出さない。
+- アプリからは決済画面をアプリ内ブラウザで開き、終わったら「アプリに戻ってください」のページを表示する。閉じると注文を取り直す。
+
+### 8.2 特定商取引法に基づく表記と注文の最終確認
+
+- `/legal/tokushoho` に特定商取引法に基づく表記を出す。
+  - 販売者の情報（販売事業者名・運営統括責任者・所在地・電話番号・受付時間・メールアドレス）と、店舗の方針（振込の支払期限・発送の目安・返品・交換・キャンセル・その他）は、管理者が管理画面「設定 › ショップ情報」で入力する。公開リポジトリに書かないため、DB に持つ。
+  - 所在地・電話番号は「掲載する」か「掲載せず『請求があった場合には遅滞なく開示します』と表示する」を選べる。開示しない設定のときは、公開ページにも API にも出さない。
+  - 販売価格・送料・消費税・支払方法・支払時期・定期便のプランと条件・投げ銭の金額の範囲・3Dデータの形式は、実際の計算に使う値（`Pricing`・`SubscriptionPlan`・`Tip`・Stripe の設定）から表示する。文面と実際の動きが食い違わないようにするため。
+  - 未入力の項目は「（準備中）」と表示する。公開する内容が法令の求めに合っているかは、店舗が確認する。
+- 注文確認画面（Web・アプリ）は、注文確定の前に次を示す。
+  - 小計・消費税・送料・お支払い金額（税込）。カートの API が注文と同じ計算（`Pricing`）で返す
+  - お支払い時期（カード / 振込の期限）、お届け時期（物販 / データ）、返品・交換・キャンセルの条件、表記のページへのリンク
+- 定期便の申し込み欄は、申し込み前に1回あたりの金額（割引・税・送料込みの見込み）、お届けと決済の間隔、契約期間（解約まで）、解約・一時停止の方法を示す。
+- 商品一覧・詳細の価格は税抜のまま（税込の総額表示は今後の課題）。
 
 ## 9. 注文ステータスと制作フロー
 
@@ -377,12 +407,12 @@ received   paid       awaiting_   in_        inspection ready_to_  shipped    co
 
 ## 12. 投げ銭（0円販売）
 
-0円で販売した商品（3Dモデルの無料配布など）を含む注文では、購入者が任意で「投げ銭」で応援できる。カード決済は使わず、通常の注文と同じく入金（振込など）を店舗が確認する。
+0円で販売した商品（3Dモデルの無料配布など）を含む注文では、購入者が任意で「投げ銭」で応援できる。支払いはクレジットカード（[8.1節](#81-カード決済)と同じく Stripe の画面。支払うと自動で入金確認済みになる）か、振込など（店舗が入金を確認する）。
 
 | 立場 | できること |
 |---|---|
-| 購入者 | 注文詳細（Web / モバイル）で金額（100・300・500・1,000円、Web は100〜100,000円の自由入力も可）とメッセージ（500文字まで）を選んで申し込む。同じ注文に何度でも申し込め、入金待ちのうちは取り消せる。申し込み後はショップから支払い方法（振込先など）を連絡する |
-| 店舗（注文権限） | 管理画面「注文 › 投げ銭」で入金待ち・入金確認済みの件数と合計を確認し、入金確認・取り消し・入金待ちに戻すができる。注文詳細にも投げ銭と操作を表示する（確認した人・日時を記録） |
+| 購入者 | 注文詳細（Web / モバイル）で金額（100・300・500・1,000円、Web は100〜100,000円の自由入力も可）とメッセージ（500文字まで）を選んで申し込む。同じ注文に何度でも申し込め、入金待ちのうちは取り消せる。カードならそのまま決済画面へ移り、入金待ちのカードの投げ銭は「カードで支払う」から払い直せる。振込などは申し込み後にショップから振込先などを連絡する |
+| 店舗（注文権限） | 管理画面「注文 › 投げ銭」で入金待ち・入金確認済みの件数と合計を確認し、振込などの入金確認・取り消し・入金待ちに戻すができる。注文詳細にも投げ銭と操作を表示する（確認した人・日時を記録） |
 
 - 対象はキャンセルされていない、単価0円の明細を含む注文。有料の商品だけの注文には投げ銭できない。3Dモデルの販売フラグは価格0円（無料配布）でもオンにできる。
 - 状態：入金待ち（`pending`）→ 入金確認済み（`paid`） / 取り消し（`cancelled`）。入金確認済みは購入者から取り消せない。
@@ -406,9 +436,13 @@ received   paid       awaiting_   in_        inspection ready_to_  shipped    co
 | 隔週お届け（`biweekly`） | 14日 | 8% |
 | 月1回お届け（`monthly`） | 30日 | 12% |
 
-- サブスク対象の商品（フィラメントなど）だけ購読できる。数量1〜10、配送先必須。次回お届け日は購読日 ＋ 間隔。
-- 一時停止・再開・次回お届け日の変更・配送先の変更・次回スキップ（次回日を1間隔後ろへ）・解約ができる。
-- 支払い方法と Stripe の顧客があれば、割引後の単価で Stripe のサブスクリプションを作成する。
+- サブスク対象の商品（フィラメントなど）だけ購読できる。数量1〜10、配送先必須。
+- 支払いはクレジットカードだけ（請求ごとに注文を作るため、振込などでは申し込めない。Stripe の設定がなければ申し込めない）。Stripe の画面（Checkout）でカードを登録して申し込み、Stripe のサブスクリプションがお届けの間隔ごとに決済する。
+- 1回の金額は、割引後の単価 × 数量に消費税・送料を加えたもの（[第8章](#8-カート注文料金)の計算）。単価は申し込み時の価格と割引で固定する。
+- 1回目は申し込み時に決済する。決済が済むたび（Stripe の `invoice.paid`）に、お届け分の注文（支払い方法はカード）を作って在庫を引き当て、「入金確認」へ進める。在庫が足りなければ「注文受付」のまま履歴にメモを残し、店舗が在庫を補充してから進める。次回お届け日は Stripe の次の請求日に合わせる。
+- 状態：申し込み手続き中（`incomplete`）→ お届け中（`active`） / 一時停止中（`paused`） / 支払いの確認待ち（`past_due`。決済に失敗し Stripe が再試行している） / 解約済み（`cancelled`）。申し込みの決済画面の期限が切れると取り消しになる。
+- 一時停止（停止中の請求は取り消す）・再開・次回お届け日の変更・次回スキップ（次回日を1間隔後ろへ）・解約は、Stripe に反映してから記録する。配送先の変更はこのサービスの中だけ。支払いカードの変更は Stripe の画面（Customer Portal）で行う。
+- カード決済に切り替える前の購読（Stripe の請求がないもの）は、これまでどおりこのサービスの中だけで操作できる。
 
 ## 15. AIコンシェルジュ
 
@@ -471,7 +505,7 @@ received   paid       awaiting_   in_        inspection ready_to_  shipped    co
 | 分類 | 内容 |
 |---|---|
 | 機能 | ステータス変更・回答時の顧客への通知、オーダーメイド依頼から注文への変換、入金後キャンセル時の在庫戻し・返金、材料の入出庫履歴、制作スタッフ向けのモバイル画面、AIコンシェルジュに進行中の問い合わせを渡す |
-| UI | カテゴリ別の商品の表示項目、OG 画像・favicon の差し替え、画像の変換・最適化、狭い画面のヘッダーのメニュー |
+| UI | 商品価格の税込の総額表示（[8.2節](#82-特定商取引法に基づく表記と注文の最終確認)）、カテゴリ別の商品の表示項目、OG 画像・favicon の差し替え、画像の変換・最適化、狭い画面のヘッダーのメニュー |
 | 品質 | テストの拡充（AIコンシェルジュの CTA 抽出、管理の商品系の request spec）、制作ボードのキーボード操作、モバイルの日時ピッカー |
 
 ---
@@ -653,6 +687,7 @@ LAN / tunnel / localhost の各モードと接続できないときの対処は 
 
 - 注文の作成は `OrderCreator`、料金の計算は `Pricing` が担う（[第8章](#8-カート注文料金)）。
 - 注文確定時に在庫を検証し、物販品は `inventories` の仮押さえ数を増やす。合計0円の注文は作成時に入金確認を省略する。
+- 支払い方法は `orders.payment_kind`（`card` / `transfer` / `free`）に記録する。カードの決済は[20.7節](#207-カード決済stripe)。
 
 ### 20.2 注文の工程（OrderWorkflow）
 
@@ -686,6 +721,25 @@ LAN / tunnel / localhost の各モードと接続できないときの対処は 
 - AIコンシェルジュの API（`ai_concierge/messages_controller.rb`）が、変数 `member_name`・`cart_items`（JSON 文字列）・`recent_orders`（JSON 文字列）を組み立て、`DifyClient` で Dify の Chatflow を呼ぶ。ゲストは `member_name` を「ゲスト」にする。
 - ナレッジのうち商品カタログ（`app/ai/knowledge/catalog.md`）は `app/ai/sync_knowledge.rb` で公開中の商品から作り直す。FAQ（`faq.md`）は手で書く。どちらも Dify のナレッジベースへアップロードし直す。
 
+### 20.7 カード決済（Stripe）
+
+- 支払いは Stripe Checkout、定期便の支払いカードの変更は Stripe Customer Portal の画面で行う。カード情報はこのサーバーを通さず、保存もしない。Stripe の呼び出しは `StripeService` にまとめる。
+- 1回払い（注文・投げ銭）は Checkout の `payment` モード。明細は商品ごとの行に送料・消費税の行を加え、合計を `orders.total_cents` と一致させる。`metadata` の `kind`（`order` / `tip`）と ID で、通知の対象を見分ける。
+- 定期便は Checkout の `subscription` モード。価格は `price_data`（`recurring: { interval: "day", interval_count: お届け間隔 }`、1回の金額）で作り、`subscription_data.metadata` に購読の ID を入れる。
+- 支払いの状態は Webhook（`POST /api/v1/webhooks/stripe`。`StripeWebhookHandler`）で反映する。
+  - 本文と `Stripe-Signature` で署名を検証する。正しくなければ `400`。
+  - イベント ID を `stripe_webhook_events` に記録し、同じイベントは二度処理しない。定期便の注文は `orders.stripe_invoice_id`（一意）でも二重に作らない。
+  - `checkout.session.completed`：注文は `OrderWorkflow` で入金確認へ、投げ銭は入金確認済みに、定期便は Stripe の購読 ID を記録してお届け中にする。
+  - `checkout.session.expired`：注文・投げ銭は払い直せるようにセッションの記録を消し、申し込み手続き中の定期便は取り消す。
+  - `invoice.paid`：定期便のお届け分の注文を作って入金確認へ進める（`SubscriptionOrderCreator`）。`invoice.payment_failed`：支払いの確認待ちにする。
+  - `customer.subscription.updated` / `.deleted`：状態（一時停止は `pause_collection`）と次回お届け日（次の請求日。日本時間）を反映する。
+  - 申し込みの通知より先に請求の通知が届くことがあるため、購読は Stripe の購読 ID か `metadata` の購読 ID で探す。
+  - 決済は済んだのに注文を進められないとき（キャンセル済み・在庫不足など）は、例外にせず注文の履歴にメモを残す。例外にすると Stripe が同じ通知を送り直し続けるため。
+- 決済画面からの戻り先は `APP_BASE_URL` から作る（Web は `/orders/:id?checkout=success` など。アプリは `client=app` を付けて `/checkout/return`）。画面は Webhook の反映が遅れることがあるため、戻ってきたら数回取り直す。
+- 設定：`STRIPE_SECRET_KEY`・`STRIPE_WEBHOOK_SECRET`（両方なければカード決済は無効で、カードの API は `503 payment_unavailable`）、`APP_BASE_URL`、`STRIPE_API_BASE`（接続先を差し替えるときだけ）。Stripe への接続に失敗したら `502 payment_gateway_error`。
+- 開発では Stripe のテスト用のキーと Stripe CLI（`stripe listen --forward-to localhost/api/v1/webhooks/stripe`）を使う。テスト用のカード番号は `4242 4242 4242 4242`、3D セキュアの確認は `4000 0027 6000 3184`。
+- テスト（`spec/requests/api/v1/card_payments_spec.rb`）は `StripeService` を差し替え、Webhook は本物と同じ形式の署名を付けて送る。
+
 ## 21. データモデル
 
 - データベースは PostgreSQL 16、マイグレーションは Rails 7.2 の migrations とする。拡張：`citext`・`pg_trgm`・`pgcrypto`・`vector`。
@@ -697,7 +751,6 @@ LAN / tunnel / localhost の各モードと接続できないときの対処は 
 |---|---|
 | `users` | 会員・スタッフ・管理者 |
 | `addresses` | 会員の住所 |
-| `payment_methods` | 会員の支払い方法（Stripe の customer / payment_method） |
 | `categories` | 商品カテゴリ |
 | `products` | 商品 |
 | `product_embeddings` | pgvector の埋め込み（商品検索） |
@@ -716,20 +769,22 @@ LAN / tunnel / localhost の各モードと接続できないときの対処は 
 | `service_requests` | 問い合わせ / オーダーメイド依頼 |
 | `active_storage_*` | 添付ファイル（ActiveStorage：blobs / attachments / variant_records） |
 | `ai_conversations` / `ai_messages` | AIコンシェルジュの対話履歴 |
+| `stripe_webhook_events` | 処理済みの Stripe の通知（同じ通知を二度処理しない） |
+| `shop_settings` | ショップ情報（特定商取引法に基づく表記の販売者の情報・店舗の方針。1行だけ） |
 
 ### 21.2 ER 概要
 
 ```text
 users 1─┬─* addresses
-        ├─* payment_methods
         ├─1 carts ─* cart_items ─* products
         ├─* orders ─* order_items ─* products
         │    │       ├─1 shipments
         │    │       ├─* order_events (─0..1 users: 操作者)
         │    │       └─* tips
         │    └─0..1 users (assignee: 製作担当)
-        ├─* subscriptions ─* subscription_deliveries
-        │     └─1 subscription_plans
+        ├─* subscriptions ─* subscription_deliveries ─0..1 orders
+        │     ├─1 subscription_plans
+        │     └─* orders (定期便の請求ごとの注文)
         ├─* service_requests ─0..1 products / 0..1 orders
         └─* ai_conversations ─* ai_messages
 
@@ -751,7 +806,7 @@ role                  'member' | 'staff' | 'admin'（既定 'member'）
 permissions           string[]（'sales' | 'production' | 'orders'。staff 以外は常に空）
 name
 admin_note            text（店舗側だけが見る顧客メモ）
-stripe_customer_id    nullable
+stripe_customer_id    nullable（カード決済で初めて Stripe の顧客を作ったときに記録）
 created_at / updated_at
 ```
 
@@ -797,7 +852,11 @@ materials_consumed_at 材料を消費済みか（差し戻しでの二重消費�
 assignee_id           users・nullable（製作担当：制作権限を持つ staff / admin）
 due_on                date・nullable（納期）
 subtotal_cents / tax_cents / shipping_cents / total_cents
-stripe_payment_intent_id
+payment_kind          既定 'transfer'（'card' カード | 'transfer' 振込など | 'free' 0円の注文）
+stripe_checkout_session_id  nullable（開いている決済画面。払い直すときに閉じる）
+stripe_payment_intent_id    nullable（カードの支払い）
+subscription_id       subscriptions・nullable（定期便の請求ごとの注文）
+stripe_invoice_id     nullable・unique（定期便の請求。同じ請求から注文を二度作らない）
 placed_at
 created_at / updated_at
 ```
@@ -909,6 +968,8 @@ message               既定 ''（500文字まで）
 status                既定 'pending'（'pending' 入金待ち | 'paid' 入金確認済み | 'cancelled' 取り消し）
 paid_at               nullable
 confirmed_by_id       users・nullable（入金確認・取り消しをした店舗側のユーザー）
+payment_kind          既定 'transfer'（'card' カード | 'transfer' 振込など）
+stripe_checkout_session_id / stripe_payment_intent_id  nullable
 created_at / updated_at
 index [status, created_at]
 ```
@@ -940,10 +1001,15 @@ id
 user_id
 subscription_plan_id
 product_id
-status                'active' | 'paused' | 'cancelled'
-next_delivery_on      date
+address_id
+quantity              1〜10
+status                'incomplete' 申し込み手続き中 | 'active' お届け中 | 'paused' 一時停止中
+                      | 'past_due' 支払いの確認待ち | 'cancelled' 解約済み
+next_delivery_on      date（Stripe の次の請求日）
 interval_days
-stripe_subscription_id
+unit_price_cents      nullable（申し込み時の割引後の単価。カード決済に切り替える前の購読は NULL）
+stripe_checkout_session_id  nullable（申し込みの決済画面）
+stripe_subscription_id      nullable・unique
 created_at / updated_at
 ```
 
@@ -966,6 +1032,24 @@ ai_messages
   created_at
 ```
 
+### 21.18 stripe_webhook_events
+
+```text
+event_id              主キー（Stripe のイベント ID）
+event_type
+processed_at
+```
+
+### 21.19 shop_settings（ショップ情報。1行だけ）
+
+```text
+seller_name / representative_name / address / phone / email / contact_hours   既定 ''
+disclose_on_request   既定 false（true なら所在地・電話番号を公開せず、請求時に開示する）
+transfer_payment_due / shipping_lead_time / returns_policy   方針の文面（最初の1行を作るときに初期文面を入れる）
+extra_notes           既定 ''
+created_at / updated_at
+```
+
 ## 22. API
 
 - Rails で実装する。ベースパスは `/api/v1`。
@@ -983,7 +1067,6 @@ ai_messages
 | GET | `/me` | プロフィールの取得 |
 | PATCH | `/me` | プロフィールの更新 |
 | GET/POST/PATCH/DELETE | `/me/addresses[/:id]` | 住所の CRUD |
-| GET/POST/DELETE | `/me/payment_methods[/:id]` | 支払い方法 |
 
 ### 22.2 商品・検索
 
@@ -1002,14 +1085,16 @@ ai_messages
 
 | Method | Path | 説明 |
 |---|---|---|
-| GET | `/cart` | 自分のカート |
+| GET | `/cart` | 自分のカート（`subtotal_cents`、注文と同じ計算の `tax_cents` / `shipping_cents` / `total_cents`、`requires_shipping`、`items`） |
 | POST | `/cart/items` | 追加（body：`product_id`、`quantity`） |
 | PATCH | `/cart/items/:id` | 数量の変更 |
 | DELETE | `/cart/items/:id` | 削除 |
-| POST | `/orders` | 注文確定（body：`address_id`、`payment_method_id`）。デジタル商品のみなら `address_id` は省略可 |
+| POST | `/orders` | 注文確定（body：`address_id`、`payment_kind` = `card` / `transfer`（既定））。デジタル商品のみなら `address_id` は省略可。`card` は Stripe が未設定なら `503 payment_unavailable`（注文は作らない）、50円未満なら `422` |
+| POST | `/orders/:id/checkout_session` | カードで支払う決済画面（Stripe Checkout）の URL → `{ url }`。未払いのカードの注文だけ（それ以外は `422 not_card_payable`）。開いたままの前の決済画面は閉じる。body：`client` = `app`（アプリから開くとき） |
 | GET | `/orders` | 自分の注文一覧 |
 | GET | `/orders/:id` | 注文詳細（`status_label`、制作の進み具合の `events` / `physical` / `due_on`、`downloadable`、明細ごとの `is_digital`、投げ銭の `accepts_tips` と自分の `tips` を含む） |
 
+- 注文のレスポンスは、支払い方法 `payment_kind` / `payment_kind_label`、カードで支払えるか `card_payable`、定期便の注文なら `subscription_id` を含む。
 - カートの `requires_shipping` が `false`（デジタル商品のみ）なら配送先は要らない。
 - デジタル商品の数量は常に1。購入済みのデータをカートに追加すると `422 already_purchased`。
 
@@ -1030,8 +1115,9 @@ ai_messages
 
 | Method | Path | 説明 |
 |---|---|---|
-| POST | `/orders/:order_id/tips` | 申し込み（body：`amount_cents` = 100〜100,000、`message` 500文字まで）→ `201`、状態は `pending`。対象外の注文は `422`、他人の注文は `404` |
-| DELETE | `/orders/:order_id/tips/:id` | 入金待ちの投げ銭を取り消す（`204`）。入金確認済みは `422 not_pending` |
+| POST | `/orders/:order_id/tips` | 申し込み（body：`amount_cents` = 100〜100,000、`message` 500文字まで、`payment_kind` = `card` / `transfer`（既定））→ `201`、状態は `pending`。対象外の注文は `422`、他人の注文は `404` |
+| POST | `/orders/:order_id/tips/:id/checkout_session` | カードで支払う決済画面の URL → `{ url }`。入金待ちのカードの投げ銭だけ |
+| DELETE | `/orders/:order_id/tips/:id` | 入金待ちの投げ銭を取り消す（`204`。開いたままの決済画面は閉じる）。入金確認済みは `422 not_pending` |
 
 ### 22.6 サブスク
 
@@ -1039,10 +1125,21 @@ ai_messages
 |---|---|---|
 | GET | `/subscription_plans` | プラン一覧 |
 | GET | `/subscriptions` | 自分のサブスク一覧 |
-| POST | `/subscriptions` | 新規購読（body：`subscription_plan_id`、`product_id`、`address_id`、`payment_method_id`） |
-| PATCH | `/subscriptions/:id` | 一時停止 / 再開 / 次回日の変更 |
-| DELETE | `/subscriptions/:id` | 解約 |
+| POST | `/subscriptions` | 新規購読（body：`subscription_plan_id`、`product_id`、`address_id`、`quantity`、`client`）→ `201`、状態は `incomplete`、決済画面の URL `checkout_url` を含む。Stripe が未設定なら `503` |
+| PATCH | `/subscriptions/:id` | 一時停止 / 再開 / 次回日の変更（明日以降） / 配送先の変更（body：`action_type` = `pause` / `resume` / `change_next_date` / `change_address`）。申し込み手続き中・解約済みは `422 invalid_state` |
+| DELETE | `/subscriptions/:id` | 解約（申し込み手続き中なら決済画面を閉じて取り消す） |
 | POST | `/subscriptions/:id/skip` | 次回スキップ |
+| POST | `/subscriptions/portal_session` | 支払いカードの変更画面（Stripe Customer Portal）の URL → `{ url }` |
+
+- サブスクのレスポンスは `status_label`、Stripe が請求するか `card`、割引後の単価 `unit_price_cents`、1回の金額（税・送料込み）`charge_cents` を含む。
+
+### 22.6.1 カード決済の設定と Stripe の通知
+
+| Method | Path | 説明 |
+|---|---|---|
+| GET | `/payment_settings` | カード決済が使えるか → `{ card_enabled }`（ログイン不要） |
+| GET | `/legal_notice` | 特定商取引法に基づく表記（ログイン不要）→ `complete`、`seller`（請求時開示なら `address` / `phone` は `null`）、方針の文面、`pricing`（税率・送料）、`card_enabled`、`card_min_amount_cents`、`subscription_plans`、`tip_range_cents`、`updated_at` |
+| POST | `/webhooks/stripe` | Stripe からの通知（ログイン不要。`Stripe-Signature` で検証し、正しくなければ `400`。処理済みの通知は何もせず `204`）。[20.7節](#207-カード決済stripe) |
 
 ### 22.7 問い合わせ・オーダーメイド依頼
 
@@ -1140,11 +1237,12 @@ ai_messages
 - 写真の JSON：`{ id, kind, kind_label, caption, featured, position, url }`。一覧・詳細は `preview_photos`（featured の最大3枚）と `photos_count`、詳細は全件の `photos` を返す。
 - 更新系はすべて最新の詳細を返す。
 
-### 22.14 管理 — スタッフ権限（管理者専用）
+### 22.14 管理 — スタッフ権限・ショップ情報（管理者専用）
 
 | Method | Path | 説明 |
 |---|---|---|
 | GET | `/admin/users` | スタッフ・管理者の一覧（`role`、`permissions`）。params：`q`（名前・メール。指定時は会員も検索） |
+| GET / PATCH | `/admin/shop_setting` | ショップ情報の取得・更新（販売者の情報・`disclose_on_request`・方針の文面。`complete` を返す）。`email` の形式が不正なら `422` |
 | PATCH | `/admin/users/:id` | ロール・権限の設定（body：`role` = `member` / `staff` / `admin`、`permissions` = `sales` / `production` / `orders` の配列。スタッフのみ有効）。不明な権限・自分自身のロールの変更（`own_role`）は `422` |
 
 ## 23. 非機能要件
@@ -1178,12 +1276,15 @@ ai_messages
 | D7 | 管理画面は Web のみとし、モバイルアプリは顧客向けにする |
 | D8 | スタッフの権限は「販売」「制作」「注文」の組み合わせとする。可否は常に API が判定し、Web のメニューの出し分けは表示のためだけに使う |
 | D9 | Dify は本リポジトリの compose に含めず、公式の compose を別のディレクトリで起動する（同梱の Nginx・Rails と同一オリジンにできず、Cookie 認証が壊れるため）。Dify が未設定でも、AIコンシェルジュ以外の機能は動く |
-| D10 | 投げ銭はカード決済を使わず、入金は店舗が確認する。投げ銭は注文の売上に含めず、別に集計する |
+| D10 | 投げ銭はカード（Stripe）か振込などで受け付ける。振込などの入金は店舗が確認する。投げ銭は注文の売上に含めず、別に集計する（2026-10 にカード決済を追加） |
 | D11 | 入金後のキャンセルの返品・返金は、店舗が個別に対応する（自動の在庫戻し・返金はしない） |
 | D12 | 3Dモデルの写真は、保存前にブラウザで長辺1920pxの JPEG に縮小し、位置情報などの EXIF を取り除く |
 | D13 | DIY設計図は別機能にせず、3Dモデル管理の種別（`kind = blueprint`）として扱う。版管理・写真・組み立て方法・販売・配布の仕組みと API を共通にし、形式・プレビュー・販売先カテゴリ（`diy-plans`、SKU `DIY-<id>`）だけを種別で切り替える |
 | D14 | 版のファイルは作成後に変えない。最新版へのファイル追加は、ファイルを引き継いだ枝番の版（v3.1）として作り、いつ追加したかを履歴に残す |
 | D15 | 版の中のファイルのカテゴリ（オールインワン / 分割 / その他）は固定の3種類にする。カテゴリはファイルへのラベルで中身ではないので、D14 と違い登録済みの版でも変えられる（配布 ZIP のフォルダ分けは作り直す） |
+| D16 | カード情報はこのサービスで受け取らず、保存もしない。支払いは Stripe Checkout、支払いカードの変更は Customer Portal の画面で行い、支払いの状態は Webhook で反映する（2026-10 に、カード情報を API で受け取る `payment_methods` を廃止） |
+| D17 | 定期便はカード払いだけにする。請求ごとにお届け分の注文を作るため、振込などでは回らない。1回目は申し込み時に決済する |
+| D18 | 特定商取引法に基づく表記の販売者の情報（氏名・住所など）は公開リポジトリに書かず、DB に持って管理画面で編集する。所在地・電話番号は請求時開示を選べる。料金・支払方法などは計算に使う値から表示する |
 
 ## 25. 未決事項
 

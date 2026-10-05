@@ -54,7 +54,12 @@ export default function AdminOrdersPage() {
                   {o.items.map((i) => `${i.name}×${i.quantity}`).join("、")}
                 </td>
                 <td className="p-3 text-coffee-600">{fmtDate(o.placed_at)}</td>
-                <td className="p-3 text-right font-semibold tabular-nums">{yen(o.total_cents)}</td>
+                <td className="p-3 text-right">
+                  <div className="font-semibold tabular-nums">{yen(o.total_cents)}</div>
+                  {o.payment_kind !== "free" && (
+                    <div className="text-xs text-coffee-400">{o.payment_kind_label}{o.subscription_id ? "・定期便" : ""}</div>
+                  )}
+                </td>
                 <td className="p-3 text-center"><span className={`badge ${orderStatusBadge(o.status)}`}>{o.status_label}</span></td>
                 <td className="p-3 text-xs text-coffee-600">
                   {o.assignee?.name ?? <span className="text-coffee-300">未割り当て</span>}
