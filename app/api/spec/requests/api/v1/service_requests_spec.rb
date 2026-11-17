@@ -28,6 +28,7 @@ RSpec.describe "Api::V1::ServiceRequests", type: :request do
     end
 
     it "クライアントが status を送っても pending から開始する" do
+      create(:category, :custom) # オーダーメイドを受付中にする
       post "/api/v1/service_requests",
            params: { kind: "custom", subject: "名入れ", body: "刻印してほしい", status: "completed" },
            headers: auth_headers(user), as: :json

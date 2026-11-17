@@ -3,10 +3,15 @@
 import Link from "next/link";
 import { useAuth } from "@/lib/auth";
 import { adminHome } from "@/lib/permissions";
+import { sells } from "@/lib/storefront";
+import { useStorefront } from "@/lib/useStorefront";
 
 export function Header() {
   const { user, logout } = useAuth();
   const adminHref = adminHome(user);
+  // 販売していないカテゴリ・休止中の受付は、メニューに出さない (読み込むまでは出さない)
+  const storefront = useStorefront();
+  const sells3d = sells(storefront, "3d-models") || sells(storefront, "3d-prints");
   return (
     <header className="sticky top-0 z-40 border-b border-white/10 bg-espresso/95 text-coffee-50 backdrop-blur-md supports-[backdrop-filter]:bg-espresso/80">
       <div className="max-w-6xl mx-auto px-4 h-16 flex items-center gap-3 sm:gap-6">
@@ -14,7 +19,8 @@ export function Header() {
           href="/"
           className="flex shrink-0 items-center gap-2.5 transition-opacity hover:opacity-80"
         >
-          <span aria-hidden className="h-2.5 w-2.5 rounded-full bg-caramel" />
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/logo.svg" alt="" className="h-8 w-8" />
           <span className="flex flex-col leading-none">
             <span className="font-bold text-base tracking-[0.04em]">CraftFlow</span>
             <span className="hidden sm:block whitespace-nowrap text-[10px] font-medium tracking-[0.2em] text-coffee-400">
@@ -25,12 +31,12 @@ export function Header() {
         {/* 項目が入りきらない幅では折り返さず横スクロール */}
         <nav className="hidden md:flex min-w-0 gap-0.5 overflow-x-auto text-sm">
           <NavLink href="/search">商品を探す</NavLink>
-          <NavLink href="/3d">3Dプリント</NavLink>
-          <NavLink href="/custom">オーダーメイド</NavLink>
+          {sells3d && <NavLink href="/3d">3Dプリント</NavLink>}
+          {storefront?.custom_orders && <NavLink href="/custom">オーダーメイド</NavLink>}
           <NavLink href="/cart">カート</NavLink>
           <NavLink href="/orders">注文履歴</NavLink>
           <NavLink href="/requests">問い合わせ</NavLink>
-          <NavLink href="/subscriptions">サブスク</NavLink>
+          {storefront?.subscriptions && <NavLink href="/subscriptions">サブスク</NavLink>}
         </nav>
         <div className="ml-auto flex shrink-0 items-center gap-2 sm:gap-3 whitespace-nowrap text-sm">
           {adminHref && (

@@ -68,6 +68,8 @@ export type Category = {
   slug: string;
   parent_id: number | null;
   position: number;
+  /** 販売中か (止めたカテゴリは店頭に出さない) */
+  active: boolean;
 };
 
 export type Address = {

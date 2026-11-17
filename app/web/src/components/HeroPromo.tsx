@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import "./HeroPromo.css";
+import { useStorefront } from "@/lib/useStorefront";
 
 // 同じタブで一度再生したら、以降は最後の場面から表示する
 const PLAYED_KEY = "craftflow:hero-played";
@@ -136,6 +137,7 @@ function pageTop(el: HTMLElement) {
  * 背景の家具は本編と独立して回り続ける。再生中もスクロールは自由。
  */
 export function HeroPromo() {
+  const storefront = useStorefront(); // 休止中のオーダーメイドのボタンは出さない
   const ref = useRef<HTMLElement>(null);
   const promoRef = useRef<HTMLDivElement>(null);
   const finishRef = useRef<(instant: boolean) => void>(() => {});
@@ -269,15 +271,15 @@ export function HeroPromo() {
               横長では補足コピーが左下、.brand が右下に分かれる。縦長の並び順は CSS の order で決める */}
           <div className="scene scene-brand">
             <p className="sub">
-              3Dプリント品・モデルデータ・ハンドメイド作品を、つくり手から直接。<br />
-              ご注文は<b>いまどの工程にあるか</b>を、いつでも確認できます。
+              つくり手の作品とデータを、つくり手から直接。<br />
+              ご注文が<b>いまどの工程にあるか</b>は、いつでも確認できます。
             </p>
             <div className="brand">
               <p className="shop">CraftFlow</p>
               <p className="tag">つくり手から直接とどく、ものづくりのお店</p>
               <div className="actions">
                 <Link href="/search" className="cta">作品を探す</Link>
-                <Link href="/custom" className="cta cta-outline">オーダーメイドを相談</Link>
+                {storefront?.custom_orders && <Link href="/custom" className="cta cta-outline">オーダーメイドを相談</Link>}
               </div>
             </div>
           </div>

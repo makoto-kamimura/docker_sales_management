@@ -30,6 +30,7 @@ Rails.application.routes.draw do
         collection { get :search }
       end
       resources :categories, only: %i[index]
+      resource :storefront, only: :show # いま店頭で扱っているもの (販売中のカテゴリ・オーダーメイド・定期便)
 
       # カート / 注文 (要件1)
       resource :cart, only: %i[show] do
@@ -87,6 +88,7 @@ Rails.application.routes.draw do
           resource :materials, only: %i[show update], controller: "product_materials" # レシピ (使用材料・制作権限)
         end
         resources :inventories, only: %i[update], param: :product_id
+        resources :categories, only: %i[index update]              # カテゴリの販売の切り替え
         namespace :dashboard do                                    # 売上・分析
           get :sales
         end

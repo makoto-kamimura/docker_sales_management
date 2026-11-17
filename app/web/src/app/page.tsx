@@ -4,26 +4,37 @@ import { SERVICE_SLUGS, type Product } from "@/lib/types";
 import { yen } from "@/lib/format";
 import { ORDER_FLOW, ORDER_STATUS_LABEL } from "@/lib/orderStatus";
 import { HeroPromo } from "@/components/HeroPromo";
+import { fetchStorefront } from "@/lib/storefront";
 
-async function getProducts(): Promise<Product[]> {
+// 読み込めなかったときは null (公開中の商品がまだ 0 件のときと、表示を分ける)
+async function getProducts(): Promise<Product[] | null> {
   try {
     return await api<Product[]>("/products");
   } catch {
-    return [];
+    return null;
   }
 }
 
+// 取り扱いのカード。販売中のカテゴリ (slug) だけを出す
 const CATEGORIES = [
-  { label: "3D PRINTS", title: "3Dプリント品", desc: "受注後に出力・仕上げてお届けする完成品。", href: "/3d", cta: "見る →" },
-  { label: "3D MODELS", title: "3Dモデルデータ", desc: "自宅のプリンタで出力できるSTLデータ。", href: "/search?category=3d-models", cta: "見る →" },
-  { label: "HANDMADE", title: "ハンドメイド雑貨", desc: "手縫いのレザー小物や無垢材の木工品。", href: "/search?category=handmade", cta: "見る →" },
-  { label: "MATERIALS", title: "素材・キット", desc: "フィラメントやクラフトキット。定期便も。", href: "/search?category=materials", cta: "見る →" },
-  { label: "DIY PLANS", title: "DIY設計図", desc: "家具や棚を自分で作れる図面データ (PDF / DXF)。", href: "/search?category=diy-plans", cta: "見る →" },
-  { label: "CUSTOM", title: "オーダーメイド", desc: "名入れ・サイズ変更・一点ものの制作を依頼。", href: "/custom", cta: "相談する →" },
+  { slug: "3d-prints", label: "3D PRINTS", title: "3Dプリント品", desc: "受注後に出力・仕上げてお届けする完成品。", href: "/3d", cta: "見る →" },
+  { slug: "3d-models", label: "3D MODELS", title: "3Dモデルデータ", desc: "自宅のプリンタで出力できるSTLデータ。購入後すぐダウンロード。", href: "/search?category=3d-models", cta: "見る →" },
+  { slug: "handmade", label: "HANDMADE", title: "ハンドメイド雑貨", desc: "手縫いのレザー小物や無垢材の木工品。", href: "/search?category=handmade", cta: "見る →" },
+  { slug: "materials", label: "MATERIALS", title: "素材・キット", desc: "フィラメントやクラフトキット。定期便も。", href: "/search?category=materials", cta: "見る →" },
+  { slug: "diy-plans", label: "DIY PLANS", title: "DIY設計図", desc: "家具や棚を自分で作れる図面データ (PDF / DXF)。", href: "/search?category=diy-plans", cta: "見る →" },
+  { slug: "custom", label: "CUSTOM", title: "オーダーメイド", desc: "名入れ・サイズ変更・一点ものの制作を依頼。", href: "/custom", cta: "相談する →" },
 ] as const;
 
+// 受注してから作る (制作の工程がある) カテゴリ
+const MADE_TO_ORDER_SLUGS = ["3d-prints", "handmade", "custom"];
+
 export default async function Home() {
-  const products = await getProducts();
+  const [products, storefront] = await Promise.all([getProducts(), fetchStorefront()]);
+  // 店頭の状態を読めなかったときは、すべて出す (読めないことで案内が消えないように)
+  const active = storefront ? new Set(storefront.categories.map((c) => c.slug)) : null;
+  const categories = CATEGORIES.filter((c) => !active || active.has(c.slug));
+  const madeToOrder = !active || MADE_TO_ORDER_SLUGS.some((s) => active.has(s));
+  const customOrders = storefront ? storefront.custom_orders : true;
   return (
     <div className="space-y-16">
       {/* ヒーロー — docs/design/hero.html の15秒ループ */}
@@ -33,10 +44,12 @@ export default async function Home() {
       <section>
         <div className="flex items-baseline justify-between mb-5">
           <h2 className="text-xl font-bold">取り扱い</h2>
-          <span className="text-xs uppercase tracking-[0.18em] text-coffee-400">{CATEGORIES.length} Categories</span>
+          <span className="text-xs uppercase tracking-[0.18em] text-coffee-400">
+            {categories.length} {categories.length === 1 ? "Category" : "Categories"}
+          </span>
         </div>
-        <ul className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {CATEGORIES.map((c) => (
+        <ul className={`grid gap-4 ${categories.length === 1 ? "grid-cols-1" : "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3"}`}>
+          {categories.map((c) => (
             <li key={c.label}>
               <Link
                 href={c.href}
@@ -56,8 +69,8 @@ export default async function Home() {
         </ul>
       </section>
 
-      {/* 制作状況の見える化 */}
-      <section className="card p-6 sm:p-8">
+      {/* 制作状況の見える化 (受注してから作るものを販売しているときだけ) */}
+      {madeToOrder && <section className="card p-6 sm:p-8">
         <span className="eyebrow">Made to order</span>
         <h2 className="mt-2 text-xl font-bold">いま、どの工程？が見える</h2>
         <p className="mt-1.5 text-sm text-coffee-500 max-w-2xl leading-relaxed">
@@ -78,7 +91,7 @@ export default async function Home() {
             </li>
           ))}
         </ol>
-      </section>
+      </section>}
 
       {/* 新着商品 */}
       <section>
@@ -88,9 +101,20 @@ export default async function Home() {
             すべて見る →
           </Link>
         </div>
-        {products.length === 0 ? (
+        {!products ? (
           <div className="card p-10 text-center text-sm text-coffee-500">
-            商品を読み込めませんでした。
+            商品を読み込めませんでした。時間をおいて、もう一度お試しください。
+          </div>
+        ) : products.length === 0 ? (
+          <div className="card p-10 text-center text-sm text-coffee-500">
+            <p>ただいま出品の準備中です。</p>
+            {customOrders && (
+              <p className="mt-2">
+                名入れや一点ものの制作は、
+                <Link href="/custom" className="font-semibold text-caramel hover:underline">オーダーメイド</Link>
+                からご相談いただけます。
+              </p>
+            )}
           </div>
         ) : (
           <ul className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">

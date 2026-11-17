@@ -8,6 +8,7 @@ import { yen } from "@/lib/format";
 import { DIGITAL_FILE_ACCEPT, MODEL_KINDS } from "@/lib/modelKinds";
 import { can } from "@/lib/permissions";
 import type { Category, Product } from "@/lib/types";
+import { CategorySwitch } from "@/components/admin/CategorySwitch";
 
 export default function AdminProductsPage() {
   const { user, token } = useAuth();
@@ -79,6 +80,7 @@ export default function AdminProductsPage() {
   return (
     <div className="space-y-6">
       <h1 className="text-2xl font-bold">商品管理</h1>
+      <CategorySwitch token={token} />
       {err && <p className="text-sm text-rose-600">{err}</p>}
 
       <div className="card overflow-x-auto">

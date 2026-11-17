@@ -14,6 +14,10 @@ module Api
       end
 
       def create
+        if params[:kind] == "custom" && !Storefront.custom_orders?
+          return render_error(code: "custom_orders_paused", message: "現在、オーダーメイドの受付を休止しています", status: :unprocessable_entity)
+        end
+
         req = current_user.service_requests.create!(create_params)
         render json: serialize(req), status: :created
       end

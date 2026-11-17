@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { FlatList, Pressable, RefreshControl, StyleSheet } from 'react-native';
+import { FlatList, Image, Pressable, RefreshControl, StyleSheet } from 'react-native';
 import { Link } from 'expo-router';
 
 const ACCENT = '#ff5722';
@@ -8,9 +8,11 @@ import { Text, View } from '@/components/Themed';
 import { api } from '@/lib/api';
 import { yen } from '@/lib/format';
 import type { Product } from '@/lib/types';
+import { useStorefront } from '@/lib/storefront';
 
 export default function HomeScreen() {
   const [products, setProducts] = useState<Product[] | null>(null);
+  const storefront = useStorefront();
   const [refreshing, setRefreshing] = useState(false);
 
   const load = useCallback(async () => {
@@ -31,10 +33,17 @@ export default function HomeScreen() {
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={async () => { setRefreshing(true); await load(); setRefreshing(false); }} />}
         ListHeaderComponent={
           <View style={{ padding: 16 }}>
-            <Text style={styles.brand}>CraftFlow</Text>
-            <Text style={styles.tagline}>つくる人のネットショップ · 3D PRINT · HANDMADE · CUSTOM</Text>
+            <View style={styles.brandRow}>
+              <Image source={require('@/assets/images/logo.png')} style={styles.brandLogo} />
+              <Text style={styles.brand}>CraftFlow</Text>
+            </View>
+            <Text style={styles.tagline}>
+              つくる人のネットショップ{storefront?.categories.length ? ` · ${storefront.categories.filter((c) => !c.service).map((c) => c.name).join(' · ')}` : ''}
+            </Text>
             <View style={styles.actions}>
-              <Link href={{ pathname: '/service-request', params: { kind: 'custom' } }} style={styles.actionBtn}>オーダーメイド</Link>
+              {storefront?.custom_orders ? (
+                <Link href={{ pathname: '/service-request', params: { kind: 'custom' } }} style={styles.actionBtn}>オーダーメイド</Link>
+              ) : null}
               <Link href={{ pathname: '/service-request', params: { kind: 'inquiry' } }} style={styles.actionBtn}>問い合わせ</Link>
               <Link href="/requests" style={styles.actionBtnOutline}>問い合わせ一覧</Link>
             </View>
@@ -52,7 +61,7 @@ export default function HomeScreen() {
             </Pressable>
           </Link>
         )}
-        ListEmptyComponent={<Text style={{ padding: 16, opacity: 0.5 }}>読み込み中…</Text>}
+        ListEmptyComponent={<Text style={{ padding: 16, opacity: 0.5 }}>{products ? 'ただいま出品の準備中です。' : '読み込み中…'}</Text>}
       />
     </View>
   );
@@ -60,6 +69,8 @@ export default function HomeScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
+  brandRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  brandLogo: { width: 36, height: 36 },
   brand: { fontSize: 24, fontWeight: 'bold', letterSpacing: 0.5, color: '#1b1b19' },
   tagline: { marginTop: 4, fontSize: 10, letterSpacing: 1, color: '#8c8c86' },
   actions: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 14 },

@@ -8,12 +8,14 @@ import { useAuth } from '@/lib/auth';
 import { yen, fmtDate } from '@/lib/format';
 import { REQUEST_KIND_LABEL as KIND_LABEL, REQUEST_STATUS_LABEL as STATUS_LABEL } from '@/lib/orderStatus';
 import type { ServiceRequest } from '@/lib/types';
+import { useStorefront } from '@/lib/storefront';
 
 const ACCENT = '#ff5722';
 
 export default function RequestsScreen() {
   const { token } = useAuth();
   const [reqs, setReqs] = useState<ServiceRequest[] | null>(null);
+  const storefront = useStorefront();
   const [refreshing, setRefreshing] = useState(false);
 
   const load = useCallback(async () => {
@@ -48,7 +50,9 @@ export default function RequestsScreen() {
         ListHeaderComponent={
           <View style={styles.actions}>
             <Link href={{ pathname: '/service-request', params: { kind: 'inquiry' } }} style={styles.actionBtn}>問い合わせる</Link>
-            <Link href={{ pathname: '/service-request', params: { kind: 'custom' } }} style={styles.actionBtn}>オーダーメイド</Link>
+            {storefront?.custom_orders ? (
+              <Link href={{ pathname: '/service-request', params: { kind: 'custom' } }} style={styles.actionBtn}>オーダーメイド</Link>
+            ) : null}
           </View>
         }
         renderItem={({ item }) => (

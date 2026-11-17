@@ -2,6 +2,7 @@ import Link from "next/link";
 import { api } from "@/lib/api";
 import { PRINT_3D_SLUGS, type Product } from "@/lib/types";
 import { yen } from "@/lib/format";
+import { fetchStorefront, sells } from "@/lib/storefront";
 
 async function getProducts(slug: string): Promise<Product[]> {
   try {
@@ -12,10 +13,14 @@ async function getProducts(slug: string): Promise<Product[]> {
 }
 
 export default async function Print3DPage() {
-  const [models, prints] = await Promise.all([
+  const [models, prints, storefront] = await Promise.all([
     getProducts(PRINT_3D_SLUGS.models),
     getProducts(PRINT_3D_SLUGS.prints),
+    fetchStorefront(),
   ]);
+  // 販売していないほうの欄は出さない (店頭の状態を読めなければ両方出す)
+  const showModels = !storefront || sells(storefront, PRINT_3D_SLUGS.models);
+  const showPrints = !storefront || sells(storefront, PRINT_3D_SLUGS.prints);
 
   return (
     <div className="space-y-12">
@@ -23,23 +28,28 @@ export default async function Print3DPage() {
         <span className="eyebrow text-caramel">3D Print Lab</span>
         <h1 className="mt-2 text-2xl font-bold">3Dプリント</h1>
         <p className="text-sm text-coffee-500 mt-1 max-w-2xl leading-relaxed">
-          バイク・ガレージ・キャンプで使える小物を、自宅の3Dプリンタで出力できる<strong>モデルデータ</strong>と、
-          当店で出力・仕上げた<strong>プリント品</strong>の2通りで販売しています。
+          {showModels && showPrints ? (
+            <>暮らしの小物を、自宅の3Dプリンタで出力できる<strong>モデルデータ</strong>と、当店で出力・仕上げた<strong>プリント品</strong>の2通りで販売しています。</>
+          ) : showPrints ? (
+            <>暮らしの小物を、当店で出力・仕上げた<strong>プリント品</strong>として販売しています。</>
+          ) : (
+            <>暮らしの小物を、自宅の3Dプリンタで出力できる<strong>モデルデータ</strong>として販売しています。</>
+          )}
         </p>
       </section>
 
-      <ProductSection
+      {showModels && <ProductSection
         label="3D MODEL DATA"
         title="モデルデータ (ダウンロード)"
         note="STL / 3MF などのデータ販売です。お支払い確認後、注文詳細からダウンロードできます。送料はかかりません。"
         products={models}
-      />
-      <ProductSection
+      />}
+      {showPrints && <ProductSection
         label="3D PRINTS"
         title="プリント品 (配送)"
         note="当店で出力・仕上げ済みの完成品です。通常の商品と同様に配送します。"
         products={prints}
-      />
+      />}
     </div>
   );
 }

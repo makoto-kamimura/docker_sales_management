@@ -55,7 +55,7 @@ function SearchInner() {
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold">商品を探す</h1>
-        <p className="text-sm text-coffee-500 mt-1">3Dプリント品・モデルデータ・ハンドメイド作品・素材を、キーワードやAIセマンティック検索で。</p>
+        <p className="text-sm text-coffee-500 mt-1">キーワードやAIセマンティック検索で、作品を探せます。</p>
       </div>
       <section className="card p-5">
         <form
@@ -64,7 +64,7 @@ function SearchInner() {
         >
           <div className="flex-1 min-w-[16rem]">
             <label className="field-label">キーワード / 質問</label>
-            <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="例: スマホスタンド / レザー / デスクまわりの小物"
+            <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="例: ホルダー / デスクまわりの小物"
                    className="input" />
           </div>
           <div>
@@ -80,7 +80,7 @@ function SearchInner() {
                 <label className="field-label">カテゴリ</label>
                 <select value={categoryId} onChange={(e) => setCategoryId(e.target.value)} className="input !w-auto">
                   <option value="">すべて</option>
-                  {cats?.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+                  {cats?.filter((c) => c.active && c.slug !== "custom").map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
                 </select>
               </div>
               <div>

@@ -29,7 +29,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
               </span>
               <span className="flex flex-col sm:items-end items-center gap-1">
                 <a href="/legal/tokushoho" className="hover:text-caramel">特定商取引法に基づく表記</a>
-                <span className="tracking-wide">3D PRINT · HANDMADE · MATERIALS · CUSTOM ORDER · © {new Date().getFullYear()}</span>
+                <span className="tracking-wide">© {new Date().getFullYear()} CraftFlow</span>
               </span>
             </div>
           </footer>

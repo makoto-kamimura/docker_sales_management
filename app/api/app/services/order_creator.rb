@@ -14,6 +14,7 @@ class OrderCreator
 
     items = cart.items.includes(product: [:inventory, { model_file_attachment: :blob }]).map do |ci|
       product = ci.product
+      raise Error, "現在お取り扱いしていない商品です: #{product.name}" unless product.category&.active?
       raise Error, "在庫不足: #{product.name}" unless product.in_stock?(ci.quantity)
       raise Error, "購入済みのデータです: #{product.name}" if @user.owns_digital?(product)
       {

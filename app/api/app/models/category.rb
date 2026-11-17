@@ -11,6 +11,16 @@ class Category < ApplicationRecord
                    format: { with: /\A[a-z0-9_\-]+\z/ }
 
   default_scope { order(:position, :id) }
+  # 販売中のカテゴリ。販売を止めたカテゴリの商品は、一覧・カート・注文・AIコンシェルジュの案内から外れる
+  scope :active, -> { where(active: true) }
+
+  def self.active_slugs
+    active.pluck(:slug)
+  end
+
+  def self.slug_active?(slug)
+    active.exists?(slug: slug)
+  end
 
   def service?
     SERVICE_SLUGS.include?(slug)
