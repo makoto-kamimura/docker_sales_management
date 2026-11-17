@@ -30,11 +30,20 @@ services:
     environment:
       RAILS_ENV: development
       DATABASE_URL: postgres://${POSTGRES_USER:-app}:${POSTGRES_PASSWORD:-app_password}@postgres:5432/${POSTGRES_DB:-app_development}
-      DIFY_API_BASE: ${DIFY_API_BASE:-http://dify-api:5001/v1}
-      DIFY_API_KEY: ${DIFY_API_KEY:-}
+      # AIコンシェルジュ (Claude API。任意)。ANTHROPIC_API_KEY が空なら無効 (.env.example)
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      ANTHROPIC_MODEL: ${ANTHROPIC_MODEL:-}
       STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY:-}
       STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET:-}
       APP_BASE_URL: ${APP_BASE_URL:-http://localhost}
+      # SSO (任意)。4 つがそろったときだけ有効 (.env.example)
+      OIDC_ISSUER: ${OIDC_ISSUER:-}
+      OIDC_CLIENT_ID: ${OIDC_CLIENT_ID:-}
+      OIDC_CLIENT_SECRET: ${OIDC_CLIENT_SECRET:-}
+      PUBLIC_BASE_URL: ${PUBLIC_BASE_URL:-http://localhost}
+      OIDC_REQUIRE_MFA: ${OIDC_REQUIRE_MFA:-true}
+      OIDC_MOBILE_REDIRECT_PREFIXES: ${OIDC_MOBILE_REDIRECT_PREFIXES:-craftflow://,exp://}
+      OIDC_ALLOW_PASSWORD_FOR_SSO_ONLY: ${OIDC_ALLOW_PASSWORD_FOR_SSO_ONLY:-false}
       RAILS_LOG_TO_STDOUT: "true"
       BUNDLE_PATH: /usr/local/bundle
     volumes:
@@ -103,10 +112,6 @@ services:
       - api
       - web
     networks: [appnet]
-
-  # Dify (AIコンシェルジュプラットフォーム) は公式 compose を別ディレクトリで起動する構成に統一。
-  # Rails からは host.docker.internal:8080 経由で Dify nginx を叩く。
-  # 詳細: docs/runbooks/development.md §3, app/ai/README.md
 
 volumes:
   postgres_data:

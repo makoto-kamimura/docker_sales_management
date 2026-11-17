@@ -11,6 +11,7 @@ import {
   REQUEST_KIND_LABEL, REQUEST_STATUSES, REQUEST_STATUS_LABEL, requestStatusBadge,
 } from "@/lib/orderStatus";
 import type { ServiceRequest } from "@/lib/types";
+import { ConciergeBadge, RequestBody } from "@/components/RequestBody";
 
 type AdminRequest = ServiceRequest & { user: { id: number; email: string; name: string } };
 
@@ -79,6 +80,36 @@ function AdminRequestsInner() {
   );
 }
 
+/** 制作依頼書 (Markdown) をそのまま別の AI やツールに渡せるように、コピー・保存する */
+function MarkdownActions({ id, markdown }: { id: number; markdown: string }) {
+  const [copied, setCopied] = useState(false);
+  async function copy() {
+    try {
+      await navigator.clipboard.writeText(markdown);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      alert("コピーできませんでした。「.md を保存」をお使いください。");
+    }
+  }
+  function download() {
+    const url = URL.createObjectURL(new Blob([markdown], { type: "text/markdown;charset=utf-8" }));
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `custom-order-${id}.md`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+  return (
+    <div className="flex flex-wrap gap-2">
+      <button type="button" onClick={() => void copy()} className="btn btn-outline !py-1 !text-xs">
+        {copied ? "コピーしました" : "Markdownをコピー"}
+      </button>
+      <button type="button" onClick={download} className="btn btn-outline !py-1 !text-xs">.md を保存</button>
+    </div>
+  );
+}
+
 function RequestItem({ r, onPatch }: { r: AdminRequest; onPatch: (body: Record<string, unknown>) => Promise<void> }) {
   const [reply, setReply] = useState(r.reply);
   return (
@@ -89,6 +120,7 @@ function RequestItem({ r, onPatch }: { r: AdminRequest; onPatch: (body: Record<s
             {REQUEST_KIND_LABEL[r.kind] ?? r.kind} #{r.id}
           </span>
           <span className={`badge ${requestStatusBadge(r.status)}`}>{REQUEST_STATUS_LABEL[r.status] ?? r.status}</span>
+          {r.from_concierge && <ConciergeBadge />}
         </div>
         <span className="text-xs text-coffee-400">{fmtDate(r.created_at)}</span>
       </div>
@@ -100,7 +132,8 @@ function RequestItem({ r, onPatch }: { r: AdminRequest; onPatch: (body: Record<s
       </div>
 
       {r.subject && <div className="text-sm font-semibold">{r.subject}</div>}
-      <p className="text-sm text-coffee-700 whitespace-pre-line">{r.body}</p>
+      <RequestBody body={r.body} collapsedClass="max-h-64" />
+      {r.from_concierge && <MarkdownActions id={r.id} markdown={r.body} />}
 
       <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-coffee-500">
         {r.order_id && <Link href={`/admin/orders/${r.order_id}`} className="text-caramel hover:underline">注文 #{r.order_id}</Link>}

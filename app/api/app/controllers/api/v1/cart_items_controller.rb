@@ -5,7 +5,7 @@ module Api
 
       def create
         cart = current_user.cart || current_user.create_cart!
-        product = Product.find(params.require(:product_id))
+        product = Product.in_active_category.find(params.require(:product_id))
         if current_user.owns_digital?(product)
           return render_error(code: "already_purchased", message: "購入済みのデータです。注文履歴から再ダウンロードできます",
                               status: :unprocessable_entity)

@@ -3,7 +3,7 @@ module Api
     class CategoriesController < BaseController
       def index
         render json: Category.all.map { |c|
-          c.attributes.slice("id", "name", "slug", "parent_id", "position")
+          c.attributes.slice("id", "name", "slug", "parent_id", "position", "active")
         }
       end
     end

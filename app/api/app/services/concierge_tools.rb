@@ -1,0 +1,114 @@
+# AIコンシェルジュ (Claude) が使うツール。店頭に並んでいる商品 (Product.on_sale) だけを、DB から直接引く。
+# propose_custom_order は、聞き取ったオーダーメイドの内容から依頼の下書きを作り、このインスタンスに残す
+# (ConciergeChat が応答のメッセージに保存する)。インスタンスは 1 回の発話ごとに作る。
+# ツールの定義は会話中に変えない (プロンプトキャッシュと、思考ブロックの引き継ぎのため)
+class ConciergeTools
+  SEARCH_LIMIT = 8
+  DESCRIPTION_LIMIT = 1_500
+
+  DEFINITIONS = [
+    {
+      name: "search_products",
+      description: "店頭に並んでいる商品を、キーワードとカテゴリで探す。お客様が作品・データを探しているときや、" \
+                   "おすすめを求められたときに使う。結果にない商品は存在しないものとして扱う。",
+      input_schema: {
+        type: "object",
+        properties: {
+          query: { type: "string", description: "探す言葉 (例: スマホスタンド、デスク、PETG)。カテゴリの一覧を見たいだけなら空文字" },
+          category_slug: { type: "string", description: "カテゴリで絞るときのスラッグ (例: 3d-models)。絞らないなら空文字" }
+        },
+        required: %w[query]
+      }
+    },
+    {
+      name: "get_product",
+      description: "商品 1 件の詳しい情報 (説明・ライセンス・データ形式・在庫) を返す。search_products で見つけた商品の id を渡す。",
+      input_schema: {
+        type: "object",
+        properties: {
+          product_id: { type: "integer", description: "商品の id" }
+        },
+        required: %w[product_id]
+      }
+    },
+    CustomOrderDraft::TOOL_DEFINITION
+  ].freeze
+
+  class InvalidInput < StandardError; end
+
+  # この発話で作った依頼の下書き (CustomOrderDraft)。呼び直されたら最後のもの
+  attr_reader :order_draft
+
+  # 戻り値は tool_result の content に入れる文字列 (JSON)
+  def call(name, input)
+    input = (input || {}).to_h.transform_keys(&:to_s)
+    case name
+    when "search_products" then search_products(query: input["query"].to_s, category_slug: input["category_slug"].to_s)
+    when "get_product" then get_product(input["product_id"])
+    when "propose_custom_order" then propose_custom_order(input)
+    else raise InvalidInput, "不明なツールです: #{name}"
+    end.to_json
+  end
+
+  private
+
+  def search_products(query:, category_slug:)
+    scope = Product.on_sale.includes(:category)
+    scope = scope.by_category_slug(category_slug.strip) if category_slug.present?
+    q = query.strip
+    rows =
+      if q.empty?
+        scope.order(published_at: :desc).limit(SEARCH_LIMIT).to_a
+      else
+        # 全文検索 (trigram) で見つからなければ、名前・説明・タグの部分一致で拾う (日本語の短い語向け)
+        hits = scope.keyword_search(q).limit(SEARCH_LIMIT).to_a
+        hits.presence || scope.where("products.name ILIKE :q OR products.description ILIKE :q OR array_to_string(products.tags, ' ') ILIKE :q",
+                                     q: "%#{Product.sanitize_sql_like(q)}%").limit(SEARCH_LIMIT).to_a
+      end
+    { count: rows.size, products: rows.map { |p| summary(p) } }
+  end
+
+  def get_product(id)
+    raise InvalidInput, "product_id を整数で指定してください" unless id.to_s.match?(/\A\d+\z/)
+
+    product = Product.on_sale.includes(:category).find_by(id: id)
+    return { found: false, message: "店頭に並んでいる商品の中に、この id の商品はありません" } unless product
+
+    detail = summary(product).merge(
+      description: product.description.to_s[0, DESCRIPTION_LIMIT],
+      in_stock: product.in_stock?(1)
+    )
+    if product.is_digital?
+      detail[:license] = product.license.presence || "（記載なし）"
+      detail[:file_format] = product.model_file_format
+    end
+    { found: true, product: detail }
+  end
+
+  def propose_custom_order(input)
+    raise InvalidInput, "現在、オーダーメイドの依頼は受付を休止しています。下書きは作れません" unless Storefront.custom_orders?
+
+    @order_draft = CustomOrderDraft.from_tool_input(input)
+    {
+      created: true,
+      message: "下書きを作り、画面に確認カード (依頼書と「はい、オーダーする」「修正する」のボタン) を出しました。" \
+               "要点を短く伝え、最後に「この内容でオーダーしますか？」と尋ねてください。依頼書の全文は繰り返さず、[CTA: ...] も付けないでください。",
+      title: @order_draft.title,
+      preferred_date: @order_draft.preferred_date&.iso8601,
+      budget_yen: @order_draft.budget_yen,
+      reference_products: @order_draft.reference_products.map(&:name)
+    }
+  rescue CustomOrderDraft::InvalidInput => e
+    raise InvalidInput, e.message
+  end
+
+  def summary(p)
+    {
+      id: p.id, sku: p.sku, name: p.name, price_yen: p.price_cents,
+      category: p.category.name, category_slug: p.category.slug,
+      kind: p.is_digital? ? "ダウンロード販売" : (p.category.service? ? "依頼制 (目安の価格)" : "物販 (配送)"),
+      tags: p.tags, subscribable: p.is_subscribable,
+      page: "/products/#{p.id}"
+    }
+  end
+end

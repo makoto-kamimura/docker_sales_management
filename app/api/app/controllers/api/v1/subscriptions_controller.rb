@@ -21,7 +21,7 @@ module Api
       def create
         stripe = StripeService.new # 定期便はカード払いだけ (未設定なら 503)
         plan = SubscriptionPlan.active.find(params.require(:subscription_plan_id))
-        product = Product.find(params.require(:product_id))
+        product = Product.in_active_category.find(params.require(:product_id))
         address = current_user.addresses.find(params.require(:address_id))
 
         unless product.is_subscribable

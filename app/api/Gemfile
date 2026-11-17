@@ -21,9 +21,10 @@ gem "neighbor"  # pgvector for Rails
 # サブスク決済
 gem "stripe"
 
-# AI連携 (Dify)
+# 外部 API (埋め込み・認証サーバー)
 gem "faraday"
 gem "faraday-retry"
+gem "anthropic"  # AIコンシェルジュ (Claude API の公式 SDK)
 
 group :development, :test do
   gem "debug", platforms: %i[ mri windows ], require: "debug/prelude"

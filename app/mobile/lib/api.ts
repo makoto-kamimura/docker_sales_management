@@ -9,7 +9,15 @@ export class ApiError extends Error {
   }
 }
 
-export async function api<T = unknown>(path: string, opts: FetchOpts = {}): Promise<T> {
+// 認証つきリクエストが 401 のときに呼ぶトークン更新処理 (AuthProvider が登録する)。
+// 新しいアクセストークンを返す。更新できなければ null (ログアウト済み)
+let refreshAuth: (() => Promise<string | null>) | null = null;
+
+export function setAuthRefresher(fn: (() => Promise<string | null>) | null) {
+  refreshAuth = fn;
+}
+
+export async function api<T = unknown>(path: string, opts: FetchOpts = {}, retried = false): Promise<T> {
   const headers = new Headers(opts.headers);
   if (!headers.has("Content-Type") && opts.body && typeof opts.body === "string") {
     headers.set("Content-Type", "application/json");
@@ -17,6 +25,11 @@ export async function api<T = unknown>(path: string, opts: FetchOpts = {}): Prom
   if (opts.auth) headers.set("Authorization", `Bearer ${opts.auth}`);
 
   const res = await fetch(`${API_BASE}/v1${path}`, { ...opts, headers });
+  // アクセストークン (有効期限1時間) が切れていたら、更新して1回だけやり直す
+  if (res.status === 401 && opts.auth && !retried && refreshAuth) {
+    const fresh = await refreshAuth();
+    if (fresh) return api<T>(path, { ...opts, auth: fresh }, true);
+  }
   if (!res.ok) {
     let body: { error?: { code: string; message: string } } = {};
     try { body = await res.json(); } catch { /* ignore */ }

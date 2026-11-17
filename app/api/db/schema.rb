@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_10_05_000002) do
+ActiveRecord::Schema[7.2].define(version: 2026_11_17_000004) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "citext"
   enable_extension "pg_trgm"
@@ -64,7 +64,6 @@ ActiveRecord::Schema[7.2].define(version: 2026_10_05_000002) do
 
   create_table "ai_conversations", force: :cascade do |t|
     t.bigint "user_id"
-    t.string "dify_conversation_id"
     t.datetime "started_at", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
@@ -77,6 +76,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_10_05_000002) do
     t.text "content", null: false
     t.string "cta"
     t.datetime "created_at", null: false
+    t.jsonb "order_draft"
     t.index ["ai_conversation_id"], name: "index_ai_messages_on_ai_conversation_id"
   end
 
@@ -115,6 +115,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_10_05_000002) do
     t.integer "position", default: 0
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.boolean "active", default: true, null: false
     t.index ["parent_id"], name: "index_categories_on_parent_id"
     t.index ["slug"], name: "index_categories_on_slug", unique: true
   end
@@ -183,6 +184,26 @@ ActiveRecord::Schema[7.2].define(version: 2026_10_05_000002) do
     t.index ["created_by_id"], name: "index_model_versions_on_created_by_id"
     t.index ["model_asset_id", "number", "minor"], name: "index_model_versions_on_model_asset_id_and_number_and_minor", unique: true
     t.index ["model_asset_id"], name: "index_model_versions_on_model_asset_id"
+  end
+
+  create_table "oauth_flows", force: :cascade do |t|
+    t.string "mode", limit: 8, null: false
+    t.bigint "user_id"
+    t.string "intent_hash", limit: 64
+    t.string "state_hash", limit: 64
+    t.string "nonce", limit: 64
+    t.string "server_verifier", limit: 64
+    t.string "client_challenge", limit: 64
+    t.string "return_to", limit: 2048
+    t.string "result_hash", limit: 64
+    t.string "result_subject"
+    t.string "result_email"
+    t.datetime "expires_at", null: false
+    t.datetime "created_at", null: false
+    t.index ["expires_at"], name: "index_oauth_flows_on_expires_at"
+    t.index ["intent_hash"], name: "index_oauth_flows_on_intent_hash", unique: true
+    t.index ["result_hash"], name: "index_oauth_flows_on_result_hash", unique: true
+    t.index ["state_hash"], name: "index_oauth_flows_on_state_hash", unique: true
   end
 
   create_table "order_events", force: :cascade do |t|
@@ -297,6 +318,8 @@ ActiveRecord::Schema[7.2].define(version: 2026_10_05_000002) do
     t.bigint "order_id"
     t.text "reply", default: "", null: false
     t.datetime "replied_at"
+    t.bigint "ai_message_id"
+    t.index ["ai_message_id"], name: "index_service_requests_on_ai_message_id", unique: true
     t.index ["order_id"], name: "index_service_requests_on_order_id"
     t.index ["product_id"], name: "index_service_requests_on_product_id"
     t.index ["status"], name: "index_service_requests_on_status"
@@ -404,6 +427,18 @@ ActiveRecord::Schema[7.2].define(version: 2026_10_05_000002) do
     t.index ["user_id"], name: "index_tips_on_user_id"
   end
 
+  create_table "user_identities", force: :cascade do |t|
+    t.bigint "user_id", null: false
+    t.string "provider", limit: 32, null: false
+    t.string "subject", null: false
+    t.string "email"
+    t.datetime "last_login_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["provider", "subject"], name: "index_user_identities_on_provider_and_subject", unique: true
+    t.index ["user_id", "provider"], name: "index_user_identities_on_user_id_and_provider", unique: true
+  end
+
   create_table "users", force: :cascade do |t|
     t.string "email", null: false
     t.string "password_digest", null: false
@@ -414,6 +449,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_10_05_000002) do
     t.datetime "updated_at", null: false
     t.text "admin_note", default: "", null: false
     t.string "permissions", default: [], null: false, array: true
+    t.boolean "sso_only", default: false, null: false
     t.index ["email"], name: "index_users_on_email", unique: true
     t.index ["role"], name: "index_users_on_role"
   end
@@ -434,6 +470,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_10_05_000002) do
   add_foreign_key "model_photos", "model_assets"
   add_foreign_key "model_versions", "model_assets"
   add_foreign_key "model_versions", "users", column: "created_by_id"
+  add_foreign_key "oauth_flows", "users", on_delete: :cascade
   add_foreign_key "order_events", "orders"
   add_foreign_key "order_events", "users", column: "actor_id"
   add_foreign_key "order_items", "orders"
@@ -446,6 +483,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_10_05_000002) do
   add_foreign_key "product_materials", "materials"
   add_foreign_key "product_materials", "products"
   add_foreign_key "products", "categories"
+  add_foreign_key "service_requests", "ai_messages", on_delete: :nullify
   add_foreign_key "service_requests", "orders"
   add_foreign_key "service_requests", "products"
   add_foreign_key "service_requests", "users"
@@ -459,4 +497,5 @@ ActiveRecord::Schema[7.2].define(version: 2026_10_05_000002) do
   add_foreign_key "tips", "orders"
   add_foreign_key "tips", "users"
   add_foreign_key "tips", "users", column: "confirmed_by_id"
+  add_foreign_key "user_identities", "users", on_delete: :cascade
 end

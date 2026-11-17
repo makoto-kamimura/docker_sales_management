@@ -35,6 +35,10 @@ class Product < ApplicationRecord
                   }
 
   scope :published, -> { where("published_at IS NOT NULL AND published_at <= ?", Time.current) }
+  # 販売中のカテゴリの商品
+  scope :in_active_category, -> { joins(:category).where(categories: { active: true }) }
+  # 店頭に並んでいる商品 (公開中で、販売中のカテゴリのもの)
+  scope :on_sale, -> { published.in_active_category }
   scope :by_category, ->(id) { where(category_id: id) if id.present? }
   scope :by_category_slug, ->(slug) {
     slug.present? ? joins(:category).where(categories: { slug: slug }) : all

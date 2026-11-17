@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth";
+import { fetchSsoName, SSO_COPY, ssoErrorMessage, startSso } from "@/lib/sso";
 
 export default function LoginPage() {
   const { login } = useAuth();
@@ -11,6 +12,24 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [err, setErr] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [sso, setSso] = useState<string | null>(null);
+  // SSO から戻ってきたときの理由 (?sso_error=…)。サーバー側の描画とずれないよう、表示してから読む
+  const [ssoError, setSsoError] = useState<string | null>(null);
+
+  useEffect(() => {
+    setSsoError(new URLSearchParams(window.location.search).get("sso_error"));
+    fetchSsoName().then(setSso);
+  }, []);
+
+  async function onSso() {
+    setErr(null); setBusy(true);
+    try {
+      await startSso("login");
+    } catch {
+      setErr(ssoErrorMessage("failed", "login", sso ?? "SSO"));
+      setBusy(false);
+    }
+  }
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -43,11 +62,22 @@ export default function LoginPage() {
           <input type="password" required value={password} onChange={(e) => setPassword(e.target.value)}
                  className="input" />
         </label>
-        {err && <p className="text-sm text-rose-600">{err}</p>}
+        {(err || ssoError) && (
+          <p className="text-sm text-rose-600">{err ?? ssoErrorMessage(ssoError, "login", sso ?? "SSO")}</p>
+        )}
         <button disabled={busy} className="btn btn-primary w-full">
           ログイン
         </button>
       </form>
+      {sso && (
+        <div className="mt-5 space-y-2 text-center">
+          <p className="text-xs text-coffee-500">{SSO_COPY.or}</p>
+          <button type="button" disabled={busy} onClick={onSso} className="btn w-full">
+            {SSO_COPY.login(sso)}
+          </button>
+          <p className="text-xs text-coffee-500">{SSO_COPY.loginHint(sso)}</p>
+        </div>
+      )}
     </div>
   );
 }

@@ -5,6 +5,7 @@ import { Link, Stack, router, useLocalSearchParams } from 'expo-router';
 import { Text, View } from '@/components/Themed';
 import { api, jsonBody } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
+import { useConciergeSettings } from '@/lib/concierge';
 import { yen } from '@/lib/format';
 import type { Order, Product, RequestKind } from '@/lib/types';
 
@@ -15,6 +16,7 @@ export default function ServiceRequestScreen() {
   const params = useLocalSearchParams<{ kind?: string; order_id?: string; product_id?: string }>();
   const kind: RequestKind = params.kind === 'custom' ? 'custom' : 'inquiry';
   const { token } = useAuth();
+  const concierge = useConciergeSettings();
 
   const [menu, setMenu] = useState<Product[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
@@ -71,6 +73,27 @@ export default function ServiceRequestScreen() {
   return (
     <ScrollView style={styles.container} contentContainerStyle={{ padding: 16 }}>
       <Stack.Screen options={{ title }} />
+
+      {/* オーダーメイドの依頼の方法は 2 つ: AIコンシェルジュと相談して依頼書にまとめる / このフォームに書く */}
+      {kind === 'custom' && concierge?.enabled ? (
+        <View style={styles.aiCard}>
+          <Text style={styles.aiTitle}>AIコンシェルジュと相談してオーダー</Text>
+          <Text style={styles.aiText}>
+            つくりたいもののイメージを伝えると、AIが用途・サイズ・素材などを聞き取り、依頼書にまとめます。内容を確かめて「はい」を押すと、そのまま依頼できます。
+          </Text>
+          <Pressable
+            onPress={() => router.push({
+              pathname: '/(tabs)/chat',
+              params: { start: 'custom_order', n: String(Date.now()), product_name: menu.find((m) => m.id === productId)?.name ?? '' },
+            })}
+            style={styles.aiButton}
+            accessibilityRole="button"
+          >
+            <Text style={{ color: '#fff', fontWeight: '700' }}>AIコンシェルジュを通してオーダーする</Text>
+          </Pressable>
+          <Text style={styles.aiOr}>または フォームに書いて依頼</Text>
+        </View>
+      ) : null}
 
       {!token && (
         <Text style={styles.notice}>送信にはログインが必要です。送信時にログイン画面へ移動します。</Text>
@@ -141,6 +164,11 @@ function Chip({ label, active, onPress }: { label: string; active: boolean; onPr
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
+  aiCard: { padding: 14, borderRadius: 12, borderWidth: 1, borderColor: ACCENT, marginBottom: 16, gap: 8 },
+  aiTitle: { fontWeight: '700', fontSize: 15 },
+  aiText: { fontSize: 12, lineHeight: 18, opacity: 0.75 },
+  aiButton: { backgroundColor: ACCENT, padding: 12, borderRadius: 10, alignItems: 'center' },
+  aiOr: { fontSize: 11, opacity: 0.55, textAlign: 'center', marginTop: 4 },
   notice: { fontSize: 12, color: '#686863', backgroundColor: '#ededea', padding: 10, borderRadius: 8, marginBottom: 12 },
   label: { marginTop: 14, fontSize: 12, fontWeight: '600', color: '#686863' },
   input: { borderWidth: 1, borderColor: '#dededa', borderRadius: 8, padding: 10, marginTop: 4, backgroundColor: '#fff' },

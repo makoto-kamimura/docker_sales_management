@@ -37,6 +37,7 @@ module Api
             preferred_at: r.preferred_at, budget_cents: r.budget_cents,
             body: r.body, contact_phone: r.contact_phone, created_at: r.created_at,
             order_id: r.order_id, reply: r.reply, replied_at: r.replied_at,
+            from_concierge: r.from_concierge?, # 本文は制作依頼書の Markdown
             user: { id: r.user_id, email: r.user.email, name: r.user.name },
             product: r.product && { id: r.product.id, sku: r.product.sku, name: r.product.name }
           }

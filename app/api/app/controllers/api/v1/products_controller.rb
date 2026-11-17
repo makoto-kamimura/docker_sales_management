@@ -6,7 +6,7 @@ module Api
       # 商品検索 (要件5) - 公開エンドポイント
       def index
         page, per = pagination_params
-        scope = Product.published
+        scope = Product.on_sale
                        .by_category(params[:category_id])
                        .by_category_slug(params[:category_slug])
                        .price_between(params[:min_price], params[:max_price])
@@ -20,7 +20,7 @@ module Api
       end
 
       def show
-        product = Product.find(params[:id])
+        product = Product.in_active_category.find(params[:id])
         render json: serialize(product, detail: true)
       end
 
@@ -32,7 +32,7 @@ module Api
                 .nearest_neighbors(:embedding, embedding, distance: "cosine")
                 .limit(20)
                 .pluck(:product_id)
-        products = Product.where(id: ids).includes(*PRELOAD).index_by(&:id)
+        products = Product.on_sale.where(id: ids).includes(*PRELOAD).index_by(&:id)
         render json: ids.filter_map { |id| products[id] }.map { |p| serialize(p) }
       end
 

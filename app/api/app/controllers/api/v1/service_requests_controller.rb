@@ -14,6 +14,10 @@ module Api
       end
 
       def create
+        if params[:kind] == "custom" && !Storefront.custom_orders?
+          return render_error(code: "custom_orders_paused", message: "現在、オーダーメイドの受付を休止しています", status: :unprocessable_entity)
+        end
+
         req = current_user.service_requests.create!(create_params)
         render json: serialize(req), status: :created
       end
@@ -32,6 +36,7 @@ module Api
           preferred_at: r.preferred_at, budget_cents: r.budget_cents,
           body: r.body, contact_phone: r.contact_phone, created_at: r.created_at,
           order_id: r.order_id, reply: r.reply, replied_at: r.replied_at,
+          from_concierge: r.from_concierge?, # 本文は制作依頼書の Markdown
           product: r.product && { id: r.product.id, sku: r.product.sku, name: r.product.name }
         }
       end

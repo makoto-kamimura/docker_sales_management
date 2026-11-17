@@ -10,6 +10,16 @@ Rails.application.routes.draw do
         post :refresh
       end
 
+      # SSO (共通の認証サーバー。OpenID Connect)。OIDC_ISSUER などが未設定なら 404 (providers は sso: false)
+      get "auth/providers", to: "sso#providers"
+      get "auth/sso/start", to: "sso#start"
+      get "auth/sso/callback", to: "sso#callback"
+      post "auth/sso/exchange", to: "sso#exchange"
+      get "me/identities", to: "sso#identities"
+      post "me/identities/sso/intent", to: "sso#intent"
+      delete "me/identities/sso", to: "sso#unlink"
+      put "me/sso-only", to: "sso#sso_only"
+
       # マイページ (要件3)
       resource :me, only: %i[show update], controller: "me" do
         resources :addresses, except: %i[new edit]
@@ -20,6 +30,7 @@ Rails.application.routes.draw do
         collection { get :search }
       end
       resources :categories, only: %i[index]
+      resource :storefront, only: :show # いま店頭で扱っているもの (販売中のカテゴリ・オーダーメイド・定期便)
 
       # カート / 注文 (要件1)
       resource :cart, only: %i[show] do
@@ -57,8 +68,10 @@ Rails.application.routes.draw do
 
       # AIコンシェルジュ (要件4)
       namespace :ai_concierge do
+        resource :settings, only: :show # 使えるか (Claude の API キーの有無)
         resources :conversations, only: %i[create show] do
           resources :messages, only: %i[create]
+          resources :custom_orders, only: %i[create] # 提示した下書きでオーダーメイドを依頼する (「はい、オーダーする」)
         end
       end
 
@@ -77,6 +90,7 @@ Rails.application.routes.draw do
           resource :materials, only: %i[show update], controller: "product_materials" # レシピ (使用材料・制作権限)
         end
         resources :inventories, only: %i[update], param: :product_id
+        resources :categories, only: %i[index update]              # カテゴリの販売の切り替え
         namespace :dashboard do                                    # 売上・分析
           get :sales
         end

@@ -1,19 +1,22 @@
 import { useCallback, useEffect, useState } from 'react';
-import { FlatList, RefreshControl, StyleSheet } from 'react-native';
+import { FlatList, Pressable, RefreshControl, StyleSheet } from 'react-native';
 import { Link, Stack } from 'expo-router';
 
+import { MarkdownText } from '@/components/MarkdownText';
 import { Text, View } from '@/components/Themed';
 import { api } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { yen, fmtDate } from '@/lib/format';
 import { REQUEST_KIND_LABEL as KIND_LABEL, REQUEST_STATUS_LABEL as STATUS_LABEL } from '@/lib/orderStatus';
 import type { ServiceRequest } from '@/lib/types';
+import { useStorefront } from '@/lib/storefront';
 
 const ACCENT = '#ff5722';
 
 export default function RequestsScreen() {
   const { token } = useAuth();
   const [reqs, setReqs] = useState<ServiceRequest[] | null>(null);
+  const storefront = useStorefront();
   const [refreshing, setRefreshing] = useState(false);
 
   const load = useCallback(async () => {
@@ -48,7 +51,9 @@ export default function RequestsScreen() {
         ListHeaderComponent={
           <View style={styles.actions}>
             <Link href={{ pathname: '/service-request', params: { kind: 'inquiry' } }} style={styles.actionBtn}>問い合わせる</Link>
-            <Link href={{ pathname: '/service-request', params: { kind: 'custom' } }} style={styles.actionBtn}>オーダーメイド</Link>
+            {storefront?.custom_orders ? (
+              <Link href={{ pathname: '/service-request', params: { kind: 'custom' } }} style={styles.actionBtn}>オーダーメイド</Link>
+            ) : null}
           </View>
         }
         renderItem={({ item }) => (
@@ -57,8 +62,9 @@ export default function RequestsScreen() {
               <Text style={styles.kind}>{KIND_LABEL[item.kind] ?? item.kind}</Text>
               <Text style={styles.status}>{STATUS_LABEL[item.status] ?? item.status}</Text>
             </View>
+            {item.from_concierge ? <Text style={styles.viaAi}>AIコンシェルジュ経由</Text> : null}
             {!!item.subject && <Text style={styles.product}>{item.subject}</Text>}
-            <Text style={styles.body} numberOfLines={3}>{item.body}</Text>
+            <RequestBody body={item.body} />
             <Text style={styles.meta}>
               {item.order_id ? `注文 #${item.order_id}  ` : ''}
               {item.product ? `メニュー: ${item.product.name}  ` : ''}
@@ -84,6 +90,24 @@ export default function RequestsScreen() {
   );
 }
 
+/** 本文は Markdown として整形して出す (AIコンシェルジュ経由の依頼は制作依頼書)。長いものは折りたたむ */
+function RequestBody({ body }: { body: string }) {
+  const long = body.length > 240 || body.split('\n').length > 6;
+  const [expanded, setExpanded] = useState(false);
+  return (
+    <View style={{ backgroundColor: 'transparent' }}>
+      <View style={[styles.bodyBox, long && !expanded && styles.bodyCollapsed]}>
+        <MarkdownText color="#2f2f2c">{body}</MarkdownText>
+      </View>
+      {long ? (
+        <Pressable onPress={() => setExpanded((v) => !v)} hitSlop={6} accessibilityState={{ expanded }}>
+          <Text style={styles.more}>{expanded ? 'たたむ' : '全文を見る'}</Text>
+        </Pressable>
+      ) : null}
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
   container: { flex: 1 },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
@@ -95,6 +119,10 @@ const styles = StyleSheet.create({
   status: { fontSize: 12, fontWeight: '600', color: '#1b1b19' },
   product: { marginTop: 6, fontWeight: '600', color: '#1b1b19' },
   body: { marginTop: 4, color: '#2f2f2c' },
+  bodyBox: { marginTop: 4 },
+  bodyCollapsed: { maxHeight: 130, overflow: 'hidden' },
+  more: { marginTop: 4, fontSize: 12, fontWeight: '700', color: ACCENT },
+  viaAi: { marginTop: 4, alignSelf: 'flex-start', fontSize: 10, fontWeight: '700', color: ACCENT, backgroundColor: 'rgba(255,87,34,0.08)', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 999, overflow: 'hidden' },
   meta: { marginTop: 6, fontSize: 12, color: '#686863' },
   date: { marginTop: 4, fontSize: 11, color: '#8c8c86' },
   reply: { marginTop: 8, padding: 10, borderRadius: 8, backgroundColor: '#f7f7f5', borderWidth: 1, borderColor: '#ededea' },

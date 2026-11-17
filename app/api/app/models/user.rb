@@ -26,6 +26,7 @@ class User < ApplicationRecord
   has_many :model_assets, foreign_key: :created_by_id, dependent: :nullify, inverse_of: :created_by
   has_many :model_versions, foreign_key: :created_by_id, dependent: :nullify, inverse_of: :created_by
   has_many :tips, dependent: :destroy
+  has_many :user_identities, dependent: :delete_all # SSO の連携
   has_many :confirmed_tips, class_name: "Tip", foreign_key: :confirmed_by_id, dependent: :nullify, inverse_of: :confirmed_by
 
   validates :email, presence: true, uniqueness: { case_sensitive: false },

@@ -3,14 +3,17 @@
 import Link from "next/link";
 import useSWR from "swr";
 import { api } from "@/lib/api";
+import { useStorefront } from "@/lib/useStorefront";
 import { useAuth } from "@/lib/auth";
 import { yen, fmtDate } from "@/lib/format";
 import { REQUEST_KIND_LABEL, REQUEST_STATUS_LABEL, requestStatusBadge } from "@/lib/orderStatus";
 import { LoadError } from "@/components/LoadError";
+import { ConciergeBadge, RequestBody } from "@/components/RequestBody";
 import type { ServiceRequest } from "@/lib/types";
 
 export default function RequestsPage() {
   const { token } = useAuth();
+  const storefront = useStorefront();
   const { data: reqs, error, mutate } = useSWR<ServiceRequest[]>(
     token ? "service_requests" : null,
     () => api<ServiceRequest[]>("/service_requests", { auth: token })
@@ -26,13 +29,15 @@ export default function RequestsPage() {
         <h1 className="text-2xl font-bold">問い合わせ・依頼</h1>
         <div className="flex gap-4 text-sm">
           <Link href="/contact" className="text-coffee-800 hover:text-caramel transition-colors">問い合わせる →</Link>
-          <Link href="/custom" className="text-coffee-800 hover:text-caramel transition-colors">オーダーメイドを依頼 →</Link>
+          {storefront?.custom_orders && (
+            <Link href="/custom" className="text-coffee-800 hover:text-caramel transition-colors">オーダーメイドを依頼 →</Link>
+          )}
         </div>
       </div>
 
       {reqs.length === 0 && (
         <div className="card p-10 text-center text-sm text-coffee-500">
-          まだ問い合わせはありません。作品や納期のご質問、オーダーメイドのご相談はこちらから。
+          まだ問い合わせはありません。作品やご注文についてのご質問は、上の「問い合わせる」からどうぞ。
         </div>
       )}
 
@@ -45,11 +50,12 @@ export default function RequestsPage() {
                   {REQUEST_KIND_LABEL[r.kind] ?? r.kind}
                 </span>
                 <span className={`badge ${requestStatusBadge(r.status)}`}>{REQUEST_STATUS_LABEL[r.status] ?? r.status}</span>
+                {r.from_concierge && <ConciergeBadge />}
               </div>
               <span className="text-xs text-coffee-400">{fmtDate(r.created_at)}</span>
             </div>
             {r.subject && <div className="mt-2 text-sm font-semibold">{r.subject}</div>}
-            <p className="mt-1 text-sm text-coffee-700 whitespace-pre-line line-clamp-3">{r.body}</p>
+            <div className="mt-1"><RequestBody body={r.body} /></div>
             <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-coffee-500">
               {r.order_id && <Link href={`/orders/${r.order_id}`} className="hover:text-caramel">注文 #{r.order_id}</Link>}
               {r.product && <span>メニュー: {r.product.name}</span>}
