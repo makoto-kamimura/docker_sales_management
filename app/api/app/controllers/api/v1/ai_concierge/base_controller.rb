@@ -31,6 +31,11 @@ module Api
         def find_conversation(id)
           return current_user.ai_conversations.find(id) if current_user
 
+          find_guest_conversation(id)
+        end
+
+        # ゲストの会話 (guest_token が合い、まだ誰のものでもない会話)
+        def find_guest_conversation(id)
           convo = AiConversation.find_signed(params[:guest_token].to_s, purpose: GUEST_TOKEN_PURPOSE)
           raise ActiveRecord::RecordNotFound, "会話が見つかりません" unless convo && convo.id == id.to_i && convo.user_id.nil?
 
@@ -42,7 +47,13 @@ module Api
         end
 
         def serialize_message(m)
-          { id: m.id, role: m.role, content: m.content, cta: m.cta, created_at: m.created_at }
+          {
+            id: m.id, role: m.role, content: m.content, cta: m.cta, created_at: m.created_at,
+            # 提示したオーダーメイドの下書き。依頼にしたら service_request_id が入る
+            order_draft: m.order_draft.presence && {
+              title: m.order_draft["title"], markdown: m.order_draft["markdown"], service_request_id: m.service_request&.id
+            }
+          }
         end
       end
     end

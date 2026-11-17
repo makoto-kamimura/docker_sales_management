@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react';
 import { Pressable, StyleSheet, TextInput } from 'react-native';
-import { Link, router } from 'expo-router';
+import { Link } from 'expo-router';
 
 import { Text, View } from '@/components/Themed';
 import { useAuth } from '@/lib/auth';
+import { routeAfterLogin } from '@/lib/concierge';
 import { fetchSsoName, signInWithSso, SSO_COPY } from '@/lib/sso';
 
 export default function LoginScreen() {
@@ -24,7 +25,7 @@ export default function LoginScreen() {
       const session = await signInWithSso('login', sso ?? 'SSO');
       if (session && session !== true) {
         await adopt(session, session.user);
-        router.replace('/(tabs)/account');
+        await routeAfterLogin();
       }
     } catch (e) {
       setErr(e instanceof Error ? e.message : 'エラー');
@@ -37,7 +38,7 @@ export default function LoginScreen() {
     setErr(null); setBusy(true);
     try {
       await login(email, password);
-      router.replace('/(tabs)/account');
+      await routeAfterLogin();
     } catch (e) {
       setErr(e instanceof Error ? e.message : 'エラー');
     } finally {

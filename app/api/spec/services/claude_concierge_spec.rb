@@ -47,7 +47,7 @@ RSpec.describe ClaudeConcierge do
                            betas: [described_class::FALLBACK_BETA], fallbacks: :default)
     expect(req[:system_].first).to include(text: described_class::STATIC_PROMPT, cache_control: { type: "ephemeral" })
     expect(req[:system_].last).to eq(type: "text", text: "店舗の状態")
-    expect(req[:tools].map { |t| t[:name] }).to eq(%w[search_products get_product])
+    expect(req[:tools].map { |t| t[:name] }).to eq(%w[search_products get_product propose_custom_order])
     expect(req[:messages]).to eq([{ role: :user, content: "スタンドはありますか" }])
     expect(req).not_to have_key(:tool_choice)
     expect(req).not_to have_key(:thinking) # Opus 5.5 は常に adaptive。指定しない

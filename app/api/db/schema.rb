@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_11_17_000003) do
+ActiveRecord::Schema[7.2].define(version: 2026_11_17_000004) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "citext"
   enable_extension "pg_trgm"
@@ -76,6 +76,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_17_000003) do
     t.text "content", null: false
     t.string "cta"
     t.datetime "created_at", null: false
+    t.jsonb "order_draft"
     t.index ["ai_conversation_id"], name: "index_ai_messages_on_ai_conversation_id"
   end
 
@@ -317,6 +318,8 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_17_000003) do
     t.bigint "order_id"
     t.text "reply", default: "", null: false
     t.datetime "replied_at"
+    t.bigint "ai_message_id"
+    t.index ["ai_message_id"], name: "index_service_requests_on_ai_message_id", unique: true
     t.index ["order_id"], name: "index_service_requests_on_order_id"
     t.index ["product_id"], name: "index_service_requests_on_product_id"
     t.index ["status"], name: "index_service_requests_on_status"
@@ -480,6 +483,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_17_000003) do
   add_foreign_key "product_materials", "materials"
   add_foreign_key "product_materials", "products"
   add_foreign_key "products", "categories"
+  add_foreign_key "service_requests", "ai_messages", on_delete: :nullify
   add_foreign_key "service_requests", "orders"
   add_foreign_key "service_requests", "products"
   add_foreign_key "service_requests", "users"

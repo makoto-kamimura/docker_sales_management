@@ -60,6 +60,7 @@ export type ServiceRequest = {
   reply: string;
   replied_at: string | null;
   product: { id: number; sku: string; name: string } | null;
+  from_concierge: boolean; // AIコンシェルジュ経由 (本文は制作依頼書の Markdown)
 };
 
 export type Category = {

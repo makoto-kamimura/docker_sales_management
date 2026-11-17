@@ -11,6 +11,7 @@ class ServiceRequest < ApplicationRecord
   belongs_to :user
   belongs_to :product, optional: true # オーダーメイド: 参考にする商品
   belongs_to :order, optional: true   # 問い合わせ: 対象の注文
+  belongs_to :ai_message, optional: true # AIコンシェルジュで提示した下書きから作った依頼 (本文は制作依頼書の Markdown)
 
   validates :kind, inclusion: { in: KINDS }
   validates :body, presence: true
@@ -21,6 +22,10 @@ class ServiceRequest < ApplicationRecord
   scope :recent,  -> { order(created_at: :desc, id: :desc) }
   scope :by_kind, ->(kind) { kind.present? ? where(kind: kind) : all }
   scope :open,    -> { where(status: %w[pending quoted in_progress]) }
+
+  def from_concierge?
+    ai_message_id.present?
+  end
 
   def statuses
     STATUSES.fetch(kind, [])

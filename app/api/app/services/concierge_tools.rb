@@ -1,4 +1,6 @@
 # AIコンシェルジュ (Claude) が使うツール。店頭に並んでいる商品 (Product.on_sale) だけを、DB から直接引く。
+# propose_custom_order は、聞き取ったオーダーメイドの内容から依頼の下書きを作り、このインスタンスに残す
+# (ConciergeChat が応答のメッセージに保存する)。インスタンスは 1 回の発話ごとに作る。
 # ツールの定義は会話中に変えない (プロンプトキャッシュと、思考ブロックの引き継ぎのため)
 class ConciergeTools
   SEARCH_LIMIT = 8
@@ -28,10 +30,14 @@ class ConciergeTools
         },
         required: %w[product_id]
       }
-    }
+    },
+    CustomOrderDraft::TOOL_DEFINITION
   ].freeze
 
   class InvalidInput < StandardError; end
+
+  # この発話で作った依頼の下書き (CustomOrderDraft)。呼び直されたら最後のもの
+  attr_reader :order_draft
 
   # 戻り値は tool_result の content に入れる文字列 (JSON)
   def call(name, input)
@@ -39,6 +45,7 @@ class ConciergeTools
     case name
     when "search_products" then search_products(query: input["query"].to_s, category_slug: input["category_slug"].to_s)
     when "get_product" then get_product(input["product_id"])
+    when "propose_custom_order" then propose_custom_order(input)
     else raise InvalidInput, "不明なツールです: #{name}"
     end.to_json
   end
@@ -76,6 +83,23 @@ class ConciergeTools
       detail[:file_format] = product.model_file_format
     end
     { found: true, product: detail }
+  end
+
+  def propose_custom_order(input)
+    raise InvalidInput, "現在、オーダーメイドの依頼は受付を休止しています。下書きは作れません" unless Storefront.custom_orders?
+
+    @order_draft = CustomOrderDraft.from_tool_input(input)
+    {
+      created: true,
+      message: "下書きを作り、画面に確認カード (依頼書と「はい、オーダーする」「修正する」のボタン) を出しました。" \
+               "要点を短く伝え、最後に「この内容でオーダーしますか？」と尋ねてください。依頼書の全文は繰り返さず、[CTA: ...] も付けないでください。",
+      title: @order_draft.title,
+      preferred_date: @order_draft.preferred_date&.iso8601,
+      budget_yen: @order_draft.budget_yen,
+      reference_products: @order_draft.reference_products.map(&:name)
+    }
+  rescue CustomOrderDraft::InvalidInput => e
+    raise InvalidInput, e.message
   end
 
   def summary(p)

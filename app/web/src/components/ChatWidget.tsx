@@ -2,14 +2,17 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { ApiError } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { useStorefront } from "@/lib/useStorefront";
 import {
-  type ConciergeMessage, type ConciergeSession,
-  ctaLink, fetchMessages, postMessage, readSession, startConversation, suggestions, useConciergeSettings, writeSession,
+  type ConciergeMessage, type ConciergeSession, type PendingOrder,
+  ACCEPT_ORDER_TEXT, REVISE_ORDER_TEXT,
+  ctaLink, fetchMessages, onOpenConcierge, postMessage, readPendingOrder, readSession, startConversation, submitCustomOrder,
+  suggestions, useConciergeSettings, writePendingOrder, writeSession,
 } from "@/lib/concierge";
+import { OrderDraftCard } from "@/components/OrderDraftCard";
 
 /** コンシェルジュベル (ホテルの受付にある呼び鈴) */
 function ConciergeBell({ className }: { className?: string }) {
@@ -33,6 +36,7 @@ export function ChatWidget() {
   const settings = useConciergeSettings();
   const storefront = useStorefront();
   const pathname = usePathname();
+  const router = useRouter();
   const owner = user ? `user-${user.id}` : "guest";
 
   const [open, setOpen] = useState(false);
@@ -41,6 +45,14 @@ export function ChatWidget() {
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
   const [failure, setFailure] = useState<Failure | null>(null);
+  // 履歴を戻し終えた持ち主。外から開いたときの最初の発話は、これが今の持ち主になってから送る
+  const [readyFor, setReadyFor] = useState<string | null>(null);
+  const starterRef = useRef<string | null>(null);
+  const [, setStarterTick] = useState(0); // 外から開かれたときに描画し直すため
+  // オーダーメイドの依頼 (確認カードの「はい」)
+  const [pendingOrder, setPendingOrder] = useState<PendingOrder | null>(null);
+  const [ordering, setOrdering] = useState(false);
+  const [orderError, setOrderError] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const restoredFor = useRef<string | null>(null);
@@ -52,31 +64,65 @@ export function ChatWidget() {
     setSession(null);
     setMessages([]);
     setFailure(null);
+    setOrderError(null);
   }, []);
 
   // 開いたとき、このタブで続けていた会話があれば履歴を戻す。ログイン・ログアウトで持ち主が変わったら新しく始める
   useEffect(() => {
     if (!open || loading || restoredFor.current === owner) return;
     restoredFor.current = owner;
+    setReadyFor(null);
     setSession(null);
     setMessages([]);
     setFailure(null);
+    setOrderError(null);
     const stored = readSession(owner);
-    if (!stored) return;
+    if (!stored) {
+      setReadyFor(owner);
+      return;
+    }
     let cancelled = false;
+    let done = false;
     fetchMessages(stored, tokenRef.current)
       .then((history) => {
         if (cancelled) return;
         setSession(stored);
         setMessages(history);
       })
-      .catch(() => writeSession(null)); // 会話が見つからなければ、次の発話で作り直す
-    return () => { cancelled = true; };
+      .catch(() => writeSession(null)) // 会話が見つからなければ、次の発話で作り直す
+      .finally(() => {
+        done = true;
+        if (!cancelled) setReadyFor(owner);
+      });
+    return () => {
+      cancelled = true;
+      if (!done) restoredFor.current = null; // 戻し終える前に閉じたら、次に開いたときにやり直す
+    };
   }, [open, loading, owner]);
+
+  // 「AIコンシェルジュを通してオーダーする」などから開かれたとき
+  useEffect(
+    () => onOpenConcierge(({ starter }) => {
+      setOpen(true);
+      if (starter) {
+        starterRef.current = starter;
+        setStarterTick((t) => t + 1);
+      }
+    }),
+    [],
+  );
+
+  // ゲストのときに「はい」を押した下書きがあれば、ログイン後にチャットを開いてもう一度確かめる
+  useEffect(() => {
+    if (loading) return;
+    const pending = user ? readPendingOrder() : null;
+    setPendingOrder(pending);
+    if (pending) setOpen(true);
+  }, [loading, user]);
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
-  }, [messages, busy, failure]);
+  }, [messages, busy, failure, pendingOrder, orderError]);
 
   useEffect(() => {
     if (!open) return;
@@ -114,14 +160,90 @@ export function ChatWidget() {
     const text = raw.trim();
     if (!text || busy || loading) return;
     setInput("");
+    setOrderError(null);
     setMessages((m) => [...m, { id: `local-${Date.now()}`, role: "user", content: text }]);
     void deliver(text);
+  }
+
+  // 外から開かれたときの最初の発話。履歴を戻し終えてから 1 回だけ送る
+  useEffect(() => {
+    if (!open || readyFor !== owner || busy || !starterRef.current) return;
+    const starter = starterRef.current;
+    starterRef.current = null;
+    send(starter);
+  });
+
+  // 確認カードの「はい」。会員はそのまま依頼し、ゲストは下書きを覚えてログインへ
+  async function acceptOrder(m: ConciergeMessage) {
+    if (typeof m.id !== "number" || !m.order_draft || !session || ordering) return;
+    if (!user) {
+      if (!session.guest_token) return;
+      writePendingOrder({
+        conversation_id: session.id, guest_token: session.guest_token, message_id: m.id,
+        title: m.order_draft.title, markdown: m.order_draft.markdown,
+      });
+      setOpen(false);
+      router.push("/login");
+      return;
+    }
+    setOrdering(true);
+    setOrderError(null);
+    try {
+      const res = await submitCustomOrder(session.id, m.id, token);
+      setMessages((list) => [
+        ...list.map((x) => (x.id === m.id && x.order_draft
+          ? { ...x, order_draft: { ...x.order_draft, service_request_id: res.service_request.id } }
+          : x)),
+        { id: `local-${Date.now()}`, role: "user", content: ACCEPT_ORDER_TEXT },
+        res.message,
+      ]);
+    } catch (e) {
+      setOrderError(e instanceof Error && e.message ? e.message : "依頼できませんでした。");
+    } finally {
+      setOrdering(false);
+    }
+  }
+
+  // ログイン後に、ゲストのときの下書きで依頼する。会話は本人のものになるので、そのまま続ける
+  async function confirmPendingOrder() {
+    if (!pendingOrder || !token || ordering) return;
+    setOrdering(true);
+    setOrderError(null);
+    try {
+      const res = await submitCustomOrder(pendingOrder.conversation_id, pendingOrder.message_id, token, pendingOrder.guest_token);
+      writePendingOrder(null);
+      setPendingOrder(null);
+      const next: ConciergeSession = { owner, id: res.conversation_id, guest_token: null };
+      writeSession(next);
+      setSession(next);
+      try {
+        setMessages(await fetchMessages(next, token));
+      } catch {
+        setMessages((list) => [...list, res.message]);
+      }
+    } catch (e) {
+      // 依頼済み・会話が見つからないときは、覚えておいた下書きを捨てる
+      if (e instanceof ApiError && (e.status === 404 || e.code === "already_ordered")) {
+        writePendingOrder(null);
+        setPendingOrder(null);
+      }
+      setOrderError(e instanceof Error && e.message ? e.message : "依頼できませんでした。");
+    } finally {
+      setOrdering(false);
+    }
+  }
+
+  function cancelPendingOrder() {
+    writePendingOrder(null);
+    setPendingOrder(null);
   }
 
   // 未設定なら出さない。管理画面は店舗スタッフ向けなので出さない
   if (!settings?.enabled || pathname?.startsWith("/admin")) return null;
 
   const maxLength = settings.max_content_length;
+  // ボタンを出すのは最新の下書きだけ (前のものは修正済み)
+  const latestDraftId = [...messages].reverse().find((m) => m.order_draft)?.id;
 
   return (
     <>
@@ -172,7 +294,7 @@ export function ChatWidget() {
           </div>
 
           <div ref={scrollRef} role="log" aria-live="polite" className="flex-1 space-y-2.5 overflow-auto bg-coffee-50/40 p-3 text-sm">
-            {messages.length === 0 && (
+            {messages.length === 0 && !pendingOrder && (
               <div className="px-2 pt-6 text-center">
                 <p className="leading-relaxed text-coffee-600">
                   {user ? `${user.name} さん、こんにちは。` : "こんにちは。"}
@@ -216,9 +338,64 @@ export function ChatWidget() {
                       {link.label} <span aria-hidden>→</span>
                     </Link>
                   )}
+                  {m.order_draft && (
+                    <div className="mt-2 w-full">
+                      <OrderDraftCard title={m.order_draft.title} markdown={m.order_draft.markdown}>
+                        {m.order_draft.service_request_id ? (
+                          <div className="flex items-center justify-between gap-2 text-xs text-coffee-600">
+                            <span>依頼済み（#{m.order_draft.service_request_id}）</span>
+                            <Link href="/requests" onClick={() => setOpen(false)} className="font-semibold text-caramel hover:underline">
+                              問い合わせ・依頼を見る →
+                            </Link>
+                          </div>
+                        ) : m.id !== latestDraftId ? (
+                          <p className="text-xs text-coffee-500">この内容は修正されています。</p>
+                        ) : (
+                          <div className="space-y-1.5">
+                            <p className="text-xs font-semibold text-coffee-800">この内容でオーダーしますか？</p>
+                            <div className="flex gap-2">
+                              <button type="button" onClick={() => void acceptOrder(m)} disabled={busy || ordering}
+                                      className="btn btn-accent flex-1 !rounded-full !py-1.5 !text-xs">
+                                {user ? "はい、オーダーする" : "ログインしてオーダーする"}
+                              </button>
+                              <button type="button" onClick={() => send(REVISE_ORDER_TEXT)} disabled={busy || ordering}
+                                      className="btn btn-outline !rounded-full !py-1.5 !text-xs">
+                                修正する
+                              </button>
+                            </div>
+                            {!user && <p className="text-[10px] leading-snug text-coffee-400">依頼には会員登録（ログイン）が必要です。ログイン後に、この内容で依頼できます。</p>}
+                          </div>
+                        )}
+                      </OrderDraftCard>
+                    </div>
+                  )}
                 </div>
               );
             })}
+            {pendingOrder && (
+              <div className="flex flex-col items-start gap-2">
+                <div className="max-w-[85%] rounded-2xl rounded-bl-md border border-coffee-100 bg-white px-3.5 py-2 text-sm leading-relaxed text-coffee-800 shadow-soft">
+                  ログイン前にまとめたオーダーの内容です。この内容でオーダーしますか？
+                </div>
+                <OrderDraftCard title={pendingOrder.title} markdown={pendingOrder.markdown}>
+                  <div className="flex gap-2">
+                    <button type="button" onClick={() => void confirmPendingOrder()} disabled={ordering}
+                            className="btn btn-accent flex-1 !rounded-full !py-1.5 !text-xs">
+                      この内容でオーダーする
+                    </button>
+                    <button type="button" onClick={cancelPendingOrder} disabled={ordering}
+                            className="btn btn-outline !rounded-full !py-1.5 !text-xs">
+                      やめる
+                    </button>
+                  </div>
+                </OrderDraftCard>
+              </div>
+            )}
+            {orderError && !ordering && (
+              <div role="alert" className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs leading-relaxed text-red-700">
+                {orderError}
+              </div>
+            )}
             {busy && (
               <div className="flex justify-start" aria-label="応答を作成しています">
                 <span className="inline-flex gap-1 rounded-2xl rounded-bl-md border border-coffee-100 bg-white px-3.5 py-2.5 shadow-soft">

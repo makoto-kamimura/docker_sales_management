@@ -32,4 +32,22 @@ RSpec.describe ConciergeTools do
     expect { tools.call("get_product", { "product_id" => "1; drop" }) }.to raise_error(ConciergeTools::InvalidInput)
     expect { tools.call("delete_everything", {}) }.to raise_error(ConciergeTools::InvalidInput)
   end
+
+  describe "propose_custom_order" do
+    let(:input) { { "title" => "スマホスタンド", "summary" => "木目調のスタンドを2個" } }
+
+    it "オーダーメイドの受付中は下書きを作って残す" do
+      create(:category, :custom)
+      result = call("propose_custom_order", input)
+      expect(result).to include("created" => true, "title" => "スマホスタンド")
+      expect(tools.order_draft.markdown).to start_with("# 制作依頼書: スマホスタンド")
+    end
+
+    it "受付を休止しているときと、入力が足りないときは作らない" do
+      expect { tools.call("propose_custom_order", input) }.to raise_error(ConciergeTools::InvalidInput, /休止/)
+      create(:category, :custom)
+      expect { tools.call("propose_custom_order", { "title" => "スタンド" }) }.to raise_error(ConciergeTools::InvalidInput)
+      expect(tools.order_draft).to be_nil
+    end
+  end
 end

@@ -8,6 +8,7 @@ import { useAuth } from "@/lib/auth";
 import { yen, fmtDate } from "@/lib/format";
 import { REQUEST_KIND_LABEL, REQUEST_STATUS_LABEL, requestStatusBadge } from "@/lib/orderStatus";
 import { LoadError } from "@/components/LoadError";
+import { ConciergeBadge, RequestBody } from "@/components/RequestBody";
 import type { ServiceRequest } from "@/lib/types";
 
 export default function RequestsPage() {
@@ -49,11 +50,12 @@ export default function RequestsPage() {
                   {REQUEST_KIND_LABEL[r.kind] ?? r.kind}
                 </span>
                 <span className={`badge ${requestStatusBadge(r.status)}`}>{REQUEST_STATUS_LABEL[r.status] ?? r.status}</span>
+                {r.from_concierge && <ConciergeBadge />}
               </div>
               <span className="text-xs text-coffee-400">{fmtDate(r.created_at)}</span>
             </div>
             {r.subject && <div className="mt-2 text-sm font-semibold">{r.subject}</div>}
-            <p className="mt-1 text-sm text-coffee-700 whitespace-pre-line line-clamp-3">{r.body}</p>
+            <div className="mt-1"><RequestBody body={r.body} /></div>
             <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-coffee-500">
               {r.order_id && <Link href={`/orders/${r.order_id}`} className="hover:text-caramel">注文 #{r.order_id}</Link>}
               {r.product && <span>メニュー: {r.product.name}</span>}

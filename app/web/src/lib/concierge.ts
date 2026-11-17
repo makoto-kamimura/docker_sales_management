@@ -6,12 +6,30 @@
 import useSWR from "swr";
 import { api, jsonBody } from "@/lib/api";
 
-export type ConciergeMessage = { id: number | string; role: "user" | "assistant"; content: string; cta?: string | null };
+/** AIコンシェルジュが提示したオーダーメイドの下書き (制作依頼書)。依頼にしたら service_request_id が入る */
+export type OrderDraft = { title: string; markdown: string; service_request_id: number | null };
+export type ConciergeMessage = {
+  id: number | string;
+  role: "user" | "assistant";
+  content: string;
+  cta?: string | null;
+  order_draft?: OrderDraft | null;
+};
 export type ConciergeSettings = { enabled: boolean; max_content_length: number };
 /** 続きから話せるよう、タブを閉じるまで覚えておく会話。owner が変わったら (ログイン・ログアウト) 使わない */
 export type ConciergeSession = { owner: string; id: number; guest_token: string | null };
 
 const STORAGE_KEY = "cf_concierge";
+const PENDING_ORDER_KEY = "cf_concierge_order";
+/** 確認カードを出す応答の CTA (API が付ける) */
+export const CONFIRM_ORDER_CTA = "confirm_custom_order";
+/** 「はい」で依頼したときに、API が会話に残す発話 (画面にも同じ文を出す) */
+export const ACCEPT_ORDER_TEXT = "はい、この内容でオーダーします";
+/** 「修正する」で送る発話 */
+export const REVISE_ORDER_TEXT = "内容を修正したいです";
+/** 外からチャットを開く (「AIコンシェルジュを通してオーダーする」など) ときのイベント */
+const OPEN_EVENT = "cf:concierge-open";
+export type OpenConciergeDetail = { starter?: string };
 
 export function useConciergeSettings(): ConciergeSettings | undefined {
   const { data } = useSWR("ai-concierge-settings", () => api<ConciergeSettings>("/ai_concierge/settings"), {
@@ -56,6 +74,51 @@ export function postMessage(session: ConciergeSession, content: string, token: s
     body: jsonBody({ content, guest_token: session.guest_token ?? undefined }),
     auth: token,
   });
+}
+
+/** ゲストが「はい」を押した下書き。ログインしたら、この内容で依頼できるようにする (タブを閉じるまで) */
+export type PendingOrder = { conversation_id: number; guest_token: string; message_id: number; title: string; markdown: string };
+
+export function readPendingOrder(): PendingOrder | null {
+  try {
+    const p = JSON.parse(sessionStorage.getItem(PENDING_ORDER_KEY) ?? "null") as PendingOrder | null;
+    return p && typeof p.conversation_id === "number" && typeof p.message_id === "number" ? p : null;
+  } catch {
+    return null;
+  }
+}
+
+export function writePendingOrder(order: PendingOrder | null) {
+  try {
+    if (order) sessionStorage.setItem(PENDING_ORDER_KEY, JSON.stringify(order));
+    else sessionStorage.removeItem(PENDING_ORDER_KEY);
+  } catch {
+    /* 保存できなければ、ログイン後にもう一度まとめてもらう */
+  }
+}
+
+/** 提示された下書きで依頼する (ログインが要る)。guest_token はゲストのときに始めた会話を引き継ぐときだけ */
+export function submitCustomOrder(conversationId: number, messageId: number, token: string | null, guestToken?: string | null) {
+  return api<{ conversation_id: number; service_request: { id: number }; message: ConciergeMessage }>(
+    `/ai_concierge/conversations/${conversationId}/custom_orders`,
+    { method: "POST", body: jsonBody({ message_id: messageId, guest_token: guestToken ?? undefined }), auth: token },
+  );
+}
+
+/** チャットを開く。starter があれば、その発話を送って会話を始める */
+export function openConcierge(detail: OpenConciergeDetail = {}) {
+  window.dispatchEvent(new CustomEvent<OpenConciergeDetail>(OPEN_EVENT, { detail }));
+}
+
+export function onOpenConcierge(handler: (detail: OpenConciergeDetail) => void) {
+  const listener = (e: Event) => handler((e as CustomEvent<OpenConciergeDetail>).detail ?? {});
+  window.addEventListener(OPEN_EVENT, listener);
+  return () => window.removeEventListener(OPEN_EVENT, listener);
+}
+
+/** オーダーメイドの相談を始める発話。参考の商品があれば添える */
+export function customOrderStarter(productName?: string | null) {
+  return productName ? `「${productName}」を参考に、オーダーメイドの制作を相談したいです` : "オーダーメイドの制作を相談したいです";
 }
 
 /** 応答に付く CTA (API が切り出した action) を、画面内のリンクにする。知らないものは出さない */

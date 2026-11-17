@@ -71,6 +71,7 @@ Rails.application.routes.draw do
         resource :settings, only: :show # 使えるか (Claude の API キーの有無)
         resources :conversations, only: %i[create show] do
           resources :messages, only: %i[create]
+          resources :custom_orders, only: %i[create] # 提示した下書きでオーダーメイドを依頼する (「はい、オーダーする」)
         end
       end
 

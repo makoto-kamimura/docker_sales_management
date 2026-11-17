@@ -1,9 +1,9 @@
 import { useState } from 'react';
 import { Pressable, StyleSheet, TextInput } from 'react-native';
-import { router } from 'expo-router';
 
 import { Text, View } from '@/components/Themed';
 import { useAuth } from '@/lib/auth';
+import { routeAfterLogin } from '@/lib/concierge';
 
 export default function RegisterScreen() {
   const { register } = useAuth();
@@ -17,7 +17,7 @@ export default function RegisterScreen() {
     setErr(null); setBusy(true);
     try {
       await register(email, password, name);
-      router.replace('/(tabs)/account');
+      await routeAfterLogin();
     } catch (e) {
       setErr(e instanceof Error ? e.message : 'エラー');
     } finally {

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { ConciergeOrderButton } from "@/components/ConciergeOrderButton";
 import { RequestForm } from "@/components/RequestForm";
 import { fetchStorefront } from "@/lib/storefront";
 
@@ -33,6 +34,8 @@ export default async function CustomOrderPage({ searchParams }: { searchParams: 
           内容を確認してお見積りをお送りします。
         </p>
       </div>
+      {/* 依頼の方法は 2 つ: AIコンシェルジュと相談して依頼書にまとめる / フォームに書く */}
+      <ConciergeOrderButton productId={product_id} />
       <RequestForm kind="custom" submitLabel="制作を依頼する" initialProductId={product_id} />
     </div>
   );

@@ -1,5 +1,6 @@
 # AIコンシェルジュの 1 往復 (発話 → Claude → 応答の保存)。
 # これまでの会話と、店頭の状態・会員の文脈 (カート・直近の注文) を組み立てて渡し、応答の末尾の [CTA: action] を切り出す。
+# オーダーメイドの下書き (ツール propose_custom_order) が作られたら、応答に保存して確認の CTA を付ける。
 class ConciergeChat
   MAX_CONTENT_LENGTH = 1_000
   # Claude に渡す、これまでの会話の件数 (発話と応答を合わせて)
@@ -11,21 +12,26 @@ class ConciergeChat
     view_product view_order open_custom_request open_contact view_requests open_subscription_settings human_handoff
   ].freeze
   CTA_PATTERN = /\[CTA:\s*([^\]\n]+)\]/i
+  # オーダーメイドの下書きの確認 (「はい、オーダーする」「修正する」)。API だけが付ける (LLM の CTA からは作らない)
+  CONFIRM_ORDER_CTA = "confirm_custom_order".freeze
 
-  def initialize(conversation, user: nil, concierge: ClaudeConcierge.new)
+  def initialize(conversation, user: nil, tools: ConciergeTools.new, concierge: nil)
     @conversation = conversation
     @user = user
-    @concierge = concierge
+    @tools = tools
+    @concierge = concierge || ClaudeConcierge.new(tools: @tools)
   end
 
   # 応答 (AiMessage) を返す。Claude から応答を受け取れなければ ClaudeConcierge::Error を上げ、発話は履歴に残さない
   def reply(content)
     answer = @concierge.reply(messages: history + [{ role: "user", content: content }], context: context)
     text, cta = self.class.extract_cta(answer, user: @user)
+    draft = @tools.order_draft
+    cta = CONFIRM_ORDER_CTA if draft
 
     AiMessage.transaction do
       @conversation.messages.create!(role: "user", content: content)
-      @conversation.messages.create!(role: "assistant", content: text, cta: cta)
+      @conversation.messages.create!(role: "assistant", content: text, cta: cta, order_draft: draft&.to_h)
     end
   end
 
@@ -61,14 +67,20 @@ class ConciergeChat
 
   private
 
-  # これまでの会話 (古いものから)。応答の CTA は本文の末尾に戻して渡す (Claude が自分の出した形を見られるように)
+  # これまでの会話 (古いものから)。応答の CTA は本文の末尾に戻して渡す (Claude が自分の出した形を見られるように)。
+  # 下書きを提示した応答には、CTA の代わりに依頼書を添える (修正の求めに、提示した内容をもとに答えられるように)
   def history
     rows = @conversation.messages.where(role: %w[user assistant]).order(id: :desc).limit(HISTORY_LIMIT).to_a.reverse
     rows.shift while rows.first&.role == "assistant" # 会話は発話から始める
-    rows.map do |m|
-      content = m.role == "assistant" && m.cta.present? ? "#{m.content}\n[CTA: #{m.cta}]" : m.content
-      { role: m.role, content: content }
-    end
+    rows.map { |m| { role: m.role, content: history_content(m) } }
+  end
+
+  def history_content(m)
+    return m.content unless m.role == "assistant"
+    return "#{m.content}\n\n[提示したオーダー内容の下書き]\n#{m.order_draft['markdown']}" if m.order_draft.present?
+    return "#{m.content}\n[CTA: #{m.cta}]" if m.cta.present?
+
+    m.content
   end
 
   # 毎回変わる文脈。店頭の状態と、会員の情報 (ゲストなら会員名だけ)
