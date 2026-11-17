@@ -39,6 +39,7 @@ function RootLayoutNav() {
           <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
           <Stack.Screen name="modal" options={{ presentation: 'modal' }} />
           <Stack.Screen name="login" options={{ title: 'ログイン' }} />
+          <Stack.Screen name="auth/sso" options={{ headerShown: false, animation: 'none' }} />
           <Stack.Screen name="register" options={{ title: '会員登録' }} />
           <Stack.Screen name="products/[id]" options={{ title: '商品詳細' }} />
           <Stack.Screen name="checkout" options={{ title: 'ご注文確認' }} />

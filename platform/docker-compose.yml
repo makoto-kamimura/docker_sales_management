@@ -36,6 +36,14 @@ services:
       STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET:-}
       APP_BASE_URL: ${APP_BASE_URL:-http://localhost}
       RAILS_LOG_TO_STDOUT: "true"
+      # SSO (任意)。4 つがそろったときだけ有効 (.env.example)
+      OIDC_ISSUER: ${OIDC_ISSUER:-}
+      OIDC_CLIENT_ID: ${OIDC_CLIENT_ID:-}
+      OIDC_CLIENT_SECRET: ${OIDC_CLIENT_SECRET:-}
+      PUBLIC_BASE_URL: ${PUBLIC_BASE_URL:-http://localhost}
+      OIDC_REQUIRE_MFA: ${OIDC_REQUIRE_MFA:-true}
+      OIDC_MOBILE_REDIRECT_PREFIXES: ${OIDC_MOBILE_REDIRECT_PREFIXES:-craftflow://,exp://}
+      OIDC_ALLOW_PASSWORD_FOR_SSO_ONLY: ${OIDC_ALLOW_PASSWORD_FOR_SSO_ONLY:-false}
       BUNDLE_PATH: /usr/local/bundle
     volumes:
       - ../app/api:/app

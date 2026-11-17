@@ -13,6 +13,10 @@ module Api
       def login
         user = User.find_by("LOWER(email) = ?", params.require(:email).to_s.downcase)
         raise AuthError, "メールアドレスまたはパスワードが正しくありません" unless user&.authenticate(params.require(:password))
+        # 「SSO だけ」の人は、パスワードが合っていても断る (パスワードが違えば上の 401 のまま。設定は漏らさない)
+        unless Oidc.login_method_allowed?(user, JsonWebToken::LOGIN_PASSWORD)
+          raise ForbiddenError, "このアカウントは #{Oidc.display_name} でのログインだけが許可されています"
+        end
 
         render json: tokens_for(user).merge(user: user_json(user))
       end
@@ -22,16 +26,20 @@ module Api
         payload = JsonWebToken.decode(token)
         raise AuthError, "リフレッシュトークンが無効です" unless payload && payload[:type] == "refresh"
 
-        user = User.find(payload[:sub])
-        render json: tokens_for(user)
+        user = User.find_by(id: payload[:sub])
+        method = JsonWebToken.login_method(payload)
+        # 「SSO だけ」にしたあとは、パスワードで入ったリフレッシュトークンも使えない
+        raise AuthError, "リフレッシュトークンが無効です" unless user && Oidc.login_method_allowed?(user, method)
+
+        render json: tokens_for(user, method)
       end
 
       private
 
-      def tokens_for(user)
+      def tokens_for(user, method = JsonWebToken::LOGIN_PASSWORD)
         {
-          access_token:  JsonWebToken.encode_access(user_id: user.id),
-          refresh_token: JsonWebToken.encode_refresh(user_id: user.id),
+          access_token:  JsonWebToken.encode_access(user_id: user.id, method: method),
+          refresh_token: JsonWebToken.encode_refresh(user_id: user.id, method: method),
           token_type: "Bearer",
           expires_in: JsonWebToken::ACCESS_EXP.to_i
         }

@@ -253,7 +253,7 @@ Expo で作る**顧客向け**のアプリ。管理画面は Web のみとする
 | 画面 | 内容 |
 |---|---|
 | タブ | ホーム / 検索 / カート / サブスク / AIコンシェルジュ / アカウント |
-| その他 | ログイン・会員登録・商品詳細・注文確定（カード / 振込など）・注文詳細（カードでの支払い、3Dデータ・組み立て説明書のダウンロード、投げ銭を含む）・問い合わせ / 依頼の作成と一覧 |
+| その他 | ログイン（SSO が有効なら「SSO でログイン」も）・会員登録・商品詳細・注文確定（カード / 振込など）・注文詳細（カードでの支払い、3Dデータ・組み立て説明書のダウンロード、投げ銭を含む）・問い合わせ / 依頼の作成と一覧 |
 
 サブスクタブでは、購読中のサブスクの操作と支払いカードの変更ができる（新しい申し込みは Web で行う）。決済画面はアプリ内ブラウザで開く。アカウントタブと注文確定の画面から、特定商取引法に基づく表記（Web のページ）を開ける。
 
@@ -261,6 +261,7 @@ Expo で作る**顧客向け**のアプリ。管理画面は Web のみとする
 
 - メールアドレス・パスワード・名前で会員登録し、ログインで JWT を受け取る（アクセストークン1時間 / リフレッシュトークン7日。[第19章](#19-認証の実装)）。
 - メールアドレスは大文字小文字を区別せず一意。パスワードは bcrypt で保存する。
+- 連携した人は、共通の認証サーバーの SSO（パスキーの 2 段階認証つき）でもログインできる。SSO の連携・解除と「SSO だけでログインする」は、Web はマイページ、モバイルはアカウントタブで行う（[第19章](#19-認証の実装)）。SSO から新しい会員は作らない。
 - プロフィール（名前・メール）の変更、住所の登録（既定の住所を1つ指定）ができる。カード情報はこのサービスに保存しない（[8.1節](#81-カード決済)）。
 - 会員登録時にカートが1つ作られる。
 
@@ -670,7 +671,7 @@ LAN / tunnel / localhost の各モードと接続できないときの対処は 
 | 項目 | 内容 |
 |---|---|
 | 方式 | API が JWT（HS256）を発行し、Web・モバイルとも `Authorization: Bearer <token>` で送る |
-| 有効期限 | アクセストークン1時間、リフレッシュトークン7日。更新は `POST /api/v1/auth/refresh` |
+| 有効期限 | アクセストークン1時間、リフレッシュトークン7日。更新は `POST /api/v1/auth/refresh`。Web もモバイルも、認証つきの通信が 401 になったら1回だけ更新してやり直し、更新できなければログアウトする |
 | パスワード | bcrypt（cost=12） |
 | ロールと権限 | `users.role`（`member` / `staff` / `admin`）と `users.permissions`（`sales` / `production` / `orders` の配列。staff 以外は常に空） |
 
@@ -678,6 +679,13 @@ LAN / tunnel / localhost の各モードと接続できないときの対処は 
 - Web のメニューの出し分けは表示のためで、可否は常に API が判定する。
 - 顧客向けの API は、自分のデータ（注文・住所・サブスク・問い合わせ・ダウンロード）にだけアクセスできる。
 - `/auth/login` の `user` と `GET /me` は、実際に持っている権限を `permissions`（配列）で返す。
+- **SSO でログイン**（任意。`OIDC_ISSUER`・`OIDC_CLIENT_ID`・`OIDC_CLIENT_SECRET`・`PUBLIC_BASE_URL` がそろったときだけ有効）: 共通の認証サーバー（OpenID Connect）でログインし、パスワードのログインと同じ JWT（アクセス・リフレッシュ）を発行する。仕様は、認証サーバー（別リポジトリ）のアプリ連携の手順 と同じ（ほかの自作アプリと共通）。実装は `app/services/oidc.rb` と `app/controllers/api/v1/sso_controller.rb`。
+  - パスワードでログインしたあと、マイページ（モバイルはアカウントタブ）で自分の SSO のアカウントを連携した人だけが使える。新しい会員は作らない。メールアドレスの一致では自動でひも付けない。デモ用（`@example.com`）には連携できない。
+  - 既定では、認証サーバーにパスキー（2 段階認証）でログインした人だけを通す（ID トークンの `amr` に `mfa`。`OIDC_REQUIRE_MFA`）。
+  - ID トークンは、認証サーバーの公開鍵（`jwks_uri`）で署名を確かめ、`iss`・`aud`・`exp`・`nonce` も確かめる。署名の確認は OpenSSL で直接行い、方式は RS256/384/512・PS256/384/512・ES256・EdDSA だけを許す。
+  - PKCE を二重に使う（クライアント ↔ API と、API ↔ 認証サーバー）。`state`・`intent`・結果コードは DB にハッシュだけを保存し、1 回で消す。Web は `sessionStorage`、モバイルはメモリに `code_verifier` を持つ。モバイルは `expo-web-browser` でアプリ内のブラウザを開き、`craftflow://auth/sso`（Expo Go では `exp://…/--/auth/sso`）で戻る。
+  - **SSO だけでログインする**（本人が選ぶ）: JWT の `amr` クレーム（`["pwd"]` / `["sso"]`。リフレッシュしても引き継ぐ）で「ログインした方法」を持ち、リクエストとリフレッシュのたびに確かめる。オンにすると、パスワードでのログインを 403 で断り、パスワードで発行したトークン（以前の `amr` のないものも）はほかの端末のものも含めて 401 になる。オンにできるのは、連携済みで SSO でログイン中の人だけ。連携を解除すると外れる。非常用に `OIDC_ALLOW_PASSWORD_FOR_SSO_ONLY=true`。
+  - 設定: `OIDC_ISSUER` / `OIDC_CLIENT_ID` / `OIDC_CLIENT_SECRET` / `PUBLIC_BASE_URL`（認証サーバーに登録するリダイレクト URI は `{PUBLIC_BASE_URL}/api/v1/auth/sso/callback`）、`OIDC_REQUIRE_MFA`（既定 `true`）、`OIDC_DISPLAY_NAME`（`SSO`）、`OIDC_MOBILE_REDIRECT_PREFIXES`（`craftflow://,exp://`）、`OIDC_LINK_DENY_EMAIL_DOMAINS`（`example.com`）、`OIDC_ALLOW_PASSWORD_FOR_SSO_ONLY`（`false`）。
 
 ## 20. 機能ごとの実装方針
 
@@ -750,8 +758,10 @@ LAN / tunnel / localhost の各モードと接続できないときの対処は 
 | テーブル | 用途 |
 |---|---|
 | `users` | 会員・スタッフ・管理者 |
+| `user_identities` | SSO の連携（`user_id`, `provider`, `subject` = 認証サーバーの `sub`, `email` は表示用）。`(provider, subject)` と `(user_id, provider)` が一意 |
+| `oauth_flows` | SSO の途中の状態（`state`・`intent`・結果コードはハッシュだけ。使ったら消す） |
 | `addresses` | 会員の住所 |
-| `categories` | 商品カテゴリ |
+| `categories` | 商品カテゴリ（販売中か `active`） |
 | `products` | 商品 |
 | `product_embeddings` | pgvector の埋め込み（商品検索） |
 | `inventories` | 販売在庫 |
@@ -807,6 +817,7 @@ permissions           string[]（'sales' | 'production' | 'orders'。staff 以�
 name
 admin_note            text（店舗側だけが見る顧客メモ）
 stripe_customer_id    nullable（カード決済で初めて Stripe の顧客を作ったときに記録）
+sso_only              boolean（SSO だけでログインする。既定 false）
 created_at / updated_at
 ```
 
@@ -1063,7 +1074,15 @@ created_at / updated_at
 |---|---|---|
 | POST | `/auth/register` | 会員登録 |
 | POST | `/auth/login` | ログイン → JWT |
-| POST | `/auth/refresh` | リフレッシュ |
+| POST | `/auth/refresh` | リフレッシュ（ログインした方法を引き継ぐ。「SSO だけ」の人のパスワードのリフレッシュは 401） |
+| GET | `/auth/providers` | SSO が使えるか（`{sso, sso_name}`） |
+| GET | `/auth/sso/start` | SSO の開始（`mode`・`client`・`code_challenge`・モバイルは `redirect_uri`・連携は `intent`）。認証サーバーへ 303 |
+| GET | `/auth/sso/callback` | 認証サーバーからの戻り。`?code=` か `?error=`（not_linked / mfa_required / cancelled / expired / failed）でクライアントへ 303 |
+| POST | `/auth/sso/exchange` | 結果コードと `code_verifier` の交換。ログインなら JWT と `user`、連携なら（Bearer の本人を確かめて）登録 |
+| GET | `/me/identities` | 自分の連携と「SSO だけ」の状態 |
+| POST | `/me/identities/sso/intent` | 連携の開始に使う使い捨ての intent |
+| DELETE | `/me/identities/sso` | 連携の解除（「SSO だけ」も外す） |
+| PUT | `/me/sso-only` | 「SSO だけでログインする」の切り替え（オンは SSO でログイン中の人だけ） |
 | GET | `/me` | プロフィールの取得 |
 | PATCH | `/me` | プロフィールの更新 |
 | GET/POST/PATCH/DELETE | `/me/addresses[/:id]` | 住所の CRUD |

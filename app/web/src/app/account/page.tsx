@@ -7,6 +7,7 @@ import { useAuth } from "@/lib/auth";
 import { fileSize } from "@/lib/format";
 import { ROLE_LABEL, permissionLabels } from "@/lib/permissions";
 import type { Address, Download } from "@/lib/types";
+import { SsoSection } from "@/components/SsoSection";
 
 export default function AccountPage() {
   const { user, token } = useAuth();
@@ -54,6 +55,8 @@ export default function AccountPage() {
           </span>
         </div>
       </section>
+
+      <SsoSection />
 
       {downloads && downloads.length > 0 && (
         <section className="card p-6 space-y-3">

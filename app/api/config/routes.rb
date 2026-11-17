@@ -10,6 +10,16 @@ Rails.application.routes.draw do
         post :refresh
       end
 
+      # SSO (共通の認証サーバー。OpenID Connect)。OIDC_ISSUER などが未設定なら 404 (providers は sso: false)
+      get "auth/providers", to: "sso#providers"
+      get "auth/sso/start", to: "sso#start"
+      get "auth/sso/callback", to: "sso#callback"
+      post "auth/sso/exchange", to: "sso#exchange"
+      get "me/identities", to: "sso#identities"
+      post "me/identities/sso/intent", to: "sso#intent"
+      delete "me/identities/sso", to: "sso#unlink"
+      put "me/sso-only", to: "sso#sso_only"
+
       # マイページ (要件3)
       resource :me, only: %i[show update], controller: "me" do
         resources :addresses, except: %i[new edit]

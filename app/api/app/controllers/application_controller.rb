@@ -42,7 +42,18 @@ class ApplicationController < ActionController::API
     payload = JsonWebToken.decode(token)
     return nil unless payload && payload[:type] == "access"
 
-    User.find_by(id: payload[:sub])
+    user = User.find_by(id: payload[:sub])
+    method = JsonWebToken.login_method(payload)
+    # 「SSO だけ」の人のパスワードのトークンは、ほかの端末のものも含めてその時点から断る
+    return nil unless user && Oidc.login_method_allowed?(user, method)
+
+    @login_method = method
+    user
+  end
+
+  # いまのリクエストのログイン方法 (pwd / sso)
+  def login_method
+    current_user && @login_method
   end
 
   def render_error(code:, message:, status:)

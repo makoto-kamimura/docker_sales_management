@@ -15,12 +15,19 @@ type AuthState = {
   loading: boolean;
   login: (email: string, password: string) => Promise<void>;
   register: (email: string, password: string, name: string) => Promise<void>;
+  /** SSO でログインしたときに、交換で受け取ったトークンを保存する */
+  adopt: (tokens: Tokens, user: User) => void;
   logout: () => void;
 };
 
 const AuthCtx = createContext<AuthState | null>(null);
 
 const STORAGE_KEY = "dr_auth";
+
+/** 保存済みのアクセストークン (AuthProvider の読み込みを待たずに使う。SSO の連携の交換用) */
+export function readStoredAccessToken(): string | null {
+  return readStored()?.access_token ?? null;
+}
 
 function readStored(): Stored | null {
   try {
@@ -114,7 +121,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [persist]);
 
   return (
-    <AuthCtx.Provider value={{ user, token, loading, login, register, logout }}>
+    <AuthCtx.Provider value={{ user, token, loading, login, register, adopt: persist, logout }}>
       {children}
     </AuthCtx.Provider>
   );
