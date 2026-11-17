@@ -69,6 +69,7 @@ class StripeService
   # 定期便の申し込み。お届けの間隔ごとに、割引後の単価 × 数量 (税・送料込み) を請求する
   def create_subscription_checkout(subscription, success_url:, cancel_url:)
     customer = ensure_customer(subscription.user)
+    # user_id は入れない。Stripe のアカウントを共有するほかのサービスが、購読の metadata の user_id を自分のユーザーとして読むため
     metadata = { kind: "subscription", subscription_id: subscription.id.to_s }
     call do
       @client.v1.checkout.sessions.create(
