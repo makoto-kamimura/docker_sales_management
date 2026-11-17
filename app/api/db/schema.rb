@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_11_17_000002) do
+ActiveRecord::Schema[7.2].define(version: 2026_11_17_000003) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "citext"
   enable_extension "pg_trgm"
@@ -64,7 +64,6 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_17_000002) do
 
   create_table "ai_conversations", force: :cascade do |t|
     t.bigint "user_id"
-    t.string "dify_conversation_id"
     t.datetime "started_at", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false

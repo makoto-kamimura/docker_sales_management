@@ -1,6 +1,6 @@
 require "faraday"
 
-# OpenAI互換 (Dify 内蔵 or 他LLMプロバイダ) でテキスト → vector(1536)
+# OpenAI互換の埋め込み API でテキスト → vector(1536)
 # 開発時は OPENAI_API_KEY 未設定なら mock vector を返す。
 class EmbeddingService
   DIMS = 1536

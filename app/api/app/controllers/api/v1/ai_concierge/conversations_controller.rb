@@ -4,26 +4,21 @@ module Api
       class ConversationsController < BaseController
         def create
           convo = AiConversation.create!(user: current_user, started_at: Time.current)
-          render json: serialize(convo), status: :created
+          render json: serialize(convo).merge(guest_token: guest_token_for(convo)), status: :created
         end
 
+        # 会話履歴 (画面を開き直したときの復元に使う)
         def show
-          convo = scope.find(params[:id])
+          convo = find_conversation(params[:id])
           render json: serialize(convo).merge(
-            messages: convo.messages.order(:id).map { |m|
-              { id: m.id, role: m.role, content: m.content, cta: m.cta, created_at: m.created_at }
-            }
+            messages: convo.messages.where(role: %w[user assistant]).order(:id).map { |m| serialize_message(m) }
           )
         end
 
         private
 
-        def scope
-          current_user ? current_user.ai_conversations : AiConversation.where(user_id: nil)
-        end
-
         def serialize(c)
-          { id: c.id, dify_conversation_id: c.dify_conversation_id, started_at: c.started_at }
+          { id: c.id, started_at: c.started_at }
         end
       end
     end

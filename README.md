@@ -68,7 +68,7 @@ CraftFlow は、**注文を唯一の正本にして、制作・発送・顧客�
 | 問い合わせ・オーダーメイド依頼 | 注文についての問い合わせと、名入れ・一点ものの制作依頼を受け付け、店舗が回答する |
 | サブスクリプション | フィラメントなどの消耗品を、毎週・隔週・月1回の割引価格で定期お届けする |
 | 顧客管理と売上分析 | 購入履歴・よく買う商品・顧客メモ。売上・リピート率に加え、工程ごとの滞留時間・リードタイムを分析する |
-| AIコンシェルジュ | カートや注文の状況を踏まえて、作品の提案や制作状況を案内するチャット（Dify） |
+| AIコンシェルジュ | 店頭の商品を調べて作品を提案し、カートや注文の状況を踏まえて案内するチャット（Claude） |
 | 権限で分ける管理画面 | スタッフに「販売」「制作」「注文」の権限を組み合わせて付与し、使える管理画面と API を切り替える |
 
 ## 使い方のイメージ
@@ -457,10 +457,13 @@ received   paid       awaiting_   in_        inspection ready_to_  shipped    co
 
 ## 15. AIコンシェルジュ
 
-- Web は全画面右下のチャット、モバイルは専用タブ。ゲストも利用できる。
-- 発話ごとに Dify（Chatflow）を呼び出し、会員名・カートの中身・直近3件の注文（ステータスを含む）を文脈として渡す。作品の提案や制作状況の案内に使う。
-- 会話履歴は API 側に保存し、Dify の会話 ID を引き継ぐ。応答末尾の `[CTA: action]` は画面のアクションボタンとして切り出す。
-- 商品・FAQ のナレッジは [app/ai/knowledge/](app/ai/knowledge/) から Dify に同期する。Dify が未起動・未設定でも他の機能は動き、チャットだけ `502 ai_unavailable` を返す（接続は[18.6節](#186-difyaiコンシェルジュの接続)）。
+- Web は全画面右下のチャット（管理画面には出さない）、モバイルは専用タブ。ゲストも利用できる。
+- 応答は Claude（Anthropic の API）が作る。店頭に並んでいる商品を DB から調べて作品を提案し、会員名・カートの中身・直近3件の注文（工程を含む）と店頭の状態（販売中のカテゴリ・オーダーメイドの受付・定期便・支払い方法・送料）を踏まえて答える。店舗の決まりと FAQ は [app/api/config/ai_concierge/](app/api/config/ai_concierge/) に置く。
+- 会話履歴は API 側に保存し、直近20件を文脈として送る。Web は、タブを閉じるまで同じ会話を続けられる（開き直すと履歴を戻す）。ログイン・ログアウトすると新しい会話になる。「新しい会話」でいつでも始め直せる。
+- 応答末尾の `[CTA: action]` は画面のボタンとして切り出す。ボタンにするのは決まった action だけで、商品へのリンクは店頭に並んでいる商品、注文へのリンクは本人の注文のときだけ出す（[20.6節](#206-aiコンシェルジュ)）。
+- 最初の画面に質問の例を出す。送れなかったときは理由を表示し、同じ内容を送り直せる。
+- 発話は1,000文字まで。短い時間に続けて送ると、しばらく送れなくなる（会員ごと・ゲストは接続元ごとに5分で30回まで）。
+- **Claude の API キー（`ANTHROPIC_API_KEY`）が未設定なら、AIコンシェルジュは無効になる。** Web はチャットのボタンを、モバイルはタブを出さず、ほかの機能はそのまま動く。キーを設定すると画面に出る（接続は[18.6節](#186-aiコンシェルジュclaude-apiの接続)）。
 
 ## 16. 管理機能
 
@@ -515,9 +518,9 @@ received   paid       awaiting_   in_        inspection ready_to_  shipped    co
 
 | 分類 | 内容 |
 |---|---|
-| 機能 | ステータス変更・回答時の顧客への通知、オーダーメイド依頼から注文への変換、入金後キャンセル時の在庫戻し・返金、材料の入出庫履歴、制作スタッフ向けのモバイル画面、AIコンシェルジュに進行中の問い合わせを渡す |
+| 機能 | ステータス変更・回答時の顧客への通知、オーダーメイド依頼から注文への変換、入金後キャンセル時の在庫戻し・返金、材料の入出庫履歴、制作スタッフ向けのモバイル画面、AIコンシェルジュに進行中の問い合わせを渡す、AIコンシェルジュの応答の逐次表示（ストリーミング） |
 | UI | 商品価格の税込の総額表示（[8.2節](#82-特定商取引法に基づく表記と注文の最終確認)）、カテゴリ別の商品の表示項目、OG 画像・favicon の差し替え、画像の変換・最適化、狭い画面のヘッダーのメニュー |
-| 品質 | テストの拡充（AIコンシェルジュの CTA 抽出、管理の商品系の request spec）、制作ボードのキーボード操作、モバイルの日時ピッカー |
+| 品質 | テストの拡充（管理の商品系の request spec）、制作ボードのキーボード操作、モバイルの日時ピッカー |
 
 ---
 
@@ -533,12 +536,12 @@ received   paid       awaiting_   in_        inspection ready_to_  shipped    co
 |---|---|---|
 | モバイル | React Native 0.81（Expo SDK 54 + Expo Router） | 顧客向けの iOS / Android アプリ。認証・注文・AIコンシェルジュ・サブスク |
 | Web | Next.js 15（App Router、React 19）+ SWR、three.js（3Dプレビュー）、dxf-viewer（DIY設計図の DXF プレビュー） | ブラウザ向けの全機能と管理画面 |
-| API | Rails 7.2（API mode） | 業務ロジック、DB アクセス、認証、Stripe、Dify の仲介、PDF 生成 |
-| AI | Dify（Chatflow + Knowledge） | LLM のオーケストレーション、商品の RAG |
+| API | Rails 7.2（API mode） | 業務ロジック、DB アクセス、認証、Stripe、AIコンシェルジュ（Claude の呼び出しとツールの実行）、PDF 生成 |
+| AI | Claude（Anthropic の Messages API。公式 Ruby SDK `anthropic`） | AIコンシェルジュの応答。商品はツールで DB を引く |
 | DB | PostgreSQL 16（pgvector / pg_trgm） | リレーショナル ＋ 全文 / ベクトル検索 |
 | インフラ | Docker Compose + Nginx | ローカル開発、単一のエントリポイント |
 
-API の主な gem：`jwt`、`bcrypt`、`pg_search`、`neighbor`（pgvector）、`stripe`、`faraday`、`prawn`（PDF）、`kramdown` + `kramdown-parser-gfm`（Markdown）、`rubyzip`。
+API の主な gem：`jwt`、`bcrypt`、`pg_search`、`neighbor`（pgvector）、`stripe`、`anthropic`（Claude）、`faraday`、`prawn`（PDF）、`kramdown` + `kramdown-parser-gfm`（Markdown）、`rubyzip`。
 
 ### 18.2 システム構成
 
@@ -549,7 +552,7 @@ flowchart TB
   web["web（Next.js）:3001"]
   api["api（Rails 7.2）:3000"]
   db[("PostgreSQL 16<br/>pgvector / pg_trgm :5432")]
-  dify["Dify（公式 compose を別に起動）:8080"]
+  claude["Claude API（api.anthropic.com）"]
   mobile["mobile（Expo の開発サーバー）:8081"]
 
   client --> nginx
@@ -557,7 +560,7 @@ flowchart TB
   nginx -- "/api/ ・ /rails/" --> api
   web -- "SSR 時は http://api:3000/api" --> api
   api --> db
-  api -- "host.docker.internal:8080/v1" --> dify
+  api -- "HTTPS（ANTHROPIC_API_KEY があるときだけ）" --> claude
   mobile -. "JS バンドルを配信" .-> client
 ```
 
@@ -568,7 +571,7 @@ flowchart TB
 | Web（ブラウザ）→ API | `http://localhost/api/v1/...`（Nginx 経由、`NEXT_PUBLIC_API_BASE`） |
 | Web（SSR）→ API | `http://api:3000/api/v1/...`（compose 内、`API_BASE_INTERNAL`） |
 | モバイル → API | `http://<開発PCの LAN IP>/api/v1/...`（端末から到達できる URL、`EXPO_PUBLIC_API_BASE`） |
-| API → Dify | `http://host.docker.internal:8080/v1/...`（Dify は別ネットワークのため、ホスト経由） |
+| API → Claude | `https://api.anthropic.com/v1/messages`（AIコンシェルジュ。API キーが未設定なら呼ばない） |
 | API → PostgreSQL | `postgres:5432` |
 | ActiveStorage の配信 | Nginx の `/rails/` を API へプロキシする（同一オリジン） |
 
@@ -581,14 +584,14 @@ docker_sales_management/
 │   ├── api/                  Rails（API mode）
 │   │   ├── app/controllers/api/v1/        顧客向け API（admin/ 以下は管理 API）
 │   │   ├── app/models/
-│   │   ├── app/services/     OrderWorkflow・OrderCreator・Pricing・ModelListing・AssemblyGuidePdf など
+│   │   ├── app/services/     OrderWorkflow・OrderCreator・Pricing・ModelListing・AssemblyGuidePdf・ClaudeConcierge など
+│   │   ├── config/ai_concierge/  AIコンシェルジュの店舗の決まり（system_prompt.md）と FAQ
 │   │   ├── db/migrate/ · db/seeds.rb
-│   │   ├── lib/tasks/        rake タスク（旧カテゴリの掃除など）
+│   │   ├── lib/tasks/        rake タスク（旧カテゴリの掃除、AIコンシェルジュの接続確認など）
 │   │   ├── spec/             RSpec
 │   │   └── Dockerfile
 │   ├── web/                  Next.js（src/app/ に画面、src/lib/api.ts に API クライアント）
 │   ├── mobile/               Expo（app/ に画面）
-│   └── ai/                   Dify のプロンプト・ナレッジ・同期スクリプト
 ├── docs/                     仕様書以外の資料（docs/README.md）
 └── platform/
     ├── docker-compose.yml
@@ -609,7 +612,7 @@ docker_sales_management/
 | `mobile` | `app/mobile/Dockerfile` | 8081, 19000-19002 | Expo の開発サーバー（`EXPO_HOST` で lan / tunnel / localhost） |
 | `nginx` | `nginx:1.27-alpine` | 80 | `/` → web、`/api/` と `/rails/` → api。アップロード上限は110MB |
 
-- Dify は含めない（[D9](#24-決定事項)）。
+- AIコンシェルジュは外部の Claude API を呼ぶので、追加のコンテナはない（[D9](#24-決定事項)）。
 - 名前付きボリューム：`postgres_data`・`bundle_cache`・`web_node_modules`・`mobile_node_modules`。
 
 ### 18.5 クイックスタート
@@ -653,16 +656,22 @@ docker compose run --rm -e RAILS_ENV=test \
 
 個別のサービスの起動、スモークテスト、トラブルシュート、リセットの手順は [docs/runbooks/development.md](docs/runbooks/development.md) を参照。
 
-### 18.6 Dify（AIコンシェルジュ）の接続
+### 18.6 AIコンシェルジュ（Claude API）の接続
 
-Dify は公式の [langgenius/dify](https://github.com/langgenius/dify) の compose を別のディレクトリで起動し、ポートを 8080 / 8443 に変える。Chatflow を作って API キーを発行し、`platform/.env` に設定して api を再起動する。
+[Claude Console](https://platform.claude.com/) で API キーを発行し、`platform/.env` に設定して api を作り直す。発話のたびに従量課金される。
 
 ```bash
-DIFY_API_BASE=http://host.docker.internal:8080/v1
-DIFY_API_KEY=app-xxxxxxxxxxxxxxxxxx
+ANTHROPIC_API_KEY=sk-ant-xxxxxxxxxxxxxxxx
+# ANTHROPIC_MODEL=claude-sonnet-5-5   # 空なら claude-opus-5-5
 ```
 
-手順の詳細は [docs/runbooks/development.md の3章](docs/runbooks/development.md#3-dify-aiコンシェルジュ-を起動) と [app/ai/README.md](app/ai/README.md) を参照。
+```bash
+cd platform
+docker compose up -d api
+docker compose exec api bin/rails ai:check   # 接続とモデルを確かめる（料金はかからない）
+```
+
+`ANTHROPIC_API_KEY` が空のあいだは、AIコンシェルジュは無効で、画面に出ない。詳しくは [docs/runbooks/development.md の3章](docs/runbooks/development.md#3-aiコンシェルジュ-claude-api-をつなぐ) を参照。
 
 ### 18.7 モバイルアプリの起動
 
@@ -736,8 +745,18 @@ LAN / tunnel / localhost の各モードと接続できないときの対処は 
 
 ### 20.6 AIコンシェルジュ
 
-- AIコンシェルジュの API（`ai_concierge/messages_controller.rb`）が、変数 `member_name`・`cart_items`（JSON 文字列）・`recent_orders`（JSON 文字列）を組み立て、`DifyClient` で Dify の Chatflow を呼ぶ。ゲストは `member_name` を「ゲスト」にする。
-- ナレッジのうち商品カタログ（`app/ai/knowledge/catalog.md`）は `app/ai/sync_knowledge.rb` で公開中の商品から作り直す。FAQ（`faq.md`）は手で書く。どちらも Dify のナレッジベースへアップロードし直す。
+- 1往復は `ConciergeChat` が受け持つ。これまでの会話（直近20件）と今回の発話、毎回変わる文脈（店頭の状態・会員名・カート（20行まで）・直近3件の注文）を組み立て、`ClaudeConcierge` で Claude を呼ぶ。
+- `ClaudeConcierge` は公式 Ruby SDK（`anthropic`）で Messages API を呼ぶ（blocking。1回のリクエストの待ちは60秒、再試行1回）。
+  - モデルは `ANTHROPIC_MODEL`（既定 `claude-opus-5-5`）。接客のチャットなので effort は `low`、`max_tokens` は16,000。思考は指定しない（モデルの既定の adaptive）。
+  - 安全の判定で断られたときに別のモデルで答え直すサーバー側のフォールバック（`fallbacks: "default"`、beta `server-side-fallback-2026-07-01`）を、対応するモデルのときに付ける。それでも断られたら、問い合わせを案内する定型文を返す。
+  - system は2つに分ける。店舗の決まりと FAQ（`config/ai_concierge/system_prompt.md`・`faq.md`。起動時に読み、文面を変えない）をプロンプトキャッシュに載せ、文脈はその後ろに置く。ツールの定義も会話中に変えない。
+- 商品は、Claude がツールで DB を引く（`ConciergeTools`）。`search_products`（キーワード・カテゴリ。最大8件）と `get_product`（説明・ライセンス・形式・在庫）で、どちらも店頭に並んでいる商品（`Product.on_sale`）だけを返す。1回の発話でツールの往復は4回まで。上限に来たら `tool_choice: none` で答えさせる。往復のあいだ、応答の思考ブロックなどは手を加えずに送り返す。
+- 発話と応答は、Claude から応答を受け取れたときにだけ、まとめて保存する。届かなかった発話は履歴に残さない（画面から送り直せる）。
+- 応答の `[CTA: action]` は本文から取り除き、最後の1つだけを使う。画面がボタンにできる action（`ConciergeChat::CTA_ACTIONS`）以外は捨てる。`view_product:<id>` は店頭に並んでいる商品、`view_order:<id>` は本人の注文のときだけ残す。`open_custom_request` はオーダーメイドを受付中のときだけ、ログインが要る画面（`view_requests` など）は会員のときだけ残す。
+- 有効・無効は `ClaudeConcierge.enabled?`（`ANTHROPIC_API_KEY` の有無）で決める。画面は `GET /ai_concierge/settings` を見て、無効ならチャットを出さない。
+- ゲストの会話は、作成時に返す `guest_token`（会話の ID の署名。30日で切れる）を持つ人だけが使える。会員の会話は本人だけが使える。期限切れのアクセストークンはゲストとして扱わず、`401` を返して画面に更新させる。
+- 発話の回数は、コントローラの `rate_limit`（プロセス内のメモリに数える）で絞る。
+- `bin/rails ai:check` は、API キーとモデルを確かめる（モデルの情報を取るだけで、料金はかからない）。
 
 ### 20.7 カード決済（Stripe）
 
@@ -1040,7 +1059,6 @@ created_at / updated_at
 ai_conversations
   id
   user_id               nullable（ゲスト可）
-  dify_conversation_id
   started_at
   created_at / updated_at
 
@@ -1186,9 +1204,12 @@ created_at / updated_at
 
 | Method | Path | 説明 |
 |---|---|---|
-| POST | `/ai_concierge/conversations` | 新しい会話を始める |
-| POST | `/ai_concierge/conversations/:id/messages` | 発話（body：`content`）。レスポンスは SSE で逐次返す |
-| GET | `/ai_concierge/conversations/:id` | 会話履歴 |
+| GET | `/ai_concierge/settings` | 使えるか → `{ enabled, max_content_length }`。無効なら、画面はチャットを出さない |
+| POST | `/ai_concierge/conversations` | 新しい会話を始める → `{ id, started_at, guest_token }`（`guest_token` はゲストのときだけ） |
+| POST | `/ai_concierge/conversations/:id/messages` | 発話（body：`content`。ゲストは `guest_token` も）→ 応答 `{ id, role, content, cta, created_at }`。応答がそろってから返す |
+| GET | `/ai_concierge/conversations/:id` | 会話履歴 → `{ id, started_at, messages }`（ゲストはクエリに `guest_token`） |
+
+エラー：無効（Claude の API キーが未設定）は `503 ai_unavailable`、Claude に届かない・API がエラーを返すときは `502 ai_unavailable`、送りすぎは `429 rate_limited`、1,000文字を超える発話は `422`、他人の会話・`guest_token` の不一致は `404`。
 
 ### 22.9 管理 API の権限
 
@@ -1308,7 +1329,7 @@ created_at / updated_at
 | D6 | 3Dモデルは販売フラグでショップの商品（SKU `MDL-<id>`）と連動させ、最新版のファイルを配布する。モデルを削除しても、注文から参照される商品は削除せず非公開にする |
 | D7 | 管理画面は Web のみとし、モバイルアプリは顧客向けにする |
 | D8 | スタッフの権限は「販売」「制作」「注文」の組み合わせとする。可否は常に API が判定し、Web のメニューの出し分けは表示のためだけに使う |
-| D9 | Dify は本リポジトリの compose に含めず、公式の compose を別のディレクトリで起動する（同梱の Nginx・Rails と同一オリジンにできず、Cookie 認証が壊れるため）。Dify が未設定でも、AIコンシェルジュ以外の機能は動く |
+| D9 | AIコンシェルジュは、API から Claude（Anthropic の Messages API）を公式 SDK で直接呼ぶ。商品はナレッジに写さず、ツールで DB を引く（手作業の同期をなくし、販売中のカテゴリにも追従させる）。API キーが未設定なら、AIコンシェルジュだけを無効にして画面に出さない（ほかの機能は動く）。2026-11 に Dify（Chatflow + ナレッジ）から移行した |
 | D10 | 投げ銭はカード（Stripe）か振込などで受け付ける。振込などの入金は店舗が確認する。投げ銭は注文の売上に含めず、別に集計する（2026-10 にカード決済を追加） |
 | D11 | 入金後のキャンセルの返品・返金は、店舗が個別に対応する（自動の在庫戻し・返金はしない） |
 | D12 | 3Dモデルの写真は、保存前にブラウザで長辺1920pxの JPEG に縮小し、位置情報などの EXIF を取り除く |

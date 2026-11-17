@@ -68,6 +68,7 @@ Rails.application.routes.draw do
 
       # AIコンシェルジュ (要件4)
       namespace :ai_concierge do
+        resource :settings, only: :show # 使えるか (Claude の API キーの有無)
         resources :conversations, only: %i[create show] do
           resources :messages, only: %i[create]
         end

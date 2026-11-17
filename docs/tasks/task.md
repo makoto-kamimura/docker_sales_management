@@ -27,7 +27,7 @@
   docker compose run --rm api bundle exec rails legacy:cleanup_categories   # DRY_RUN=1 で事前確認
   ```
 - [ ] **Nginx の再読み込み** — アップロード上限を 110MB に変更済み ([nginx.conf](../../platform/nginx/nginx.conf))
-- [ ] **Dify ナレッジ・プロンプトの差し替え** — [catalog.md](../../app/ai/knowledge/catalog.md) / [faq.md](../../app/ai/knowledge/faq.md) / [concierge_system.md](../../app/ai/prompts/concierge_system.md) (CTA が `open_custom_request` / `open_contact` に変わった)
+- [ ] **AIコンシェルジュの API キーを設定する** — 本番は `ANTHROPIC_API_KEY` が空のため無効 (画面に出ない)。設定したら `bin/rails ai:check` で確かめる ([runbook §3](../runbooks/development.md#3-aiコンシェルジュ-claude-api-をつなぐ))
 
 ### P1 — 機能の作り込み (未着手)
 
@@ -36,7 +36,7 @@
 - [ ] **入金後キャンセル時の在庫戻し・返金** (現状は入金前のみ仮押さえを自動解除)
 - [ ] **材料の入出庫履歴** (現状は在庫数のみ。棚卸し差異の追跡用)
 - [ ] **制作スタッフ向けモバイル画面** (制作ボードは現状 Web のみ)
-- [ ] **AIコンシェルジュ `build_inputs` に進行中の問い合わせ (`service_requests`) を渡す**
+- [ ] **AIコンシェルジュの文脈 (`ConciergeChat#inputs`) に進行中の問い合わせ (`service_requests`) を渡す**
 
 ### P2 — UI仕上げ
 
@@ -47,7 +47,7 @@
 
 ### P3 — 品質 / 運用
 
-- [ ] テスト拡充 — AIコンシェルジュCTA抽出、admin 商品系の request spec
+- [ ] テスト拡充 — admin 商品系の request spec
 - [ ] アクセシビリティ: 制作ボードのキーボード操作 (現状は ◀ ▶ ボタンで代替) の確認
 - [ ] **モバイル**: 日時ピッカー導入 (現状 希望納期はテキスト入力)、画像表示の最適化
 
@@ -91,7 +91,7 @@
 #### AIコンシェルジュ
 - プロンプト更新 (ペルソナ・カテゴリ・整備/開発フロー誘導・CTA追加)
 - ChatWidget が CTA (`open_maintenance_booking` 等) をリンク化
-- ナレッジソース ([catalog.md](../../app/ai/knowledge/catalog.md) / [faq.md](../../app/ai/knowledge/faq.md)) と再生成スクリプト ([sync_knowledge.rb](../../app/ai/sync_knowledge.rb))
+- ナレッジソース (catalog.md / faq.md) と再生成スクリプト。2026-11 に Claude API の直接呼び出しへ移り、FAQ は [app/api/config/ai_concierge/](../../app/api/config/ai_concierge/) へ、商品はツールで DB を引く形に変わった
 
 #### 画像アップロード基盤
 - ActiveStorage 導入 (migration / schema / `Product has_one_attached :image`)

@@ -1,5 +1,4 @@
--- Rails 用データベースを作成
--- (Dify は公式 compose 側で自前の Postgres を持つためここでは作らない)
+-- Rails のテスト用データベースを作成
 CREATE DATABASE app_test;
 
 -- pgvector / pg_trgm 拡張 (商品検索 / Rails 側の埋め込み用)

@@ -8,7 +8,6 @@
 - Docker Desktop (Compose v2)
 - ホストには Ruby / Node の事前インストール **不要**
 - ポート: 80 / 3000 / 3001 / 5432 / 8081 / 19000-19002 が空いていること
-- (Dify を起動する場合) 追加で 8080 / 8443 / 5003 が空いていること
 
 ## 1. 初回セットアップ
 
@@ -80,79 +79,40 @@ docker compose up -d
 docker compose logs -f api web
 ```
 
-## 3. Dify (AIコンシェルジュ) を起動
+## 3. AIコンシェルジュ (Claude API) をつなぐ
 
-> ⚠️ Dify は **公式 [langgenius/dify](https://github.com/langgenius/dify) の docker compose** を**別ディレクトリで起動**する構成。  
-> 本リポジトリの `platform/docker-compose.yml` には Dify サービスを含めない（同梱 nginx／Rails と同一オリジン化できず Cookie 認証が壊れるため）。
+AIコンシェルジュは、API が Claude (Anthropic の Messages API) を直接呼ぶ。追加のコンテナは要らない。
 
-### 3.1 初回セットアップ (1回だけ)
+### 3.1 API キーを設定する
 
-```bash
-# 1. 公式リポジトリをホームに clone
-git clone --depth 1 https://github.com/langgenius/dify.git ~/dify
+1. [Claude Console](https://platform.claude.com/) で API キー (`sk-ant-…`) を発行する。発話のたびに従量課金される。
+2. `platform/.env` に設定する。
 
-# 2. .env を作成し、本プラットフォームの nginx (80) と衝突しないようポートを変更
-cp ~/dify/docker/.env.example ~/dify/docker/.env
+   ```bash
+   ANTHROPIC_API_KEY=sk-ant-xxxxxxxxxxxxxxxx
+   # ANTHROPIC_MODEL=claude-sonnet-5-5   # 空なら claude-opus-5-5
+   ```
 
-# .env の以下2行を編集 (デフォルト 80/443 → 8080/8443 に変更):
-#   EXPOSE_NGINX_PORT=8080
-#   EXPOSE_NGINX_SSL_PORT=8443
-# SECRET_KEY= も空なら適当なランダム文字列を設定:
-#   SECRET_KEY=sk-$(openssl rand -base64 42)
-```
+3. api を作り直し (環境変数を読み直すため、`restart` ではなく `up -d`)、接続を確かめる。
 
-### 3.2 起動 / 停止 (2回目以降)
+   ```bash
+   cd docker_sales_management/platform
+   docker compose up -d api
+   docker compose exec api bin/rails ai:check
+   ```
 
-```bash
-# 起動
-cd ~/dify/docker && docker compose up -d
+   `ai:check` はモデルの情報を取るだけなので、料金はかからない。すべて `OK` なら、Web の右下にチャットのボタンが、モバイルに「AIコンシェルジュ」のタブが出る。
 
-# 停止
-cd ~/dify/docker && docker compose stop
+### 3.2 何を参照して答えるか
 
-# 状況確認
-cd ~/dify/docker && docker compose ps
-```
+- 店舗の決まりと FAQ: [app/api/config/ai_concierge/](../../app/api/config/ai_concierge/) の `system_prompt.md` と `faq.md`。直したら api を再起動する。
+- 商品: Claude がツール (`search_products` / `get_product`) で DB を引く。店頭に並んでいる商品 (公開中で、販売中のカテゴリのもの) だけが対象で、ナレッジの手作業の更新は要らない。
+- 店頭の状態 (販売中のカテゴリ・オーダーメイドの受付・定期便・支払い方法・送料) と、会員の文脈 (カート・直近の注文) は、発話のたびに API が渡す。
 
-- Dify Console / Web:  http://localhost:8080
-- Dify Service API:     http://localhost:8080/v1   (Rails からはこちらを叩く)
+### 3.3 キーが未設定 / 届かないとき
 
-### 3.3 Workflow 登録と API キー発行
-
-初回のみ：
-
-1. http://localhost:8080/install で管理者アカウント作成
-2. ログイン後、Studio → Create from Blank → **Chatflow** で「AIコンシェルジュ」ワークフローを作成
-3. Variables に以下を追加 (型はすべて string):
-   - `member_name`
-   - `cart_items` (JSON 文字列)
-   - `recent_orders` (JSON 文字列)
-4. LLM ノードのモデルプロバイダを設定 (OpenAI/Anthropic 等の API キーを Dify 側で登録)
-5. プロンプトに [../app/ai/prompts/concierge_system.md](../../app/ai/prompts/concierge_system.md) を貼り付け
-6. **Publish** → アプリ画面の「API Access」から **API Key** を発行 (`app-xxxxxxxx`)
-
-### 3.4 Rails 側の接続設定
-
-`platform/.env`:
-
-```bash
-DIFY_API_BASE=http://host.docker.internal:8080/v1
-DIFY_API_KEY=app-xxxxxxxxxxxxxxxxxx
-```
-
-反映：
-
-```bash
-cd docker_sales_management/platform
-docker compose restart api
-```
-
-> Rails コンテナは `appnet` ネットワーク、Dify は別ネットワーク (`docker_default`) に居るため、Docker DNS ではなく **`host.docker.internal`** 経由でホスト→Dify nginx に到達する。  
-> 動作確認: `docker compose exec api bash -lc 'curl -sS http://host.docker.internal:8080/v1/parameters -H "Authorization: Bearer $DIFY_API_KEY"'`
-
-### 3.5 Dify 未起動 / 未設定でも他機能は動く
-
-`DIFY_API_KEY` 未設定や Dify 未起動でも、AIコンシェルジュ以外の機能 (商品閲覧・カート・注文等) は動作する。AIコンシェルジュ API のみ `bad_gateway` (`code: ai_unavailable`) を返す ([../app/api/app/controllers/api/v1/ai_concierge/messages_controller.rb](../../app/api/app/controllers/api/v1/ai_concierge/messages_controller.rb))。
+- `ANTHROPIC_API_KEY` が空なら、AIコンシェルジュは無効になる。Web はチャットのボタンを、モバイルはタブを出さない。API は `503`（`code: ai_unavailable`）を返す。ほかの機能 (商品閲覧・カート・注文等) は動く。
+- キーはあるが Claude に届かない・API がエラーを返すときは、発話が `502`（`code: ai_unavailable`）になり、チャットに「もう一度送る」が出る。原因は api のログの `Concierge error: …` に出る。
 
 ## 4. モバイル (Expo) の接続方法
 
@@ -341,6 +301,5 @@ curl -X POST http://localhost:3000/api/v1/cart/items \
 - Next.js: `next build && next start` (multi-stage) / 静的アセットは CDN
 - Expo: EAS Build でネイティブビルド (Docker 不使用)
 - Postgres: マネージド (RDS / Cloud SQL) + pgvector 有効化
-- Dify: 別ホストの公式 compose を使う / クラウド版利用
 - 秘密情報: AWS Secrets Manager / GCP Secret Manager / Vault 等
 - ログ: stdout → CloudWatch / Cloud Logging
