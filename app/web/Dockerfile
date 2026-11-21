@@ -1,4 +1,4 @@
-FROM node:20-alpine
+FROM node:24-alpine
 
 ENV TZ=Asia/Tokyo
 ENV NEXT_TELEMETRY_DISABLED=1
