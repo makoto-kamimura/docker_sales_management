@@ -67,7 +67,12 @@ export type Category = {
   id: number;
   name: string;
   slug: string;
+  /** トップの「取り扱い」のカードの英字の見出し (例 HANDMADE)。空なら slug から作る */
+  label: string;
+  /** トップの「取り扱い」のカードのひとこと説明 */
+  description: string;
   parent_id: number | null;
+  /** 並び順 (管理画面の ▲▼ で変える) */
   position: number;
   /** 販売中か (止めたカテゴリは店頭に出さない) */
   active: boolean;

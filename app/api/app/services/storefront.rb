@@ -1,5 +1,5 @@
 # いま店頭で扱っているもの (販売中のカテゴリ・オーダーメイドの受付・定期便)。
-# 画面のメニューの出し分けと、AIコンシェルジュの案内に使う。販売中かどうかは、管理画面でカテゴリごとに切り替える
+# 画面のメニューの出し分けと、AIコンシェルジュの案内に使う。販売中かどうか・並び順・見出しと説明は、管理画面でカテゴリごとに設定する
 class Storefront
   CUSTOM_SLUG = "custom"
 
@@ -19,7 +19,9 @@ class Storefront
 
   def self.as_json
     {
-      categories: categories.map { |c| { id: c.id, slug: c.slug, name: c.name, service: c.service? } },
+      categories: categories.map { |c|
+        { id: c.id, slug: c.slug, name: c.name, label: c.label, description: c.description, service: c.service? }
+      },
       custom_orders: custom_orders?,
       subscriptions: subscriptions?
     }

@@ -86,5 +86,76 @@ RSpec.describe "販売するカテゴリの切り替え", type: :request do
       expect(response).to have_http_status(:forbidden)
       expect(prints.reload.active).to be(false)
     end
+
+    it "カテゴリを追加でき、追加したては停止中で並びの最後に入る" do
+      post "/api/v1/admin/categories",
+           params: { slug: "leather", name: "レザー小物", label: "LEATHER", description: "手縫いの革小物。" },
+           headers: auth_headers(seller), as: :json
+      expect(response).to have_http_status(:created)
+      expect(body).to include("slug" => "leather", "label" => "LEATHER", "active" => false, "deletable" => true)
+
+      get "/api/v1/storefront"
+      expect(body["categories"].map { |c| c["slug"] }).not_to include("leather")
+
+      leather = Category.find_by!(slug: "leather")
+      patch "/api/v1/admin/categories/#{leather.id}", params: { active: true, name: "レザー" }, headers: auth_headers(seller), as: :json
+      get "/api/v1/storefront"
+      expect(body["categories"].last).to include("slug" => "leather", "name" => "レザー", "description" => "手縫いの革小物。")
+
+      post "/api/v1/admin/categories", params: { slug: "Leather Goods", name: "x" }, headers: auth_headers(seller), as: :json
+      expect(response).to have_http_status(:unprocessable_entity)
+      post "/api/v1/admin/categories", params: { slug: "leather", name: "x" }, headers: auth_headers(seller), as: :json
+      expect(response).to have_http_status(:unprocessable_entity)
+      post "/api/v1/admin/categories", params: { slug: "toys", name: "おもちゃ" }, headers: auth_headers(maker), as: :json
+      expect(response).to have_http_status(:forbidden)
+    end
+
+    it "slug はあとから変えられない" do
+      patch "/api/v1/admin/categories/#{prints.id}", params: { slug: "prints", name: "プリント品" }, headers: auth_headers(seller), as: :json
+      expect(response).to have_http_status(:ok)
+      expect(prints.reload).to have_attributes(slug: "3d-prints", name: "プリント品")
+    end
+
+    it "▲▼ で並べ替えると、店頭の並びも変わる" do
+      patch "/api/v1/admin/categories/#{custom.id}/move", params: { direction: "up" }, headers: auth_headers(seller), as: :json
+      expect(response).to have_http_status(:ok)
+      expect(body.map { |c| c["slug"] }).to eq(%w[3d-prints custom 3d-models])
+      expect(body.map { |c| c["position"] }).to eq([1, 2, 3])
+
+      # 端より先には動かない
+      patch "/api/v1/admin/categories/#{prints.id}/move", params: { direction: "up" }, headers: auth_headers(seller), as: :json
+      expect(body.map { |c| c["slug"] }).to eq(%w[3d-prints custom 3d-models])
+
+      get "/api/v1/storefront"
+      expect(body["categories"].map { |c| c["slug"] }).to eq(%w[3d-prints custom 3d-models])
+      get "/api/v1/categories"
+      expect(body.map { |c| c["slug"] }).to eq(%w[3d-prints custom 3d-models])
+
+      patch "/api/v1/admin/categories/#{prints.id}/move", params: { direction: "left" }, headers: auth_headers(seller), as: :json
+      expect(response).to have_http_status(:bad_request)
+    end
+
+    it "商品がなく、コードが使っていないカテゴリだけ消せる" do
+      empty = create(:category, slug: "toys")
+      used = create(:category, slug: "leather")
+      create(:product, :stocked, category: used, published_at: nil)
+
+      get "/api/v1/admin/categories", headers: auth_headers(seller)
+      deletable = body.to_h { |c| [c["slug"], c["deletable"]] }
+      expect(deletable).to include("toys" => true, "leather" => false, "custom" => false, "3d-models" => false)
+
+      delete "/api/v1/admin/categories/#{used.id}", headers: auth_headers(seller)
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(body.dig("error", "message")).to include("商品があるカテゴリは消せません")
+
+      delete "/api/v1/admin/categories/#{custom.id}", headers: auth_headers(seller)
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(body.dig("error", "message")).to include("消せません")
+
+      delete "/api/v1/admin/categories/#{empty.id}", headers: auth_headers(seller)
+      expect(response).to have_http_status(:no_content)
+      expect(Category.exists?(empty.id)).to be(false)
+      expect(Category.exists?(custom.id)).to be(true)
+    end
   end
 end

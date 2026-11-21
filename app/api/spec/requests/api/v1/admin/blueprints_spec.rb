@@ -100,7 +100,7 @@ RSpec.describe "Admin DIY blueprints (制作権限)", type: :request do
     end
 
     it "販売先のカテゴリがなければ 422" do
-      plan_category.destroy!
+      plan_category.delete # 管理画面からは消せない (Category::SYSTEM_SLUGS) ので、DB から直接消す
       id = create_asset(kind: "blueprint", files: [pdf_upload])["id"]
       patch "/api/v1/admin/model_assets/#{id}", params: { for_sale: true }, headers: auth_headers(producer), as: :json
       expect(response).to have_http_status(:unprocessable_entity)

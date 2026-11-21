@@ -90,7 +90,9 @@ Rails.application.routes.draw do
           resource :materials, only: %i[show update], controller: "product_materials" # レシピ (使用材料・制作権限)
         end
         resources :inventories, only: %i[update], param: :product_id
-        resources :categories, only: %i[index update]              # カテゴリの販売の切り替え
+        resources :categories, only: %i[index create update destroy] do # カテゴリの設定 (追加・変更・販売の切り替え・削除)
+          patch :move, on: :member                                 # 並べ替え (direction: up / down)
+        end
         namespace :dashboard do                                    # 売上・分析
           get :sales
         end

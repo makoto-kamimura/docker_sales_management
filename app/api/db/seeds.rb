@@ -33,16 +33,18 @@ members = [
 end
 
 # --- カテゴリ ---------------------------------------------------------------
+# 名前・見出し・説明・並び順・販売中かは管理画面で変えるので、作るときだけ入れる (既存のカテゴリは上書きしない)
 cats = [
-  ["3d-prints", "3Dプリント品"],
-  ["3d-models", "3Dモデルデータ"],
-  ["handmade",  "ハンドメイド雑貨"],
-  ["materials", "素材・キット"],
-  ["custom",    "オーダーメイド"], # 依頼制 (カートには入らない)
-  ["diy-plans", "DIY設計図"]
-].each_with_index.to_h do |(slug, name), i|
-  cat = Category.find_or_create_by!(slug: slug) { |c| c.name = name }
-  cat.update!(name: name, position: i + 1)
+  ["3d-prints", "3Dプリント品",     "3D PRINTS", "受注後に出力・仕上げてお届けする完成品。"],
+  ["3d-models", "3Dモデルデータ",   "3D MODELS", "自宅のプリンタで出力できるSTLデータ。購入後すぐダウンロード。"],
+  ["handmade",  "ハンドメイド雑貨", "HANDMADE",  "手縫いのレザー小物や無垢材の木工品。"],
+  ["materials", "素材・キット",     "MATERIALS", "フィラメントやクラフトキット。定期便も。"],
+  ["custom",    "オーダーメイド",   "CUSTOM",    "名入れ・サイズ変更・一点ものの制作を依頼。"], # 依頼制 (カートには入らない)
+  ["diy-plans", "DIY設計図",        "DIY PLANS", "家具や棚を自分で作れる図面データ (PDF / DXF)。"]
+].to_h do |slug, name, label, description|
+  cat = Category.find_or_create_by!(slug: slug) do |c|
+    c.assign_attributes(name: name, label: label, description: description, position: Category.next_position)
+  end
   [slug, cat]
 end
 
