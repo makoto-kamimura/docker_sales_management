@@ -1,6 +1,6 @@
 source "https://rubygems.org"
 
-gem "rails", "~> 7.2.3", ">= 7.2.3.1"
+gem "rails", "~> 8.1.4", ">= 8.1.4.1"
 gem "pg", "~> 1.5"
 gem "puma", ">= 5.0"
 
@@ -30,7 +30,7 @@ group :development, :test do
   gem "debug", platforms: %i[ mri windows ], require: "debug/prelude"
   gem "brakeman", require: false
   gem "rubocop-rails-omakase", require: false
-  gem "rspec-rails", "~> 7.0"
+  gem "rspec-rails", "~> 8.0"
   gem "factory_bot_rails"
   gem "faker"
   gem "dotenv-rails"
@@ -42,4 +42,4 @@ gem "kramdown", "~> 2.5"
 
 gem "kramdown-parser-gfm", "~> 1.1"
 
-gem "rubyzip", "~> 2.4"
+gem "rubyzip", "~> 3.4"
