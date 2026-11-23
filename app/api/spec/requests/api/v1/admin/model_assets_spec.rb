@@ -211,6 +211,31 @@ RSpec.describe "Admin 3D models (制作権限)", type: :request do
                                                                        headers: auth_headers(producer), as: :json
         expect(response).to have_http_status(:not_found)
       end
+
+      it "版のファイルの ID 以外のキーや、文字列でない値は受け取らず、カテゴリも変えない" do
+        model = create_model(files: [stl_upload("a.stl"), stl_upload("b.stl")])
+        id = model["id"]
+        v1 = model["versions"].first
+        file_id = v1["files"].first["id"]
+        url = "/api/v1/admin/model_assets/#{id}/versions/#{v1['id']}"
+
+        # 正しいキーに、ほかのキーが混ざっていたら全体を断る
+        patch url, params: { categories: { file_id => "parts", "file_categories" => "x" } }, headers: auth_headers(producer), as: :json
+        expect(response).to have_http_status(:not_found)
+
+        [["parts"], { "nested" => "parts" }, 1, nil].each do |value|
+          patch url, params: { categories: { file_id => value } }, headers: auth_headers(producer), as: :json
+          expect(response).to have_http_status(:unprocessable_entity), "value=#{value.inspect}"
+        end
+
+        patch url, params: { categories: "parts" }, headers: auth_headers(producer), as: :json
+        expect(response).to have_http_status(:unprocessable_entity)
+
+        patch url, params: { categories: {} }, headers: auth_headers(producer), as: :json
+        expect(response).to have_http_status(:bad_request)
+
+        expect(ModelVersion.find(v1["id"]).file_categories).to eq({})
+      end
     end
   end
 

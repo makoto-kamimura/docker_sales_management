@@ -554,7 +554,7 @@ received   paid       awaiting_   in_        inspection ready_to_  shipped    co
 |---|---|
 | 機能 | ステータス変更・回答時の顧客への通知、オーダーメイド依頼から注文への変換、入金後キャンセル時の在庫戻し・返金、材料の入出庫履歴、制作スタッフ向けのモバイル画面、AIコンシェルジュに進行中の問い合わせを渡す、AIコンシェルジュの応答の逐次表示（ストリーミング） |
 | UI | 商品価格の税込の総額表示（[8.2節](#82-特定商取引法に基づく表記と注文の最終確認)）、カテゴリ別の商品の表示項目、OG 画像・favicon の差し替え、画像の変換・最適化、狭い画面のヘッダーのメニュー |
-| 品質 | テストの拡充（管理の商品系の request spec）、制作ボードのキーボード操作、モバイルの日時ピッカー |
+| 品質 | テストの拡充（管理の商品系の request spec）、制作ボードのキーボード操作、モバイルの日時ピッカー、API の Rails 8.1 への上げ（[Q7](#25-未決事項)） |
 
 ---
 
@@ -1319,7 +1319,7 @@ created_at / updated_at
 | POST | `/admin/model_assets/:id/preview` | プレビュー画像の保存（multipart：`image`、PNG/JPEG 5MBまで） |
 | GET | `/admin/model_assets/:id/assembly_pdf` | 組み立て説明書 PDF |
 | POST | `/admin/model_assets/:id/versions` | 新しい版（multipart：`all_in_one_files[]` / `parts_files[]` / `files[]`（カテゴリごと。複数可・合わせて20個・合計100MBまで）、`note`、`append`）。`append=true` は最新版のファイル（カテゴリも）を引き継いで選んだファイルを足した枝番の版（v3 → v3.1。`note` の省略時は「ファイルを追加」）を作る。販売中なら配布ファイルを差し替える（複数ファイルは ZIP） |
-| PATCH | `/admin/model_assets/:id/versions/:version_id` | ファイルのカテゴリの変更（JSON：`categories` = `{ "<file_id>": "all_in_one" / "parts" / "other" }`）。ファイルは変えない。ZIP を作り直し、販売中の最新版なら配布ファイルを差し替える。不正なカテゴリは `422`、他の版のファイルは `404` |
+| PATCH | `/admin/model_assets/:id/versions/:version_id` | ファイルのカテゴリの変更（JSON：`categories` = `{ "<file_id>": "all_in_one" / "parts" / "other" }`）。ファイルは変えない。ZIP を作り直し、販売中の最新版なら配布ファイルを差し替える。キーはその版のファイルの ID だけを受け取り、ほかのキー（他の版のファイルなど）が1つでもあれば `404`。値が文字列でない・カテゴリでないときは `422`。どちらも何も変えない |
 | POST | `/admin/model_assets/:id/versions/:version_id/restore` | 過去の版のファイル（カテゴリも）で新しい版を作る |
 | GET | `/admin/model_assets/:id/versions/:version_id/file` | 版の中の1ファイルのプレビュー・ダウンロード用の期限付き（10分）URL（params：`file_id`（省略時は最初のファイル）、`disposition` = `inline` / `attachment`）→ `{ url, filename, byte_size, expires_in }` |
 | GET | `/admin/model_assets/:id/versions/:version_id/bundle` | 版のファイルをまとめてダウンロードする期限付き URL（複数なら `<モデル名>_v<版>.zip`、1つならそのファイル） |
@@ -1396,3 +1396,4 @@ created_at / updated_at
 | Q4 | 材料の入出庫履歴を持つか | 履歴のテーブルを追加し棚卸し差異を追えるようにする / 在庫数のみ（現在の仕様） |
 | Q5 | 制作スタッフ向けのモバイル画面を作るか | 制作ボードをモバイルに追加する / Web のみ（現在の仕様。D7） |
 | Q6 | AIコンシェルジュに進行中の問い合わせ・依頼を渡すか | `service_requests` を文脈に加える / 会員名・カート・直近の注文のみ（現在の仕様） |
+| Q7 | API の Rails 7.2（2026-08-09 にセキュリティ修正の提供が終了）を、いつ・どう 8 系へ上げるか | 8.1 へ直接上げる（計画：[docs/design/plan-rails8-upgrade.md](docs/design/plan-rails8-upgrade.md)） / その前に、使っていない Action Mailbox・Action Text・Action Cable の読み込みをやめて受け口を減らす / 7.2 のまま（Rails の外の gem だけを上げる。現在の状態） |
