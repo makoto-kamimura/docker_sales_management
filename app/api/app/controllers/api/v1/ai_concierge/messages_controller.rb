@@ -8,7 +8,7 @@ module Api
           content = params.require(:content).to_s.strip
           if content.length > ConciergeChat::MAX_CONTENT_LENGTH
             return render_error(code: "unprocessable", message: "メッセージは#{ConciergeChat::MAX_CONTENT_LENGTH}文字以内で入力してください。",
-                                status: :unprocessable_entity)
+                                status: :unprocessable_content)
           end
 
           message = ConciergeChat.new(convo, user: current_user).reply(content)

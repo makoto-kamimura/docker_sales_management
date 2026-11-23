@@ -554,7 +554,7 @@ received   paid       awaiting_   in_        inspection ready_to_  shipped    co
 |---|---|
 | 機能 | ステータス変更・回答時の顧客への通知、オーダーメイド依頼から注文への変換、入金後キャンセル時の在庫戻し・返金、材料の入出庫履歴、制作スタッフ向けのモバイル画面、AIコンシェルジュに進行中の問い合わせを渡す、AIコンシェルジュの応答の逐次表示（ストリーミング） |
 | UI | 商品価格の税込の総額表示（[8.2節](#82-特定商取引法に基づく表記と注文の最終確認)）、カテゴリ別の商品の表示項目、OG 画像・favicon の差し替え、画像の変換・最適化、狭い画面のヘッダーのメニュー |
-| 品質 | テストの拡充（管理の商品系の request spec）、制作ボードのキーボード操作、モバイルの日時ピッカー、API の Rails 8.1 への上げ（[Q7](#25-未決事項)） |
+| 品質 | テストの拡充（管理の商品系の request spec）、制作ボードのキーボード操作、モバイルの日時ピッカー |
 
 ---
 
@@ -570,7 +570,7 @@ received   paid       awaiting_   in_        inspection ready_to_  shipped    co
 |---|---|---|
 | モバイル | React Native 0.81（Expo SDK 54 + Expo Router） | 顧客向けの iOS / Android アプリ。認証・注文・AIコンシェルジュ・サブスク |
 | Web | Next.js 15（App Router、React 19）+ SWR、three.js（3Dプレビュー）、dxf-viewer（DIY設計図の DXF プレビュー） | ブラウザ向けの全機能と管理画面 |
-| API | Rails 7.2（API mode） | 業務ロジック、DB アクセス、認証、Stripe、AIコンシェルジュ（Claude の呼び出しとツールの実行）、PDF 生成 |
+| API | Rails 8.1（API mode） | 業務ロジック、DB アクセス、認証、Stripe、AIコンシェルジュ（Claude の呼び出しとツールの実行）、PDF 生成 |
 | AI | Claude（Anthropic の Messages API。公式 Ruby SDK `anthropic`） | AIコンシェルジュの応答。商品はツールで DB を引く |
 | DB | PostgreSQL 16（pgvector / pg_trgm） | リレーショナル ＋ 全文 / ベクトル検索 |
 | インフラ | Docker Compose + Nginx | ローカル開発、単一のエントリポイント |
@@ -584,7 +584,7 @@ flowchart TB
   client["ブラウザ / Expo Go"]
   nginx["Nginx :80"]
   web["web（Next.js）:3001"]
-  api["api（Rails 7.2）:3000"]
+  api["api（Rails 8.1）:3000"]
   db[("PostgreSQL 16<br/>pgvector / pg_trgm :5432")]
   claude["Claude API（api.anthropic.com）"]
   mobile["mobile（Expo の開発サーバー）:8081"]
@@ -818,7 +818,7 @@ LAN / tunnel / localhost の各モードと接続できないときの対処は 
 
 ## 21. データモデル
 
-- データベースは PostgreSQL 16、マイグレーションは Rails 7.2 の migrations とする。拡張：`citext`・`pg_trgm`・`pgcrypto`・`vector`。
+- データベースは PostgreSQL 16、マイグレーションは Rails の migrations とする（2026-11 に 7.2 から 8.1 へ上げた。D21）。拡張：`citext`・`pg_trgm`・`pgcrypto`・`vector`。
 - 主キーは `bigint` の連番。金額は円の整数（`*_cents`、通貨は JPY）で持つ。
 
 ### 21.1 テーブル一覧
@@ -1385,6 +1385,7 @@ created_at / updated_at
 | D18 | 特定商取引法に基づく表記の販売者の情報（氏名・住所など）は公開リポジトリに書かず、DB に持って管理画面で編集する。所在地・電話番号は請求時開示を選べる。料金・支払方法などは計算に使う値から表示する |
 | D19 | 販売するカテゴリは、カテゴリごとの `active` で切り替える。止めても商品とデータは消さず、店頭（一覧・カート・注文・メニュー・AIコンシェルジュ）から外すだけにする。オーダーメイドの受付は `custom` の、定期便のメニューはサブスク対応の商品の有無で決める |
 | D20 | AIコンシェルジュからのオーダーメイド依頼は、フォームと併用する。依頼書は Claude にツールで構造化した値を出させ、API が検証して決まった形の Markdown に組み立てる。提示した下書きをそのまま依頼の本文にし、「はい」のときに作り直さない（確認した内容と送られる内容を同じにする）。依頼書に個人情報は入れない。依頼は会員に紐づけ、ゲストはログインしてから同じ下書きで依頼する |
+| D21 | API は Rails 8.1 で動かす（2026-11 に、セキュリティ修正の提供が終わった 7.2 から直接上げた。手順と判断は [docs/design/plan-rails8-upgrade.md](docs/design/plan-rails8-upgrade.md)）。既定値は `load_defaults 8.1`。使っていない Action Mailbox・Action Text は読み込まない。画像の変換（variant）は使わないので `variant_processor = :disabled` にする |
 
 ## 25. 未決事項
 
@@ -1396,4 +1397,3 @@ created_at / updated_at
 | Q4 | 材料の入出庫履歴を持つか | 履歴のテーブルを追加し棚卸し差異を追えるようにする / 在庫数のみ（現在の仕様） |
 | Q5 | 制作スタッフ向けのモバイル画面を作るか | 制作ボードをモバイルに追加する / Web のみ（現在の仕様。D7） |
 | Q6 | AIコンシェルジュに進行中の問い合わせ・依頼を渡すか | `service_requests` を文脈に加える / 会員名・カート・直近の注文のみ（現在の仕様） |
-| Q7 | API の Rails 7.2（2026-08-09 にセキュリティ修正の提供が終了）を、いつ・どう 8 系へ上げるか | 8.1 へ直接上げる（計画：[docs/design/plan-rails8-upgrade.md](docs/design/plan-rails8-upgrade.md)） / その前に、使っていない Action Mailbox・Action Text・Action Cable の読み込みをやめて受け口を減らす / 7.2 のまま（Rails の外の gem だけを上げる。現在の状態） |

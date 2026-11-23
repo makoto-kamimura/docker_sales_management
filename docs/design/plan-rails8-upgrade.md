@@ -1,10 +1,10 @@
 # API を Rails 8 へ上げる計画
 
-作成: 2026-11-23。README には、上げ終わってから反映する（技術スタックの表・データモデルの「Rails 7.2 の migrations」など）。
+作成: 2026-11-23。**状態: 2026-11-23 に実施した（Rails 8.1.4.1）。** 実施の内容と計画との違いは[第 10 章](#10-実施の記録)。README には決定事項 D21 として反映した。
 
 ## 1. なぜ上げるか
 
-- Rails 7.2 のセキュリティ修正の提供は 2026-08-09 で終わった（README の未決事項 Q7）。以降の修正は 8 系にだけ出るので、8 系へ上げる（7.2.4 は不具合の修正版で、`connection_pool` を 3 未満に戻す必要があるので入れていない）。
+- Rails 7.2 のセキュリティ修正の提供は 2026-08-09 で終わった（README の決定事項 D21。もとは未決事項 Q7）。以降の修正は 8 系にだけ出るので、8 系へ上げる（7.2.4 は不具合の修正版で、`connection_pool` を 3 未満に戻す必要があるので入れていない）。
 - 2026-11-23 に、Rails の外の gem（puma・rack・nokogiri・loofah など）は 7.2 のまま上げた。残っているのは Rails 本体と rubyzip（第 5 章）だけである。
 
 ## 2. 目標の版
@@ -101,3 +101,21 @@
 | 既定値の切り替え | 0.5 日 |
 | 本番への反映と確認 | 1〜2 時間 |
 | 合計 | 1.5〜2.5 日 |
+
+## 10. 実施の記録
+
+2026-11-23 に、7.2.3.2 から 8.1.4.1 へ直接上げた。
+
+| 項目 | 実施したこと | 計画との違い |
+|---|---|---|
+| gem | `rails ~> 8.1.4`、`rspec-rails ~> 8.0`（8.1.0）、`rubyzip ~> 3.4`（3.7.0） | rubyzip 3 は別の変更にする予定だったが、使っている API（`Zip::OutputStream.open`・`put_next_entry`・`Zip::File.open_buffer`・`Zip.unicode_names`）がそのまま動いたので一緒に上げた |
+| `bundler-audit` | 指摘なし | - |
+| 既定値 | `config.load_defaults 8.1` にした（`new_framework_defaults_8_1.rb` は作らない） | 1 つずつ有効にする予定だったが、当たる所を調べて一度に切り替えた。`to_time`・`fresh_when` / `stale?`・パスの相対リダイレクト・ビューは使っていない。JSON の HTML のエスケープをやめる既定値は、JSON を HTML に埋め込んでいないので影響しない |
+| `bin/rails app:update` | 差分を読み、`filter_parameter_logging.rb` に `:cvv`・`:cvc` を足しただけにした | `production.rb`・`test.rb`・`development.rb`・`cors.rb`・`puma.rb`・`bin/setup` は、コメントの書き換えか、このアプリでは使わない設定（Solid Queue・`bin/dev`・CI）なので取り込まない。`production.rb` は 7.2 と 8.1 のどちらでも動く今のままにした |
+| Active Storage のマイグレーション | `app:update` が写す 3 本（`service_name`・`variant_records`・`checksum` の NULL 可）は入れない | 2026-05 の最初のマイグレーションで、これらはすでに入っている（`schema.rb` で確かめた） |
+| 使っていない engine | Action Mailbox・Action Text を読み込まない（`/rails/action_mailbox/...`・`/rails/conductor/...` のルートがなくなる） | Action Cable は `app/channels` があるので残した |
+| Active Storage の画像の変換 | `config.active_storage.variant_processor = :disabled` | 8.1 が image_processing gem がないと起動時に警告を出すため。variant は使っていない |
+| ステータスのシンボル | `:unprocessable_entity` を `:unprocessable_content` に替えた（コードとテスト） | Rack 3.2 が古い名前を非推奨にしている。応答のコードは同じ 422 |
+| テスト | RSpec 173 件がすべて通った。brakeman は Rails のサポート終了の警告が消えた | - |
+| 本番 | まだ流れていないマイグレーションがないことを、本番の DB に読み取り専用の接続（`default_transaction_read_only=on`）で確かめてから、API のコンテナだけを作り直した | - |
+

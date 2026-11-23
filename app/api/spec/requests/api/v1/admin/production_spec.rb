@@ -45,7 +45,7 @@ RSpec.describe "Admin production board / materials", type: :request do
 
     it "入金確認前に制作へ進めると 422" do
       move(status: "in_production")
-      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response).to have_http_status(:unprocessable_content)
       expect(response.parsed_body.dig("error", "code")).to eq("bad_transition")
     end
   end

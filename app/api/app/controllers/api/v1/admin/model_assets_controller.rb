@@ -43,7 +43,7 @@ module Api
           end
           render json: model_asset_detail(find_model_asset(@model_asset.id))
         rescue ModelListing::Error => e
-          render_error(code: "listing_failed", message: e.message, status: :unprocessable_entity)
+          render_error(code: "listing_failed", message: e.message, status: :unprocessable_content)
         end
 
         # 連動する商品は注文から参照されるので削除せず非公開にする
@@ -64,7 +64,7 @@ module Api
           end
           render json: model_asset_detail(find_model_asset(@model_asset.id))
         rescue ModelListing::Error => e
-          render_error(code: "listing_failed", message: e.message, status: :unprocessable_entity)
+          render_error(code: "listing_failed", message: e.message, status: :unprocessable_content)
         end
 
         def assembly_pdf
@@ -78,7 +78,7 @@ module Api
           file = params.require(:file)
           raise ActionController::ParameterMissing, :file unless file.respond_to?(:read)
           if file.size > AssemblyMarkdownImport::MAX_BYTES
-            return render_error(code: "import_failed", message: "Markdown ファイルは 1MB 以下にしてください", status: :unprocessable_entity)
+            return render_error(code: "import_failed", message: "Markdown ファイルは 1MB 以下にしてください", status: :unprocessable_content)
           end
 
           result = AssemblyMarkdownImport.parse(file.read)
@@ -90,7 +90,7 @@ module Api
           ActiveRecord::Base.transaction { apply_import(result, mode) }
           render json: model_asset_detail(find_model_asset(@model_asset.id))
         rescue AssemblyMarkdownImport::Error => e
-          render_error(code: "import_failed", message: e.message, status: :unprocessable_entity)
+          render_error(code: "import_failed", message: e.message, status: :unprocessable_content)
         end
 
         private

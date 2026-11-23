@@ -131,7 +131,7 @@ RSpec.describe "AIコンシェルジュ", type: :request do
       say("  ")
       expect(response).to have_http_status(:bad_request)
       say("あ" * 1_001)
-      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response).to have_http_status(:unprocessable_content)
       expect(claude).not_to have_received(:reply)
     end
 

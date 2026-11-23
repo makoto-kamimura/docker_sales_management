@@ -47,7 +47,7 @@ module Api
         # 3Dモデルデータ (STL/3MF/OBJ/STEP/ZIP) のアップロード。購入者のみ DownloadsController 経由で取得できる
         def upload_model_file
           unless @product.is_digital?
-            return render_error(code: "not_digital", message: "デジタル商品ではありません", status: :unprocessable_entity)
+            return render_error(code: "not_digital", message: "デジタル商品ではありません", status: :unprocessable_content)
           end
           @product.model_file = params.require(:model_file)
           @product.save! # 形式・サイズ不正は RecordInvalid → 422

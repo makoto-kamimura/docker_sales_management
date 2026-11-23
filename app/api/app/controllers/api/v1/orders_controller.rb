@@ -26,7 +26,7 @@ module Api
         order = OrderCreator.new(user: current_user, address: address, payment_kind: payment_kind).call(cart)
         render json: detail(order), status: :created
       rescue OrderCreator::Error => e
-        render_error(code: "order_failed", message: e.message, status: :unprocessable_entity)
+        render_error(code: "order_failed", message: e.message, status: :unprocessable_content)
       end
 
       # カードで支払う決済の画面 (Stripe Checkout) の URL。開いたままの前の画面は閉じてから作り直す (二重払いを防ぐ)
@@ -34,7 +34,7 @@ module Api
         order = current_user.orders.includes(items: :product).find(params[:id])
         stripe = StripeService.new
         unless order.card_payable?
-          return render_error(code: "not_card_payable", message: "この注文はカードで支払えません", status: :unprocessable_entity)
+          return render_error(code: "not_card_payable", message: "この注文はカードで支払えません", status: :unprocessable_content)
         end
 
         stripe.expire_checkout_session(order.stripe_checkout_session_id)

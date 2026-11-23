@@ -38,7 +38,7 @@ module Api
           end
           render json: order_card(Order.includes(*ORDER_PRELOAD).find(order.id))
         rescue OrderWorkflow::Error => e
-          render_error(code: "bad_transition", message: e.message, status: :unprocessable_entity)
+          render_error(code: "bad_transition", message: e.message, status: :unprocessable_content)
         end
       end
     end

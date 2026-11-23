@@ -113,7 +113,7 @@ RSpec.describe "Admin 3D models (制作権限)", type: :request do
       it "引き継いだファイルと合わせて上限を超えると 422 で、版は作られない" do
         id = create_model(files: Array.new(ModelVersion::MAX_FILES) { |i| stl_upload("part#{i}.stl") })["id"]
         append_files(id, [stl_upload("extra.stl")])
-        expect(response).to have_http_status(:unprocessable_entity)
+        expect(response).to have_http_status(:unprocessable_content)
         expect(ModelAsset.find(id).versions.size).to eq(1)
       end
 
@@ -130,7 +130,7 @@ RSpec.describe "Admin 3D models (制作権限)", type: :request do
 
     it "モデルデータ以外が混ざると 422 で、モデルも作られない" do
       create_model(files: [stl_upload("ok.stl"), Rack::Test::UploadedFile.new(StringIO.new("x"), "text/plain", original_filename: "memo.txt")])
-      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response).to have_http_status(:unprocessable_content)
       expect(body.dig("error", "message")).to include("memo.txt")
       expect(ModelAsset.count).to eq(0)
     end
@@ -202,7 +202,7 @@ RSpec.describe "Admin 3D models (制作権限)", type: :request do
         v1 = model["versions"].first
         patch "/api/v1/admin/model_assets/#{id}/versions/#{v1['id']}", params: { categories: { v1["files"].first["id"] => "bogus" } },
                                                                        headers: auth_headers(producer), as: :json
-        expect(response).to have_http_status(:unprocessable_entity)
+        expect(response).to have_http_status(:unprocessable_content)
         expect(ModelVersion.find(v1["id"]).file_categories).to eq({})
 
         post "/api/v1/admin/model_assets/#{id}/versions", params: { files: [stl_upload("c.stl")] }, headers: auth_headers(producer)
@@ -225,11 +225,11 @@ RSpec.describe "Admin 3D models (制作権限)", type: :request do
 
         [["parts"], { "nested" => "parts" }, 1, nil].each do |value|
           patch url, params: { categories: { file_id => value } }, headers: auth_headers(producer), as: :json
-          expect(response).to have_http_status(:unprocessable_entity), "value=#{value.inspect}"
+          expect(response).to have_http_status(:unprocessable_content), "value=#{value.inspect}"
         end
 
         patch url, params: { categories: "parts" }, headers: auth_headers(producer), as: :json
-        expect(response).to have_http_status(:unprocessable_entity)
+        expect(response).to have_http_status(:unprocessable_content)
 
         patch url, params: { categories: {} }, headers: auth_headers(producer), as: :json
         expect(response).to have_http_status(:bad_request)
@@ -328,7 +328,7 @@ RSpec.describe "Admin 3D models (制作権限)", type: :request do
       expect(body["assembly_steps"].map { |s| s.values_at("position", "title") }).to eq([[1, "カバー"], [2, "ギア"]])
 
       post steps_path, params: { title: "", body: "" }, headers: auth_headers(producer)
-      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response).to have_http_status(:unprocessable_content)
     end
 
     it "Markdown ファイルから部品・工具と手順を取り込める (プレビュー / 追加 / 置き換え)" do
@@ -351,7 +351,7 @@ RSpec.describe "Admin 3D models (制作権限)", type: :request do
 
       post path, params: { file: Rack::Test::UploadedFile.new(StringIO.new("ただの文章"), "text/markdown", original_filename: "x.md") },
                  headers: auth_headers(producer)
-      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response).to have_http_status(:unprocessable_content)
       expect(body.dig("error", "code")).to eq("import_failed")
     end
 

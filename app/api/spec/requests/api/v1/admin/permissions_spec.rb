@@ -52,7 +52,7 @@ RSpec.describe "Admin permissions (販売 / 制作 / 注文)", type: :request do
 
       order = create(:order)
       patch "/api/v1/admin/orders/#{order.id}", params: { assignee_id: sales.id }, headers: auth_headers(admin), as: :json
-      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response).to have_http_status(:unprocessable_content)
     end
 
     it "ログイン・プロフィールで実際に持っている権限を返す" do
@@ -96,7 +96,7 @@ RSpec.describe "Admin permissions (販売 / 制作 / 注文)", type: :request do
     it "不明な権限・自分のロール変更は 422、管理者以外は 403" do
       patch "/api/v1/admin/users/#{member.id}", params: { role: "staff", permissions: %w[secret] },
                                                 headers: auth_headers(admin), as: :json
-      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response).to have_http_status(:unprocessable_content)
 
       patch "/api/v1/admin/users/#{admin.id}", params: { role: "staff" }, headers: auth_headers(admin), as: :json
       expect(response.parsed_body.dig("error", "code")).to eq("own_role")

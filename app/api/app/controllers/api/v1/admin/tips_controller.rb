@@ -29,7 +29,7 @@ module Api
           when "cancelled" then tip.update!(status: "cancelled", paid_at: nil, confirmed_by: current_user)
           when "pending"   then tip.update!(status: "pending", paid_at: nil, confirmed_by: nil)
           else
-            return render_error(code: "bad_status", message: "status が不正です", status: :unprocessable_entity)
+            return render_error(code: "bad_status", message: "status が不正です", status: :unprocessable_content)
           end
           render json: tip_json(tip)
         end

@@ -37,7 +37,7 @@ RSpec.describe "特定商取引法に基づく表記", type: :request do
     expect(response.body).not_to include("千代田1-1")
 
     patch "/api/v1/admin/shop_setting", params: { email: "not-an-email" }, headers: auth_headers(admin), as: :json
-    expect(response).to have_http_status(:unprocessable_entity)
+    expect(response).to have_http_status(:unprocessable_content)
   end
 
   it "ショップ情報の編集は管理者だけ" do

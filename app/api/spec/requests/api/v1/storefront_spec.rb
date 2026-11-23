@@ -50,7 +50,7 @@ RSpec.describe "販売するカテゴリの切り替え", type: :request do
 
     # 止める前にカートに入れていた商品は、注文できない
     post "/api/v1/orders", params: { address_id: create(:address, user: buyer).id }, headers: auth_headers(buyer), as: :json
-    expect(response).to have_http_status(:unprocessable_entity)
+    expect(response).to have_http_status(:unprocessable_content)
     expect(body.dig("error", "message")).to include("現在お取り扱いしていない商品です")
 
     get "/api/v1/categories"
@@ -60,7 +60,7 @@ RSpec.describe "販売するカテゴリの切り替え", type: :request do
   it "オーダーメイドを止めると、依頼は受け付けず、問い合わせは受け付ける" do
     stop_selling(custom)
     post "/api/v1/service_requests", params: { kind: "custom", subject: "名入れ", body: "お願いします" }, headers: auth_headers(buyer), as: :json
-    expect(response).to have_http_status(:unprocessable_entity)
+    expect(response).to have_http_status(:unprocessable_content)
     expect(body.dig("error", "code")).to eq("custom_orders_paused")
 
     post "/api/v1/service_requests", params: { kind: "inquiry", subject: "納期", body: "いつ届きますか" }, headers: auth_headers(buyer), as: :json
@@ -103,9 +103,9 @@ RSpec.describe "販売するカテゴリの切り替え", type: :request do
       expect(body["categories"].last).to include("slug" => "leather", "name" => "レザー", "description" => "手縫いの革小物。")
 
       post "/api/v1/admin/categories", params: { slug: "Leather Goods", name: "x" }, headers: auth_headers(seller), as: :json
-      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response).to have_http_status(:unprocessable_content)
       post "/api/v1/admin/categories", params: { slug: "leather", name: "x" }, headers: auth_headers(seller), as: :json
-      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response).to have_http_status(:unprocessable_content)
       post "/api/v1/admin/categories", params: { slug: "toys", name: "おもちゃ" }, headers: auth_headers(maker), as: :json
       expect(response).to have_http_status(:forbidden)
     end
@@ -145,11 +145,11 @@ RSpec.describe "販売するカテゴリの切り替え", type: :request do
       expect(deletable).to include("toys" => true, "leather" => false, "custom" => false, "3d-models" => false)
 
       delete "/api/v1/admin/categories/#{used.id}", headers: auth_headers(seller)
-      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response).to have_http_status(:unprocessable_content)
       expect(body.dig("error", "message")).to include("商品があるカテゴリは消せません")
 
       delete "/api/v1/admin/categories/#{custom.id}", headers: auth_headers(seller)
-      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response).to have_http_status(:unprocessable_content)
       expect(body.dig("error", "message")).to include("消せません")
 
       delete "/api/v1/admin/categories/#{empty.id}", headers: auth_headers(seller)

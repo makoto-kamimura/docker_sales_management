@@ -66,7 +66,7 @@ class ApplicationController < ActionController::API
 
   def unprocessable(e)
     msg = e.respond_to?(:record) ? e.record.errors.full_messages.join(", ") : e.message
-    render_error(code: "unprocessable", message: msg, status: :unprocessable_entity)
+    render_error(code: "unprocessable", message: msg, status: :unprocessable_content)
   end
 
   def bad_request(e)

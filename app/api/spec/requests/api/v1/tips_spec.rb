@@ -24,7 +24,7 @@ RSpec.describe "投げ銭 (0円販売)", type: :request do
     expect(body).to include("status" => "completed", "downloadable" => true, "accepts_tips" => true, "tips" => [])
 
     post "/api/v1/orders/#{order.id}/tips", params: { amount_cents: 50 }, headers: auth_headers(buyer), as: :json
-    expect(response).to have_http_status(:unprocessable_entity)
+    expect(response).to have_http_status(:unprocessable_content)
 
     post "/api/v1/orders/#{order.id}/tips", params: { amount_cents: 500, message: "応援しています" }, headers: auth_headers(buyer), as: :json
     expect(response).to have_http_status(:created)
@@ -50,7 +50,7 @@ RSpec.describe "投げ銭 (0円販売)", type: :request do
     expect(body["accepts_tips"]).to be(false)
 
     post "/api/v1/orders/#{order.id}/tips", params: { amount_cents: 500 }, headers: auth_headers(buyer), as: :json
-    expect(response).to have_http_status(:unprocessable_entity)
+    expect(response).to have_http_status(:unprocessable_content)
   end
 
   describe "店舗の管理 (注文権限)" do
@@ -79,10 +79,10 @@ RSpec.describe "投げ銭 (0円販売)", type: :request do
       expect(body["tips"].first).to include("id" => tip.id, "status" => "paid")
 
       delete "/api/v1/orders/#{order.id}/tips/#{tip.id}", headers: auth_headers(buyer)
-      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response).to have_http_status(:unprocessable_content)
 
       patch "/api/v1/admin/tips/#{tip.id}", params: { status: "bogus" }, headers: auth_headers(staff), as: :json
-      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response).to have_http_status(:unprocessable_content)
     end
   end
 end

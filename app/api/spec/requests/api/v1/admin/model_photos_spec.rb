@@ -37,7 +37,7 @@ RSpec.describe "Admin 3D model photos (実モデル画像 / 実利用画像)", t
 
     fourth = photos.last
     patch "#{path}/#{fourth['id']}", params: { featured: true }, headers: auth_headers(producer), as: :json
-    expect(response).to have_http_status(:unprocessable_entity)
+    expect(response).to have_http_status(:unprocessable_content)
     expect(body.dig("error", "message")).to include("3 枚まで")
 
     patch "#{path}/#{photos.first['id']}", params: { featured: false }, headers: auth_headers(producer), as: :json
@@ -62,9 +62,9 @@ RSpec.describe "Admin 3D model photos (実モデル画像 / 実利用画像)", t
 
   it "画像以外・種類の指定なしは 422" do
     post path, params: { kind: "real_model", files: [stl_upload("x.stl")] }, headers: auth_headers(producer)
-    expect(response).to have_http_status(:unprocessable_entity)
+    expect(response).to have_http_status(:unprocessable_content)
     post path, params: { files: [png_upload] }, headers: auth_headers(producer)
-    expect(response).to have_http_status(:unprocessable_entity)
+    expect(response).to have_http_status(:unprocessable_content)
     expect(model.photos.count).to eq(0)
   end
 

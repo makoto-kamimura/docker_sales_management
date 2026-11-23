@@ -26,7 +26,7 @@ module Api
           end
           render json: serialize(req)
         rescue ArgumentError => e
-          render_error(code: "bad_status", message: e.message, status: :unprocessable_entity)
+          render_error(code: "bad_status", message: e.message, status: :unprocessable_content)
         end
 
         private

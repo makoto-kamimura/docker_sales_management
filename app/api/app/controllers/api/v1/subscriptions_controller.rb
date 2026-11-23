@@ -25,7 +25,7 @@ module Api
         address = current_user.addresses.find(params.require(:address_id))
 
         unless product.is_subscribable
-          return render_error(code: "not_subscribable", message: "この商品はサブスク対象外です", status: :unprocessable_entity)
+          return render_error(code: "not_subscribable", message: "この商品はサブスク対象外です", status: :unprocessable_content)
         end
 
         sub = current_user.subscriptions.create!(
@@ -120,7 +120,7 @@ module Api
       end
 
       def invalid_state(message)
-        render_error(code: "invalid_state", message: message, status: :unprocessable_entity)
+        render_error(code: "invalid_state", message: message, status: :unprocessable_content)
       end
 
       # 次回お届け日を変える。Stripe の購読は次の請求日もずらす (それまでは請求しない)
