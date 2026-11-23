@@ -53,7 +53,7 @@ RSpec.describe "Digital products (3D model data)", type: :request do
       add_to_cart(model_data)
       add_to_cart(printed, quantity: 2)
       place_order
-      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response).to have_http_status(:unprocessable_content)
 
       place_order(address_id: create(:address, user: user).id)
       expect(response).to have_http_status(:created)
@@ -112,7 +112,7 @@ RSpec.describe "Digital products (3D model data)", type: :request do
 
       it "購入済みのデータは再度カートに入れられない" do
         add_to_cart(model_data)
-        expect(response).to have_http_status(:unprocessable_entity)
+        expect(response).to have_http_status(:unprocessable_content)
         expect(response.parsed_body.dig("error", "code")).to eq("already_purchased")
       end
 
@@ -144,13 +144,13 @@ RSpec.describe "Digital products (3D model data)", type: :request do
 
     it "対応外の形式は 422" do
       upload(product, "virus.exe")
-      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response).to have_http_status(:unprocessable_content)
       expect(product.reload.model_file).not_to be_attached
     end
 
     it "物販品には登録できない" do
       upload(create(:product), "mount.stl")
-      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response).to have_http_status(:unprocessable_content)
     end
 
     it "一般会員は 403" do

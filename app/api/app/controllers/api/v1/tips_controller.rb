@@ -20,7 +20,7 @@ module Api
         tip = @order.tips.find(params[:id])
         stripe = StripeService.new
         unless tip.card_payable?
-          return render_error(code: "not_card_payable", message: "この投げ銭はカードで支払えません", status: :unprocessable_entity)
+          return render_error(code: "not_card_payable", message: "この投げ銭はカードで支払えません", status: :unprocessable_content)
         end
 
         stripe.expire_checkout_session(tip.stripe_checkout_session_id)
@@ -36,7 +36,7 @@ module Api
       def destroy
         tip = @order.tips.find(params[:id])
         unless tip.status == "pending"
-          return render_error(code: "not_pending", message: "入金待ちの投げ銭だけ取り消せます", status: :unprocessable_entity)
+          return render_error(code: "not_pending", message: "入金待ちの投げ銭だけ取り消せます", status: :unprocessable_content)
         end
 
         # 開いたままのカードの決済の画面を閉じる

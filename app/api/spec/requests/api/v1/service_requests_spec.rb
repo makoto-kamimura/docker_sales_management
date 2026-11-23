@@ -24,7 +24,7 @@ RSpec.describe "Api::V1::ServiceRequests", type: :request do
       post "/api/v1/service_requests",
            params: { kind: "inquiry", subject: "納期", body: "?", order_id: create(:order).id },
            headers: auth_headers(user), as: :json
-      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response).to have_http_status(:unprocessable_content)
     end
 
     it "クライアントが status を送っても pending から開始する" do
@@ -69,7 +69,7 @@ RSpec.describe "Api::V1::ServiceRequests", type: :request do
     it "kind に存在しないステータスは 422" do
       patch "/api/v1/admin/service_requests/#{req.id}",
             params: { status: "in_progress" }, headers: auth_headers(admin), as: :json
-      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response).to have_http_status(:unprocessable_content)
     end
 
     it "一般会員・制作スタッフは 403" do

@@ -72,7 +72,7 @@ RSpec.describe "カード決済 (Stripe Checkout と Webhook)", type: :request d
       expect(response).to have_http_status(:no_content)
 
       post "/api/v1/orders/#{order.id}/checkout_session", headers: auth_headers(buyer)
-      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response).to have_http_status(:unprocessable_content)
     end
 
     it "データだけの注文はカード決済で完了になり、ダウンロードできる" do
@@ -110,7 +110,7 @@ RSpec.describe "カード決済 (Stripe Checkout と Webhook)", type: :request d
       expect(order).to have_attributes(status: "received", payment_kind: "transfer")
       expect(body["card_payable"]).to be(false)
       post "/api/v1/orders/#{order.id}/checkout_session", headers: auth_headers(buyer)
-      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response).to have_http_status(:unprocessable_content)
     end
 
     it "他人の注文の決済の画面は開けない" do
@@ -160,7 +160,7 @@ RSpec.describe "カード決済 (Stripe Checkout と Webhook)", type: :request d
       post "/api/v1/orders/#{order.id}/tips", params: { amount_cents: 500 }, headers: auth_headers(buyer), as: :json
       expect(body).to include("payment_kind" => "transfer", "card_payable" => false)
       post "/api/v1/orders/#{order.id}/tips/#{body['id']}/checkout_session", headers: auth_headers(buyer)
-      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response).to have_http_status(:unprocessable_content)
 
       tip = order.tips.create!(user: buyer, amount_cents: 300, payment_kind: "card", stripe_checkout_session_id: "cs_open")
       expect(stripe).to receive(:expire_checkout_session).with("cs_open")
@@ -254,7 +254,7 @@ RSpec.describe "カード決済 (Stripe Checkout と Webhook)", type: :request d
 
       patch "/api/v1/subscriptions/#{sub.id}", params: { action_type: "change_next_date", next_delivery_on: Date.current.iso8601 },
                                                headers: auth_headers(buyer), as: :json
-      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response).to have_http_status(:unprocessable_content)
 
       expect(stripe).to receive(:cancel_subscription).with("sub_test_1")
       delete "/api/v1/subscriptions/#{sub.id}", headers: auth_headers(buyer)

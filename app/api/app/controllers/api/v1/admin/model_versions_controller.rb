@@ -12,7 +12,7 @@ module Api
 
         class InvalidCategoriesError < StandardError; end
         rescue_from InvalidCategoriesError do |e|
-          render_error(code: "unprocessable", message: e.message, status: :unprocessable_entity)
+          render_error(code: "unprocessable", message: e.message, status: :unprocessable_content)
         end
 
         before_action :set_model_asset
@@ -32,7 +32,7 @@ module Api
           end
           render json: model_asset_detail(find_model_asset(@model_asset.id)), status: :created
         rescue ModelListing::Error => e
-          render_error(code: "listing_failed", message: e.message, status: :unprocessable_entity)
+          render_error(code: "listing_failed", message: e.message, status: :unprocessable_content)
         end
 
         # ファイルのカテゴリを変える (JSON: categories = { "<file_id>": "all_in_one" | "parts" | "other" })。
@@ -45,7 +45,7 @@ module Api
           end
           render json: model_asset_detail(find_model_asset(@model_asset.id))
         rescue ModelListing::Error => e
-          render_error(code: "listing_failed", message: e.message, status: :unprocessable_entity)
+          render_error(code: "listing_failed", message: e.message, status: :unprocessable_content)
         end
 
         # 過去の版のファイル (カテゴリも) で新しい版を作る (履歴は消さない)
@@ -53,7 +53,7 @@ module Api
           add_version(entries: entries_of(@version), note: "v#{@version.label} に戻す")
           render json: model_asset_detail(find_model_asset(@model_asset.id)), status: :created
         rescue ModelListing::Error => e
-          render_error(code: "listing_failed", message: e.message, status: :unprocessable_entity)
+          render_error(code: "listing_failed", message: e.message, status: :unprocessable_content)
         end
 
         # 版の中の1ファイル。params: file_id (省略時は最初のファイル), disposition (inline: 3Dプレビュー用 / attachment)

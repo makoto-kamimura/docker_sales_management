@@ -44,15 +44,15 @@ RSpec.describe "Admin DIY blueprints (制作権限)", type: :request do
 
   it "種別ごとに登録できる形式が違う (設計図に STEP、3Dモデルに PDF は 422)" do
     create_asset(kind: "blueprint", files: [stl_upload("part.step")])
-    expect(response).to have_http_status(:unprocessable_entity)
+    expect(response).to have_http_status(:unprocessable_content)
     expect(body.dig("error", "message")).to include("part.step", "DIY設計図")
 
     create_asset(kind: "model", files: [pdf_upload])
-    expect(response).to have_http_status(:unprocessable_entity)
+    expect(response).to have_http_status(:unprocessable_content)
     expect(ModelAsset.count).to eq(0)
 
     create_asset(kind: "unknown", files: [pdf_upload])
-    expect(response).to have_http_status(:unprocessable_entity)
+    expect(response).to have_http_status(:unprocessable_content)
   end
 
   it "一覧は種別で絞り込み (省略時は3Dモデル)、種別は後から変えられない" do
@@ -103,7 +103,7 @@ RSpec.describe "Admin DIY blueprints (制作権限)", type: :request do
       plan_category.delete # 管理画面からは消せない (Category::SYSTEM_SLUGS) ので、DB から直接消す
       id = create_asset(kind: "blueprint", files: [pdf_upload])["id"]
       patch "/api/v1/admin/model_assets/#{id}", params: { for_sale: true }, headers: auth_headers(producer), as: :json
-      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response).to have_http_status(:unprocessable_content)
       expect(body.dig("error", "message")).to include("diy-plans")
     end
   end

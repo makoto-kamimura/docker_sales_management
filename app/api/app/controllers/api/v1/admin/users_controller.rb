@@ -24,7 +24,7 @@ module Api
           attrs = params.permit(:role, permissions: [])
           # 自分の管理者権限を外すと誰も権限設定できなくなり得るため、自分のロールは変えられない
           if user == current_user && attrs.key?(:role) && attrs[:role] != user.role
-            return render_error(code: "own_role", message: "自分自身のロールは変更できません", status: :unprocessable_entity)
+            return render_error(code: "own_role", message: "自分自身のロールは変更できません", status: :unprocessable_content)
           end
 
           user.update!(attrs)

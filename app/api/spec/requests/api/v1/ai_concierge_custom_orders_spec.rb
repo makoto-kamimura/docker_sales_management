@@ -90,7 +90,7 @@ RSpec.describe "AIコンシェルジュのオーダーメイド依頼", type: :r
     second = say(convo, "数量を3個に", headers: headers)
 
     order(convo, first, headers: headers)
-    expect(response).to have_http_status(:unprocessable_entity)
+    expect(response).to have_http_status(:unprocessable_content)
     expect(body.dig("error", "code")).to eq("draft_outdated")
 
     Category.find_by(slug: "custom").update!(active: false)
@@ -101,7 +101,7 @@ RSpec.describe "AIコンシェルジュのオーダーメイド依頼", type: :r
     order(convo, second, headers: headers)
     expect(response).to have_http_status(:created)
     order(convo, second, headers: headers)
-    expect(response).to have_http_status(:unprocessable_entity)
+    expect(response).to have_http_status(:unprocessable_content)
     expect(body.dig("error", "code")).to eq("already_ordered")
     expect(ServiceRequest.count).to eq(1)
   end

@@ -34,7 +34,7 @@ module Api
           end
           render json: order_detail(find_order)
         rescue OrderWorkflow::Error => e
-          render_error(code: "bad_transition", message: e.message, status: :unprocessable_entity)
+          render_error(code: "bad_transition", message: e.message, status: :unprocessable_content)
         end
 
         private

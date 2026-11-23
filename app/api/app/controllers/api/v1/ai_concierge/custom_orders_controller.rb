@@ -17,11 +17,11 @@ module Api
           draft_message = convo.messages.where(role: "assistant").where.not(order_draft: nil).find(params.require(:message_id))
 
           unless Storefront.custom_orders?
-            return render_error(code: "custom_orders_paused", message: "現在、オーダーメイドの受付を休止しています", status: :unprocessable_entity)
+            return render_error(code: "custom_orders_paused", message: "現在、オーダーメイドの受付を休止しています", status: :unprocessable_content)
           end
           return already_ordered if draft_message.service_request
           if convo.messages.where.not(order_draft: nil).maximum(:id) != draft_message.id
-            return render_error(code: "draft_outdated", message: "この内容は修正されています。最新の内容でオーダーしてください", status: :unprocessable_entity)
+            return render_error(code: "draft_outdated", message: "この内容は修正されています。最新の内容でオーダーしてください", status: :unprocessable_content)
           end
 
           request, reply = ServiceRequest.transaction do
@@ -52,7 +52,7 @@ module Api
         end
 
         def already_ordered
-          render_error(code: "already_ordered", message: "この内容はすでに依頼済みです", status: :unprocessable_entity)
+          render_error(code: "already_ordered", message: "この内容はすでに依頼済みです", status: :unprocessable_content)
         end
       end
     end

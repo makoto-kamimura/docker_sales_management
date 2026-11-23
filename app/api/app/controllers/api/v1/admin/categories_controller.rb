@@ -31,7 +31,7 @@ module Api
           else
             message = @category.errors.full_messages.first || "削除できませんでした"
             message = "商品があるカテゴリは消せません（販売を止めることはできます）" if @category.products.exists?
-            render_error(code: "category_in_use", message: message, status: :unprocessable_entity)
+            render_error(code: "category_in_use", message: message, status: :unprocessable_content)
           end
         end
 
