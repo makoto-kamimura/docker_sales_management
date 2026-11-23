@@ -8,6 +8,12 @@ module Api
         include ModelAssetJson
 
         URL_EXPIRES_IN = 10.minutes
+        CATEGORIES_FORMAT_MESSAGE = "categories は { ファイルの ID: #{ModelVersion::FILE_CATEGORIES.keys.join(' / ')} } の形で送ってください".freeze
+
+        class InvalidCategoriesError < StandardError; end
+        rescue_from InvalidCategoriesError do |e|
+          render_error(code: "unprocessable", message: e.message, status: :unprocessable_entity)
+        end
 
         before_action :set_model_asset
         before_action :set_version, only: %i[update restore file bundle]
@@ -32,7 +38,7 @@ module Api
         # ファイルのカテゴリを変える (JSON: categories = { "<file_id>": "all_in_one" | "parts" | "other" })。
         # ファイル自体は変えない。販売中の最新版なら、フォルダ分けを変えた ZIP に配布ファイルを差し替える
         def update
-          categories = params.require(:categories).permit!.to_h
+          categories = category_params
           ActiveRecord::Base.transaction do
             @version.recategorize!(categories)
             ModelListing.new(@model_asset.reload).sync! if @model_asset.for_sale? && @model_asset.current_version == @version
@@ -71,6 +77,25 @@ module Api
 
         def set_version
           @version = @model_asset.versions.find(params[:id])
+        end
+
+        # categories で受け取るのは、この版のファイルの ID をキー、文字列を値にしたものだけ。
+        # 版にないファイルの ID は 404 (file と同じ扱い)。値が文字列でない (配列・ハッシュ・数値・null) なら 422。
+        # 値がカテゴリ (all_in_one / parts / other) のどれかであることは、ModelVersion の検証
+        # (file_categories_must_be_valid) が保存の前に確かめるので、ここでは重ねて見ない
+        def category_params
+          categories = params.require(:categories)
+          raise InvalidCategoriesError, CATEGORIES_FORMAT_MESSAGE unless categories.is_a?(ActionController::Parameters)
+
+          file_ids = @version.files.attachments.map { |a| a.id.to_s }
+          raise NotFoundError, "この版にないファイルが含まれています" unless (categories.keys - file_ids).empty?
+
+          permitted = categories.permit(*file_ids).to_h
+          unless permitted.size == categories.keys.size && permitted.values.all?(String)
+            raise InvalidCategoriesError, CATEGORIES_FORMAT_MESSAGE
+          end
+
+          permitted
         end
 
         def signed_url(blob, disposition:)
