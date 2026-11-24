@@ -1,0 +1,89 @@
+{
+  "ignored_warnings": [
+    {
+      "fingerprint": "6206898af3be01805f8ca478b2e8cf61ec69519907ada6c9e8d0ec25e652778e",
+      "warning_type": "SQL Injection",
+      "check_name": "SQL",
+      "message": "Possible SQL injection",
+      "file": "app/controllers/api/v1/admin/customers_controller.rb",
+      "line": 24,
+      "code": "User.where(:role => \"member\").where(\"users.name ILIKE :q OR users.email ILIKE :q\", :q => (\"%#{User.sanitize_sql_like(params[:q])}%\")).select(\"users.*,\\n(SELECT COUNT(*) FROM orders o WHERE o.user_id = users.id AND o.status IN (#{Order::PAID_STATUSES.map do\n \"'#{s}'\"\n end.join(\", \")})) AS orders_count,\\n(SELECT COALESCE(SUM(o.total_cents), 0) FROM orders o WHERE o.user_id = users.id AND o.status IN (#{Order::PAID_STATUSES.map do\n \"'#{s}'\"\n end.join(\", \")})) AS total_spent_cents,\\n(SELECT MAX(o.placed_at) FROM orders o WHERE o.user_id = users.id) AS last_order_at,\\n(SELECT COUNT(*) FROM service_requests s WHERE s.user_id = users.id AND s.status IN ('pending', 'quoted', 'in_progress')) AS open_requests_count\\n\".squish)",
+      "render_path": null,
+      "location": {
+        "type": "method",
+        "class": "Api::V1::Admin::CustomersController",
+        "method": "index"
+      },
+      "user_input": "Order::PAID_STATUSES.map",
+      "confidence": "High",
+      "cwe_id": [
+        89
+      ],
+      "note": "確認済み: STATS_SELECT は定数で、検索語は sanitize_sql_like とプレースホルダーで渡している"
+    },
+    {
+      "fingerprint": "08101251018436166011430580d35a1bd78d145076fdf74f2c44e9b01414d7b6",
+      "warning_type": "SQL Injection",
+      "check_name": "SQL",
+      "message": "Possible SQL injection",
+      "file": "app/controllers/api/v1/admin/customers_controller.rb",
+      "line": 36,
+      "code": "User.where(:role => \"member\").select(\"users.*,\\n(SELECT COUNT(*) FROM orders o WHERE o.user_id = users.id AND o.status IN (#{Order::PAID_STATUSES.map do\n \"'#{s}'\"\n end.join(\", \")})) AS orders_count,\\n(SELECT COALESCE(SUM(o.total_cents), 0) FROM orders o WHERE o.user_id = users.id AND o.status IN (#{Order::PAID_STATUSES.map do\n \"'#{s}'\"\n end.join(\", \")})) AS total_spent_cents,\\n(SELECT MAX(o.placed_at) FROM orders o WHERE o.user_id = users.id) AS last_order_at,\\n(SELECT COUNT(*) FROM service_requests s WHERE s.user_id = users.id AND s.status IN ('pending', 'quoted', 'in_progress')) AS open_requests_count\\n\".squish)",
+      "render_path": null,
+      "location": {
+        "type": "method",
+        "class": "Api::V1::Admin::CustomersController",
+        "method": "show"
+      },
+      "user_input": "Order::PAID_STATUSES.map",
+      "confidence": "High",
+      "cwe_id": [
+        89
+      ],
+      "note": "確認済み: STATS_SELECT は定数で、検索語は sanitize_sql_like とプレースホルダーで渡している"
+    },
+    {
+      "fingerprint": "708404239640007eba90b17b938b3e8f263d3875b29ba815c421fb84726a9c9a",
+      "warning_type": "Mass Assignment",
+      "check_name": "PermitAttributes",
+      "message": "Potentially dangerous key allowed for mass assignment",
+      "file": "app/controllers/api/v1/admin/users_controller.rb",
+      "line": 24,
+      "code": "params.permit(:role, :permissions => ([]))",
+      "render_path": null,
+      "location": {
+        "type": "method",
+        "class": "Api::V1::Admin::UsersController",
+        "method": "update"
+      },
+      "user_input": ":role",
+      "confidence": "Medium",
+      "cwe_id": [
+        915
+      ],
+      "note": "確認済み: 管理者だけが使う API（Admin::BaseController）。自分のロールは変えられない"
+    },
+    {
+      "fingerprint": "28a96d921c5c92296461ec9a7cce005f7125a753cb96322874f121d4ec3daa79",
+      "warning_type": "Redirect",
+      "check_name": "Redirect",
+      "message": "Possible unprotected redirect",
+      "file": "app/controllers/api/v1/sso_controller.rb",
+      "line": 58,
+      "code": "redirect_to(Oidc.with_query((Oidc.web_return_url or params[:redirect_uri].to_s), \"error\", \"expired\"), :status => :see_other, :allow_other_host => true)",
+      "render_path": null,
+      "location": {
+        "type": "method",
+        "class": "Api::V1::SsoController",
+        "method": "start"
+      },
+      "user_input": "params[:redirect_uri].to_s",
+      "confidence": "Weak",
+      "cwe_id": [
+        601
+      ],
+      "note": "確認済み: 戻り先は、Web は設定の固定値、モバイルは許可リスト（OIDC_MOBILE_REDIRECT_PREFIXES）で検証した値だけを使う"
+    }
+  ],
+  "brakeman_version": "8.0.4"
+}
