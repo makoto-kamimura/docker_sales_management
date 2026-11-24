@@ -570,7 +570,7 @@ received   paid       awaiting_   in_        inspection ready_to_  shipped    co
 |---|---|---|
 | モバイル | React Native 0.81（Expo SDK 54 + Expo Router） | 顧客向けの iOS / Android アプリ。認証・注文・AIコンシェルジュ・サブスク |
 | Web | Next.js 15（App Router、React 19）+ SWR、three.js（3Dプレビュー）、dxf-viewer（DIY設計図の DXF プレビュー） | ブラウザ向けの全機能と管理画面 |
-| API | Rails 8.1（API mode） | 業務ロジック、DB アクセス、認証、Stripe、AIコンシェルジュ（Claude の呼び出しとツールの実行）、PDF 生成 |
+| API | Rails 8.1（API mode）、Ruby 3.4 | 業務ロジック、DB アクセス、認証、Stripe、AIコンシェルジュ（Claude の呼び出しとツールの実行）、PDF 生成 |
 | AI | Claude（Anthropic の Messages API。公式 Ruby SDK `anthropic`） | AIコンシェルジュの応答。商品はツールで DB を引く |
 | DB | PostgreSQL 16（pgvector / pg_trgm） | リレーショナル ＋ 全文 / ベクトル検索 |
 | インフラ | Docker Compose + Nginx | ローカル開発、単一のエントリポイント |
