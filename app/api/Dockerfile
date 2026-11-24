@@ -1,4 +1,4 @@
-FROM ruby:3.3.5-slim
+FROM ruby:3.4.13-slim-bookworm
 
 ENV LANG=C.UTF-8 \
     TZ=Asia/Tokyo \
