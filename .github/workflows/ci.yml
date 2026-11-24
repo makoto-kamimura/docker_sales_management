@@ -1,0 +1,51 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [ main ]
+
+permissions:
+  contents: read
+
+# API（Rails）は app/api にある
+defaults:
+  run:
+    working-directory: app/api
+
+jobs:
+  scan_ruby:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@b3aaceaef7e0ee231b499e7b5f49c03fc1d32199 # v1.338.0
+        with:
+          working-directory: app/api
+          ruby-version: .ruby-version
+          bundler-cache: true
+
+      # bin/brakeman は最新版でないと止まる設定（--ensure-latest）なので、bundle exec で動かす。
+      # 確認済みの警告は config/brakeman.ignore に登録してある
+      - name: Scan for common Rails security vulnerabilities using static analysis
+        run: bundle exec brakeman --no-pager
+
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@b3aaceaef7e0ee231b499e7b5f49c03fc1d32199 # v1.338.0
+        with:
+          working-directory: app/api
+          ruby-version: .ruby-version
+          bundler-cache: true
+
+      # 既存の指摘は .rubocop_todo.yml に記録してあり、新しく増えた指摘だけで止まる
+      - name: Lint code for consistent style
+        run: bin/rubocop -f github
