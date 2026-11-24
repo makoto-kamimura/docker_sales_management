@@ -12,7 +12,7 @@
 **Rails 8.1 系（2026-11 時点で 8.1.4.1）へ、7.2 から直接上げる。** 8.0 系はサポートの期限が 8.1 より先に来るので、途中で止めない。
 各版のサポートの期限は、作業を始める前に <https://rubyonrails.org/maintenance> で確かめる。
 
-- Ruby は今の 3.3.5 のまま上げられる（8.0 / 8.1 とも Ruby 3.2 以上）。Ruby の上げ（3.3 の最新パッチ / 3.4）は別の変更にする。
+- Ruby は当時の 3.3.5 のまま上げられる（8.0 / 8.1 とも Ruby 3.2 以上）ので、Ruby の上げは別の変更にした。→ 2026-11-24 に、Dockerfile と `.ruby-version` を 3.4.13 にそろえた（第 10 章）。
 - `config.load_defaults` は、まず 7.2 のまま Rails だけを上げ、動いてから `new_framework_defaults_8_0.rb` / `_8_1.rb` の項目を 1 つずつ有効にして、最後に `load_defaults 8.1` にする。
 
 ## 3. 今の構成で関係する所
@@ -60,7 +60,7 @@
 ## 5. 一緒に考えること
 
 - **rubyzip 3.x**: 2.4.1 から 3 系へ上げる。メジャーの上げなので別の変更にする（`Zip::OutputStream.open` と `Zip.unicode_names` の使い方を 3.x の変更点と見比べる）。
-- **Ruby 3.3 の最新パッチ**: Dockerfile の `ruby:3.3.5-slim` を上げる。Rails とは別に反映する。
+- **Ruby の上げ**: Dockerfile の `ruby:3.3.5-slim` を上げる。Rails とは別に反映する。→ 実施済み（2026-11-24。3.3 系ではなく 3.4.13 にした。第 10 章）。
 
 ## 6. 進め方
 
@@ -119,3 +119,4 @@
 | テスト | RSpec 173 件がすべて通った。brakeman は Rails のサポート終了の警告が消えた | - |
 | 本番 | まだ流れていないマイグレーションがないことを、本番の DB に読み取り専用の接続（`default_transaction_read_only=on`）で確かめてから、API のコンテナだけを作り直した | - |
 
+| Ruby | 2026-11-24 に、Dockerfile（`ruby:3.3.5-slim`）と `.ruby-version`（3.3.11）の食い違いを解き、どちらも 3.4.13 にした（`ruby:3.4.13-slim-bookworm`） | 3.3 系のセキュリティ修正の提供は 2027-03 末に終わる予定のため、3.4 系の最新にした。Gemfile.lock は変わらず、RSpec 173 件・brakeman・bundler-audit・eager load の結果も同じだった |
